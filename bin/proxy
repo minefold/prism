@@ -1,14 +1,57 @@
 #!/usr/bin/env ruby
 # encoding: utf-8
+require 'bundler/setup'
+Bundler.require :proxy
 
-$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+# Graceful shutdown
+%w(INT TERM).each {|sig| Signal.trap(sig) { EventMachine.stop}}
 
-require 'eventmachine'
-require 'socket'
+# STUB
+SERVER_HOST = '0.0.0.0'
+SERVER_PORT = 3000
 
-require 'proxy/connection'
-require 'proxy/backend'
+module Client
+  def post_init opts={}
+    @db = opts[:db]
+    @connect = EM::DefaultDeferrable.new
+  end
+
+  def receive_data data
+    case data.unpack('C*')[0]
+    when 0x02 # Handshake
+      @username = data[3..-1]
+      @server = EventMachine.connect(SERVER_HOST, SERVER_PORT, Server) do |s|
+        s.plexer = self
+      end
+      @connect.succeed
+    end
+
+    @server.send data
+  end
+
+  def send data
+    @connect.callback { send_data data}
+  end
+end
+
+module Server
+  attr_accessor :plexer
+  def receive_data data
+    plexer.send data
+  end
+
+  def send data
+    send_data data
+  end
+end
 
 EventMachine.run do
-  EventMachine.start_server '0.0.0.0', 25565, Proxy::Connection
+  db = Redis.new :host => '0.0.0.0', :port => 6379
+
+  # TODO: Danger, Will Robinson!
+  EM.synchrony do
+    db.flushall
+  end
+
+  EventMachine.start_server '0.0.0.0', 25565, Client, :db => db
 end
