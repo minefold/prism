@@ -16,8 +16,6 @@ module Proxy
     def receive_data(data)
       puts [:received, data].inspect.yellow
 
-      @backend.send(data) if @backend
-
       msg = data.unpack('C*')
 
       case msg[0]
