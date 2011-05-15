@@ -1,32 +1,46 @@
 #!/usr/bin/env ruby
-# encoding: utf-8
+# encoding: UTF-8
 require 'bundler/setup'
 Bundler.require :proxy
 
 # Graceful shutdown
 %w(INT TERM).each {|sig| Signal.trap(sig) { EventMachine.stop}}
 
-# STUB
-SERVER_HOST = '0.0.0.0'
-SERVER_PORT = 3000
-
 module Client
-  def post_init opts={}
-    @db = opts[:db]
+  attr_accessor :db
+
+  def post_init
     @connect = EM::DefaultDeferrable.new
   end
 
   def receive_data data
-    case data.unpack('C*')[0]
-    when 0x02 # Handshake
-      @username = data[3..-1]
-      @server = EventMachine.connect(SERVER_HOST, SERVER_PORT, Server) do |s|
-        s.plexer = self
+    raw = data.unpack('CN*')
+    if raw[0] == 0x02
+      # 1 byte for type and 2 bytes for the string length
+      raw_offset = 1 + 2
+
+      # Java ecodes strings as UTF-16 and is big-endian by default
+      # Way to be different, dude.
+      username = data[raw_offset..-1].
+        force_encoding('UTF-16BE').encode('UTF-8')
+
+      host = @db.get("player.#{username}.host")
+      port = @db.get("player.#{username}.port").to_i
+
+      @server = EventMachine.connect(host, port, Server) do |server|
+        server.plexer = self
       end
+
       @connect.succeed
     end
 
-    @server.send data
+    # If the connection to the server hasn't been made, the client is
+    # sending faulty data.
+    if @server and !@server.error?
+      @server.send data
+    else
+      close_connection
+    end
   end
 
   def send data
@@ -49,9 +63,13 @@ EventMachine.run do
   db = Redis.new :host => '0.0.0.0', :port => 6379
 
   # TODO: Danger, Will Robinson!
-  EM.synchrony do
-    db.flushall
-  end
+  db.flushall
 
-  EventMachine.start_server '0.0.0.0', 25565, Client, :db => db
+  # STUB: Overseer
+  db.set 'player.chrislloyd.host', '0.0.0.0'
+  db.set 'player.chrislloyd.port', 3000
+
+  EventMachine.start_server('0.0.0.0', 25565, Client) do |connection|
+    connection.db = db
+  end
 end
