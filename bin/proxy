@@ -63,12 +63,21 @@ EventMachine.run do
   db = Redis.new :host => '0.0.0.0', :port => 6379
 
   # TODO: Danger, Will Robinson!
-  db.flushall
+  # db.flushall
 
   # STUB: Overseer
-  db.set 'player.chrislloyd.host', '0.0.0.0'
-  db.set 'player.chrislloyd.port', 3000
-
+  
+  # look up world
+  world = 'worldster'
+  
+  # if the foreman started it should have created an entry for each active server
+  server_info = JSON.parse(db.get("servers.#{world}") || '{}')
+  
+  %w{chrislloyd whatupdave}.each do |player|
+    db.set "player.#{player}.host", server_info['ip']
+    db.set "player.#{player}.port", server_info['port']
+  end
+  
   EventMachine.start_server('0.0.0.0', 25565, Client) do |connection|
     connection.db = db
   end
