@@ -11,3 +11,16 @@ desc "Start redis"
 task :redis do
   sh "redis-server conf/redis.conf"
 end
+
+namespace :foreman do
+  desc "Destroys all world files"
+  task :nuke do
+    sh "rm -rf foreman/servers"
+    sh "rm -rf worlds"
+  end
+  
+  desc "Kills all running servers"
+  task :kill do
+    sh "ps | grep 'java' | awk '{print $1}' | xargs kill -9"
+  end
+end

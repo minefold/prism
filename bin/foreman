@@ -4,31 +4,120 @@
 require 'bundler/setup'
 Bundler.require :foreman
 
+require 'fileutils'
+
+ROOT = File.expand_path File.join(File.dirname(__FILE__), '..')
+WORLDS = File.join ROOT, 'worlds'
+SERVERS = File.join ROOT, 'foreman/servers'
+SERVER_TEMPLATES = File.join ROOT, 'foreman/server_templates'
+
 module Foreman
   class ServerWatcher < EventMachine::Connection
-    attr_accessor :on_exit
+    attr_accessor :world, :on_exit
+
+    def initialize
+      @data_recieved = false
+    end
     
-    def receive_data(data) # :nodoc:
-      puts data
+    def receive_data data
+      unless @data_recieved
+        @data_recieved = true
+        info "Starting"
+      end
+      info "Ready" if data =~ /\[INFO\]\sDone/
     end
     
     def unbind
-      puts "CRAZASH!"
+      info "Crashed! Restarting"
       on_exit.call
     end
     
+    def connection_completed
+      info "connection_completed"
+    end
+    
+    
+    def info message
+      puts "[#{world.name}] #{message}"
+    end
   end
+  
+  class World
+    attr_reader :name, :port, :source, :destination
+    
+    def initialize name, port
+      @name = name
+      @port = port
+      @source = File.join WORLDS, name
+      @destination = File.join SERVERS, name
+    end
+    
+    def start_cmd
+      %Q{/bin/sh -c "cd '#{destination}' && java -Xmx1024M -Xms512M -jar server.jar nogui 2>&1"}
+    end
+    
+    def create_server
+      FileUtils.mkdir_p SERVERS
 
-  def self.start_server(port = 3000)
-    dir = File.expand_path(File.join File.dirname(__FILE__), "..")
-    cmd = '/bin/sh -c "cd mc && java -Xmx1024M -Xms512M -jar server.jar nogui 2>&1"'
-    EM.popen(cmd, ServerWatcher) do |watcher|
-      watcher.on_exit = proc { start_server(port) }
+      return if File.exists? destination
+
+      unless File.exists? source
+        FileUtils.mkdir_p source
+        FileUtils.cp_r "#{SERVER_TEMPLATES}/default/.", source
+      end
+
+      FileUtils.ln_s source, destination
+    end
+    
+    def configure_server
+      properties = {
+        "level-name" => name,
+        "hellworld" =>"false",
+        "spawn-monsters"=>"false",
+        "online-mode"=>"true",
+        "spawn-animals"=>"true",
+        "max-players"=>"64",
+        "server-ip"=>"0.0.0.0",
+        "pvp"=>"true",
+        "level-seed"=>"",
+        "server-port"=> port,
+        "allow-flight"=>"false",
+        "white-list"=>"false"
+      }
+
+      File.open("#{destination}/server.properties", "w") do |props|
+        props.write properties.map {|k,v| "#{k}=#{v}" }.join("\n")
+      end
     end
   end
 end
 
-
+# Graceful shutdown
+%w(INT TERM).each { |sig| Signal.trap(sig) { EventMachine.stop } }
 EM.run do
-  Foreman.start_server
+  def start_world name, port
+    world = Foreman::World.new name, port
+    world.create_server
+    world.configure_server
+    
+    EM.popen(world.start_cmd, Foreman::ServerWatcher) do |watcher|
+      # servers[world.name] = watcher
+      watcher.world = world
+      watcher.on_exit = proc { start_world name, port }
+    end
+  end
+  
+  def stop_world name
+    
+  end
+  
+  # test server creation
+  EM.add_timer(1) { start_world 'superworld', 3000 }
+  EM.add_timer(2) { start_world 'worldbot', 3001 }
+  EM.add_timer(3) { start_world 'worldinator', 3002 }
+  EM.add_timer(4) { start_world 'worldster', 3003 }
+  
+  # test server shutdown
+  
+  EM.add_timer(20) { stop_world 'superworld' }
 end
