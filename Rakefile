@@ -12,6 +12,10 @@ task :redis do
   sh "redis-server conf/redis.conf"
 end
 
+task :redis_cli do
+  exec 'redis-cli'
+end
+
 namespace :foreman do
   desc "Destroys all world files"
   task :nuke do

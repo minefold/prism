@@ -11,9 +11,23 @@ WORLDS = File.join ROOT, 'worlds'
 SERVERS = File.join ROOT, 'foreman/servers'
 SERVER_TEMPLATES = File.join ROOT, 'foreman/server_templates'
 
+require 'socket'
+
+def local_ip
+  orig, Socket.do_not_reverse_lookup = Socket.do_not_reverse_lookup, true  # turn off reverse DNS resolution temporarily
+  UDPSocket.open do |s|
+    s.connect '64.233.187.99', 1
+    s.addr.last
+  end
+ensure
+  Socket.do_not_reverse_lookup = orig
+end
+
+LOCAL_IP = local_ip
+
 module Foreman
   class ServerWatcher < EventMachine::Connection
-    attr_accessor :world, :on_exit
+    attr_accessor :world, :on_exit, :on_started
 
     def initialize
       @data_recieved = false
@@ -24,9 +38,15 @@ module Foreman
         @data_recieved = true
         info "Starting"
       end
-      info "Ready" if data =~ /\[INFO\]\sDone/
+      started if data =~ /\[INFO\]\sDone/
     end
     
+    def started
+      info "Ready"
+      
+      on_started.call
+    end
+        
     def unbind
       info "Crashed! Restarting"
       on_exit.call
@@ -92,17 +112,26 @@ module Foreman
   end
 end
 
+DB = Redis.new :host => '0.0.0.0', :port => 6379
+
 # Graceful shutdown
 %w(INT TERM).each { |sig| Signal.trap(sig) { EventMachine.stop } }
 EM.run do
+  
+  
   def start_world name, port
     world = Foreman::World.new name, port
     world.create_server
     world.configure_server
     
     EM.popen(world.start_cmd, Foreman::ServerWatcher) do |watcher|
-      # servers[world.name] = watcher
       watcher.world = world
+      watcher.on_started = proc do 
+        DB.set "servers.#{world.name}", {
+          ip:LOCAL_IP,
+          port:world.port
+        }.to_json
+      end
       watcher.on_exit = proc { start_world name, port }
     end
   end
