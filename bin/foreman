@@ -42,7 +42,7 @@ module Foreman
     end
     
     def started
-      info "Ready"
+      info "Server running { pid: #{get_pid} }"
       
       on_started.call
     end
@@ -56,6 +56,10 @@ module Foreman
       info "connection_completed"
     end
     
+    def stop_server
+      info "Stopping #{get_pid}"
+      Process.kill('TERM', get_pid)
+    end
     
     def info message
       puts "[#{world.name}] #{message}"
@@ -73,7 +77,7 @@ module Foreman
     end
     
     def start_cmd
-      %Q{/bin/sh -c "cd '#{destination}' && java -Xmx1024M -Xms512M -jar server.jar nogui 2>&1"}
+      %Q{java -Xmx1024M -Xms512M -jar server.jar nogui}
     end
     
     def create_server
@@ -114,6 +118,8 @@ end
 
 DB = Redis.new :host => '0.0.0.0', :port => 6379
 
+WATCHERS = {}
+
 # Graceful shutdown
 %w(INT TERM).each { |sig| Signal.trap(sig) { EventMachine.stop } }
 EM.run do
@@ -124,7 +130,11 @@ EM.run do
     world.create_server
     world.configure_server
     
+    prev_dir = Dir.pwd
+    Dir.chdir world.destination
+    
     EM.popen(world.start_cmd, Foreman::ServerWatcher) do |watcher|
+      WATCHERS[world.name] = watcher
       watcher.world = world
       watcher.on_started = proc do 
         DB.set "servers.#{world.name}", {
@@ -134,19 +144,22 @@ EM.run do
       end
       watcher.on_exit = proc { start_world name, port }
     end
+    
+    Dir.chdir prev_dir
   end
   
   def stop_world name
-    
+    watcher = WATCHERS[name]
+    watcher.stop_server
   end
   
   # test server creation
   EM.add_timer(1) { start_world 'superworld', 3000 }
   EM.add_timer(2) { start_world 'worldbot', 3001 }
   EM.add_timer(3) { start_world 'worldinator', 3002 }
-  EM.add_timer(4) { start_world 'worldster', 3003 }
+  EM.add_timer(1) { start_world 'worldster', 3003 }
   
   # test server shutdown
   
-  EM.add_timer(20) { stop_world 'superworld' }
+  EM.add_timer(5) { stop_world 'worldster' }
 end
