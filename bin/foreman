@@ -166,10 +166,14 @@ EM.run do
     Signal.trap(sig) do
       EventMachine.stop
       $logger.info(:foreman) { 'terminated'}
+
     end
+
+    Dir.chdir prev_dir
   end
 
   $logger.info(:foreman) { 'started'}
+
 end
 
 
