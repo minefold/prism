@@ -1,14 +1,26 @@
+PATH
+  remote: ~/src/em-zmq
+  specs:
+    em-zmq (0.0.2)
+      eventmachine (>= 1.0.0.beta.3)
+      ffi (>= 1.0.8)
+      ffi-rzmq (>= 0.7.2)
+
 GEM
   remote: http://rubygems.org/
   specs:
-    eventmachine (0.12.10)
-    json (1.4.6)
+    colored (1.2)
+    eventmachine (1.0.0.beta.3)
+    ffi (1.0.8)
+    ffi-rzmq (0.8.0)
     redis (2.2.0)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
-  eventmachine
-  json
+  colored
+  em-zmq!
+  eventmachine (>= 1.0.0.beta.3)
+  ffi
   redis

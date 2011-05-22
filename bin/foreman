@@ -1,152 +1,237 @@
 #!/usr/bin/env ruby
 # encoding: UTF-8
-
 require 'bundler/setup'
-Bundler.require :foreman
-
+Bundler.require :default, :foreman
 require 'fileutils'
-
-ROOT = File.expand_path File.join(File.dirname(__FILE__), '..')
-WORLDS = File.join ROOT, 'worlds'
-SERVERS = File.join ROOT, 'foreman/servers'
-SERVER_TEMPLATES = File.join ROOT, 'foreman/server_templates'
-
 require 'socket'
+require 'logger'
+require 'colored'
+require 'json'
 
-def local_ip
-  orig, Socket.do_not_reverse_lookup = Socket.do_not_reverse_lookup, true  # turn off reverse DNS resolution temporarily
-  UDPSocket.open do |s|
-    s.connect '64.233.187.99', 1
-    s.addr.last
+$logger = Logger.new(STDOUT)
+
+class ServerProcess < EventMachine::Connection
+  attr_accessor :world, :log
+
+  def started(&blk); @started = blk; end
+
+  # TODO: Configure the min/max heap size based on machine resources
+  # TODO: This command is spawning a subshell, so the PID is incorrect
+  def self.start_cmd(path)
+    %Q{/bin/sh -c "cd '#{path}' && java -Xms512M -Xmx1024M -jar server.jar nogui 2>&1"}
   end
-ensure
-  Socket.do_not_reverse_lookup = orig
-end
 
-LOCAL_IP = local_ip
-
-module Foreman
-  class ServerWatcher < EventMachine::Connection
-    attr_accessor :world, :on_exit, :on_started
-
-    def initialize
-      @data_recieved = false
-    end
-    
-    def receive_data data
-      unless @data_recieved
-        @data_recieved = true
-        info "Starting"
-      end
-      started if data =~ /\[INFO\]\sDone/
-    end
-    
-    def started
-      info "Ready"
-      
-      on_started.call
-    end
-        
-    def unbind
-      info "Crashed! Restarting"
-      on_exit.call
-    end
-    
-    def connection_completed
-      info "connection_completed"
-    end
-    
-    
-    def info message
-      puts "[#{world.name}] #{message}"
+  def receive_data data
+    if data =~ /\[INFO\]\sDone/
+      $logger.info(:server) { "#{get_pid} started"}
+      @started.call
     end
   end
-  
-  class World
-    attr_reader :name, :port, :source, :destination
-    
-    def initialize name, port
-      @name = name
-      @port = port
-      @source = File.join WORLDS, name
-      @destination = File.join SERVERS, name
-    end
-    
-    def start_cmd
-      %Q{/bin/sh -c "cd '#{destination}' && java -Xmx1024M -Xms512M -jar server.jar nogui 2>&1"}
-    end
-    
-    def create_server
-      FileUtils.mkdir_p SERVERS
 
-      return if File.exists? destination
-
-      unless File.exists? source
-        FileUtils.mkdir_p source
-        FileUtils.cp_r "#{SERVER_TEMPLATES}/default/.", source
-      end
-
-      FileUtils.ln_s source, destination
-    end
-    
-    def configure_server
-      properties = {
-        "level-name" => name,
-        "hellworld" =>"false",
-        "spawn-monsters"=>"false",
-        "online-mode"=>"true",
-        "spawn-animals"=>"true",
-        "max-players"=>"64",
-        "server-ip"=>"0.0.0.0",
-        "pvp"=>"true",
-        "level-seed"=>"",
-        "server-port"=> port,
-        "allow-flight"=>"false",
-        "white-list"=>"false"
-      }
-
-      File.open("#{destination}/server.properties", "w") do |props|
-        props.write properties.map {|k,v| "#{k}=#{v}" }.join("\n")
-      end
-    end
+  # TODO: There needs to be a difference between stopping a process and
+  # restarting it. Currently there isn't any way to legitimely stop a process.
+  def unbind
+    world.unlink!
+    $log.info(:server) { "#{get_pid} unbound"}
+    # TODO: Refactor
+    world.touch!
+    world.start!
   end
 end
 
-DB = Redis.new :host => '0.0.0.0', :port => 6379
+# TODO: Design this class better
+class World
+  attr_reader :id, :data, :port
 
-# Graceful shutdown
-%w(INT TERM).each { |sig| Signal.trap(sig) { EventMachine.stop } }
+  # TODO Have these set by ARGV
+  WORLDS = File.expand_path '../../data/worlds', __FILE__
+  SERVERS = File.expand_path '../../tmp/servers', __FILE__
+  JAR = File.expand_path '../../mc/server.jar', __FILE__
+
+  def self.first_available_port(start=3000)
+    start
+  end
+
+  def self.start! id, port
+    new(id, port).tap {|world| world.touch!}.start!
+  end
+
+  def initialize id, port = self.class.first_available_port
+    @id, @port = id, port
+  end
+
+  def world_path
+    File.join WORLDS, id
+  end
+
+  def server_path
+    File.join SERVERS, id
+  end
+
+  def server_world_path
+    File.join server_path, id
+  end
+
+  def start! &callback
+    EM.popen(ServerProcess.start_cmd(server_path), ServerProcess) do |server|
+      server.world = self
+      server.started &callback
+    end
+  end
+
+  def touch!
+    link_paths!
+    write_properties!
+  end
+
+  def unlink!
+    lock_path = File.join(server_world_path, 'session.lock')
+    File.unlink lock_path if File.exist?(lock_path)
+    FileUtils.rm_rf server_path
+  end
+
+
+  def link_paths!
+    FileUtils.mkdir_p world_path
+    FileUtils.mkdir_p server_path
+
+    FileUtils.ln_s JAR, server_path unless File.exist?(File.join(server_path, 'server.jar'))
+    FileUtils.ln_s world_path, server_world_path unless File.exist?(server_world_path)
+  end
+
+  def properties_path
+    File.join(server_path, 'server.properties')
+  end
+
+  def properties
+    { "level-name"     => id,
+      "hellworld"      => false,
+      "spawn-monsters" => false,
+      "online-mode"    => true,
+      "spawn-animals"  => true,
+      "max-players"    => 64,
+      "server-ip"      => "0.0.0.0",
+      "pvp"            => true,
+      "level-seed"     => '',
+      "server-port"    => port,
+      "allow-flight"   => false,
+      "white-list"     => false
+    }.map {|values| values.join('=')}.join("\n")
+  end
+
+  def write_properties!
+    File.open(properties_path, 'w') {|file| file.puts properties}
+  end
+end
+
+module SauronHandler
+
+  def receive_data data
+    request = JSON.parse data
+
+    puts "sauron -> #{request.inspect.bold} -> foreman"
+
+    name = request[1]
+    world = World.new name
+    world.touch!
+    world.start! do
+      send_data ['0.0.0.0', world.port]
+    end
+  end
+
+  def send_data data
+    puts "foreman -> #{data.inspect.bold} -> sauron"
+    super data
+  end
+
+end
+
+
+
 EM.run do
-  
-  
-  def start_world name, port
-    world = Foreman::World.new name, port
-    world.create_server
-    world.configure_server
-    
-    EM.popen(world.start_cmd, Foreman::ServerWatcher) do |watcher|
-      watcher.world = world
-      watcher.on_started = proc do 
-        DB.set "servers.#{world.name}", {
-          ip:LOCAL_IP,
-          port:world.port
-        }.to_json
-      end
-      watcher.on_exit = proc { start_world name, port }
+  ctx = EM::ZMQ::Context.new
+
+  sauron = ctx.connect :rep, 'ipc:///tmp/sauron-to-foreman', SauronHandler
+
+  # alpha = World.new 'alpha', 3000, logger
+  # alpha.touch!
+  # alpha.start!
+  #
+  # beta = World.new 'beta', 3001, logger
+  # beta.touch!
+  # beta.start!
+
+  # Graceful shutdown
+  %w(INT TERM).each do |sig|
+    Signal.trap(sig) do
+      EventMachine.stop
+      $logger.info(:foreman) { 'terminated'}
     end
   end
-  
-  def stop_world name
-    
-  end
-  
-  # test server creation
-  EM.add_timer(1) { start_world 'superworld', 3000 }
-  EM.add_timer(2) { start_world 'worldbot', 3001 }
-  EM.add_timer(3) { start_world 'worldinator', 3002 }
-  EM.add_timer(4) { start_world 'worldster', 3003 }
-  
-  # test server shutdown
-  
-  EM.add_timer(20) { stop_world 'superworld' }
+
+  $logger.info(:foreman) { 'started'}
 end
+
+
+
+
+# require 'bundler/setup'
+# Bundler.require :foreman
+# require 'json'
+#
+# %w(INT TERM).each {|sig| Signal.trap(sig) { EventMachine.stop}}
+#
+# module Server
+#
+#   def post_init(opts)
+#     p opts
+#   end
+#
+#   def receive_data data
+#     puts data
+#     # Parses the entire line as a security measure, as the username could be
+#     # fuzzed to "Done".
+#     if data =~ /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [INFO] Done (\d+ns)! For help, type "help" or "\?"/
+#       sauron.send [:started, {host: '0.0.0.0', port: 3000}].to_json
+#     end
+#   end
+#
+#   def unbind
+#     sauron.send [:unbound].to_json
+#   end
+#
+# end
+
+# class Foo
+#   def on_readable(socket, messages)
+#     puts messages.length
+#     messages.each do |m|
+#       p JSON.parse(m.copy_out_string)
+#       # Copy over world data if needed
+#       # Find available port
+#       # Write out server.properties and ops
+#       # Copy over process
+#       EM.popen("/bin/sh -c 'cd mc && java -Xmx1024M -Xms512M -jar server.jar nogui 2>&1'", Server, sauron)
+#     end
+#   end
+# end
+#
+# EventMachine.run do
+#   # The number when initializing the context is stupid. So is initializing the
+#   # context.
+#   ctx = EM::ZeroMQ::Context.new(1)
+#
+#   # stub = EM.push 'inproc://stub'
+#   stub = ctx.bind(ZMQ::PUSH, 'inproc://stub')
+#
+#   # EM.pull 'inproc://stub', Foo
+#   sauron = ctx.connect ZMQ::PULL, 'inproc://stub', Foo.new
+#
+#   stub.send_msg({:players => ['chrislloyd'], :data => 'mc/world'}.to_json)
+#   # Get world in message from Sauron
+#   # Create data folder
+#   # Copy over latest world files if they exist
+#   # Pick an available port and write it to server.properties
+#   # Start process and start monitoring it
+#   # Once it's started and initialized, send Sauron a message with the port
+# end

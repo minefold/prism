@@ -1,16 +1,26 @@
 #!/usr/bin/env ruby
 # encoding: UTF-8
 require 'bundler/setup'
-Bundler.require :proxy
+Bundler.require :default, :proxy
+require 'logger'
+require 'json'
 
-# Graceful shutdown
-%w(INT TERM).each {|sig| Signal.trap(sig) { EventMachine.stop}}
+module SauronHandler
+  attr_accessor :future
+
+  def receive_data raw
+    response = JSON.parse(raw)
+    future.succeed response['host'], response['port']
+  end
+end
+
+Thread.abort_on_exception = true
 
 module Client
-  attr_accessor :db
+  attr_accessor :db, :log, :sauron_in, :sauron
 
   def post_init
-    @connect = EM::DefaultDeferrable.new
+    @f_connection_established = EM::DefaultDeferrable.new
   end
 
   def receive_data data
@@ -21,31 +31,68 @@ module Client
 
       # Java ecodes strings as UTF-16 and is big-endian by default
       # Way to be different, dude.
-      username = data[raw_offset..-1].
+      @username = data[raw_offset..-1].
         force_encoding('UTF-16BE').encode('UTF-8')
 
-      host = @db.get("player.#{username}.host")
-      port = @db.get("player.#{username}.port").to_i
+      log.info(:proxy) { "#{@username} connected"}
 
-      @server = EventMachine.connect(host, port, Server) do |server|
-        server.plexer = self
+      # TODO: Needs to be wrapped in a transaction
+      world = @db.get("player.#{@username}.world")
+
+      # Player doesn't belong in a world
+      if !world
+        close_connection
+        logger.warn(:proxy) { "#{@username} kicked, no world"}
       end
 
-      @connect.succeed
+      host, port = @db.mget "world.#{world}.host", "world.#{world}.port"
+
+      f_server_info = EM::DefaultDeferrable.new
+      f_server_info.callback do |host, port|
+        @server = EventMachine.connect(host, port, Server) do |server|
+          server.plexer = self
+          log.info(:proxy) { "#{@username} proxied to #{host}:#{port}"}
+        end
+        @f_connection_established.succeed
+      end
+
+      # In the case that the world isn't started, for for it from Sauron
+      if !host || !port
+        sauron.future = f_server_info
+        sauron.send_data [:where_art_thou, world].to_json
+        # TODO This is needed because of a bug in em-zmq
+        EM.next_tick {sauron.notify_readable}
+      else
+        lock.succeed host, port
+      end
+
     end
 
-    # If the connection to the server hasn't been made, the client is
-    # sending faulty data.
-    if @server and !@server.error?
-      @server.send data
-    else
-      close_connection
+    # TODO: We need to check their auth details when they send it over the
+    # wire somebody might be spoofing a username to get free access
+
+    @f_connection_established.callback do
+      if !@server.error?
+        @server.send data
+      else
+        close_connection
+        log.warn(:proxy) { 'unable to connect'}
+      end
     end
   end
 
   def send data
-    @connect.callback { send_data data}
+    @f_connection_established.callback { send_data data}
   end
+
+  # It seems like eventmachine is quite slow unbinding the connection. I tried
+  # closing it earlier by parsing the 0x255 message but it still exhibited the
+  # same behaviour. Strangely, if you cancel loading the world the connection
+  # unbinds quicker...
+  def unbind
+    log.info(:proxy) { "#{@username} unbound"}
+  end
+
 end
 
 module Server
@@ -60,25 +107,25 @@ module Server
 end
 
 EventMachine.run do
+  logger = Logger.new(STDOUT)
   db = Redis.new :host => '0.0.0.0', :port => 6379
+  ctx = EM::ZMQ::Context.new
 
-  # TODO: Danger, Will Robinson!
-  # db.flushall
+  sauron = ctx.bind :req, 'ipc:///tmp/proxy-to-sauron', SauronHandler
 
-  # STUB: Overseer
-  
-  # look up world
-  world = 'worldster'
-  
-  # if the foreman started it should have created an entry for each active server
-  server_info = JSON.parse(db.get("servers.#{world}") || '{}')
-  
-  %w{chrislloyd whatupdave}.each do |player|
-    db.set "player.#{player}.host", server_info['ip']
-    db.set "player.#{player}.port", server_info['port']
-  end
-  
   EventMachine.start_server('0.0.0.0', 25565, Client) do |connection|
     connection.db = db
+    connection.log = logger
+    connection.sauron = sauron
   end
+
+  # Graceful shutdown
+  %w(INT TERM).each do |sig|
+    Signal.trap(sig) do
+      EventMachine.stop
+      logger.info(:proxy) { 'terminated'}
+    end
+  end
+
+  logger.info(:proxy) { 'started on 0.0.0.0:25565'}
 end
