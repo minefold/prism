@@ -32,7 +32,7 @@ class ServerProcess < EventMachine::Connection
   # restarting it. Currently there isn't any way to legitimely stop a process.
   def unbind
     world.unlink!
-    $log.info(:server) { "#{get_pid} unbound"}
+    $logger.info(:server) { "#{get_pid} unbound"}
     # TODO: Refactor
     world.touch!
     world.start!
@@ -169,7 +169,7 @@ EM.run do
 
     end
 
-    Dir.chdir prev_dir
+    # Dir.chdir prev_dir
   end
 
   $logger.info(:foreman) { 'started'}

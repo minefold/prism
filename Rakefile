@@ -10,6 +10,11 @@ end
 CLEAN.add 'tmp'
 CLOBBER.add 'data'
 
+desc "Get latest mc server"
+task :get_latest_server do
+  exec 'curl -L http://www.minecraft.net/download/minecraft_server.jar -o mc/server.jar'
+end
+
 # namespace :foreman do
 #   desc "Destroys all world files"
 #   task :nuke do
