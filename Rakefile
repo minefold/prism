@@ -1,29 +1,23 @@
 require 'rake/clean'
-CLEAN.add 'mc/*.txt', 'mc/server.log*'
-CLOBBER.add 'mc/world'
-
-desc "Start mc server"
-task :minecraft do
-  Dir.chdir('mc') { exec 'java -Xmx1024M -Xms512M -jar server.jar nogui'}
-end
-
 CLEAN.add 'tmp'
 CLOBBER.add 'data'
 
-desc "Get latest mc server"
-task :get_latest_server do
-  exec 'curl -L http://www.minecraft.net/download/minecraft_server.jar -o mc/server.jar'
-end
+task :default => :minecraft
 
-# namespace :foreman do
-#   desc "Destroys all world files"
-#   task :nuke do
-#     sh "rm -rf foreman/servers"
-#     sh "rm -rf worlds"
-#   end
-#
-#   desc "Kills all running servers"
-#   task :kill do
-#     sh "ps | grep 'java' | awk '{print $1}' | xargs kill -9"
-#   end
-# end
+task :minecraft => 'minecraft:start'
+namespace :mc do
+  CLEAN.add 'mc/*.txt', 'mc/server.log*'
+  CLOBBER.add 'mc/world', 'mc/server.jar'
+
+  desc 'Manually starts the MineCraft server'
+  task :start do
+    Dir.chdir('mc') do
+      sh 'java -Xmx1024M -Xms512M -jar server.jar nogui'
+    end
+  end
+
+  desc 'Downloads the latest version of the server from minecraft.net'
+  task :pull do
+    sh 'curl -L http://www.minecraft.net/download/minecraft_server.jar -o mc/server.jar'
+  end
+end
