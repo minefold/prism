@@ -1,12 +1,16 @@
 #!/usr/bin/env ruby
 # encoding: UTF-8
 
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'worlds'
+
 worlds_root = File.expand_path "../../worlds", __FILE__
 LIB = File.expand_path "../../lib", __FILE__
 JAR = "#{worlds_root}/server.jar"
 
 require 'fileutils'
 require 'erb'
+require 'file/tail'
 
 abort "Usage: start-world name port" unless ARGV.length == 2
 abort "server.jar not found. Run download-server" unless File.exists? JAR
@@ -32,6 +36,8 @@ world_name, port = ARGV
 world_path = File.join worlds_root, world_name
 properties_path = File.join world_path, "server.properties"
 god_path = File.join world_path, "world.god"
+
+exit 0 if Worlds.running.any? {|w| w[:name] == world_name }
 
 # create world path if it aint there
 FileUtils.mkdir_p world_path
@@ -59,6 +65,20 @@ def god_load_config config_file
   end
 end
 
+# clear server log
+server_log = File.join(world_path, "server.log")
+File.open(server_log, "w") {|file| file.print }
+
 # start world
 god_load_config god_path
+`god start minecraft-#{world_name}`
+
+
+# wait for start
+File::Tail::Logfile.open(server_log) do |log|
+  log.max_interval = 0.1
+  log.interval = 0.1
+  
+  log.tail { |line| puts line; exit 0 if line =~ /Done/ }
+end
 

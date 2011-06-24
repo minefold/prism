@@ -9,7 +9,11 @@ GEM
     eventmachine (1.0.0.beta.3)
     ffi (1.0.8)
     ffi-rzmq (0.8.0)
+    file-tail (1.0.5)
+      spruz (>= 0.1.0)
+    god (0.11.0)
     redis (2.2.0)
+    spruz (0.2.8)
 
 PLATFORMS
   ruby
@@ -19,4 +23,6 @@ DEPENDENCIES
   em-zmq
   eventmachine (>= 1.0.0.beta.3)
   ffi
+  file-tail
+  god
   redis
