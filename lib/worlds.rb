@@ -35,4 +35,13 @@ class Worlds
   def self.running
     present.select {|w| w[:running] }
   end
+  
+  def self.next_available_port
+    running_world_with_highest_port = running.sort_by{|w| w[:port].to_i }.last
+    if running_world_with_highest_port
+      running_world_with_highest_port[:port].to_i + 1 
+    else
+      4000
+    end
+  end
 end

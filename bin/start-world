@@ -12,7 +12,7 @@ require 'fileutils'
 require 'erb'
 require 'file/tail'
 
-abort "Usage: start-world name port" unless ARGV.length == 2
+abort "Usage: start-world name" unless ARGV.length == 1
 abort "server.jar not found. Run download-server" unless File.exists? JAR
 
 def server_properties name, port
@@ -31,7 +31,7 @@ def server_properties name, port
   }.map {|values| values.join('=')}.join("\n")
 end
 
-world_name, port = ARGV
+world_name = ARGV.shift
 
 world_path = File.join worlds_root, world_name
 properties_path = File.join world_path, "server.properties"
@@ -41,6 +41,9 @@ exit 0 if Worlds.running.any? {|w| w[:name] == world_name }
 
 # create world path if it aint there
 FileUtils.mkdir_p world_path
+
+# get a port number to use
+port = Worlds.next_available_port
 
 # create server.properties
 File.open(properties_path, 'w') {|file| file.puts server_properties(world_name, port)}
