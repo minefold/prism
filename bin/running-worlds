@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'worlds'
+
+puts Worlds.running.map {|w| "name: #{w[:name]}  port: #{w[:port]}" }

@@ -1,0 +1,64 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+
+worlds_root = File.expand_path "../../worlds", __FILE__
+LIB = File.expand_path "../../lib", __FILE__
+JAR = "#{worlds_root}/server.jar"
+
+require 'fileutils'
+require 'erb'
+
+abort "Usage: start-world name port" unless ARGV.length == 2
+abort "server.jar not found. Run download-server" unless File.exists? JAR
+
+def server_properties name, port
+  { "level-name"     => name,
+    "hellworld"      => false,
+    "spawn-monsters" => false,
+    "online-mode"    => true,
+    "spawn-animals"  => true,
+    "max-players"    => 64,
+    "server-ip"      => "0.0.0.0",
+    "pvp"            => true,
+    "level-seed"     => '',
+    "server-port"    => port,
+    "allow-flight"   => false,
+    "white-list"     => false
+  }.map {|values| values.join('=')}.join("\n")
+end
+
+world_name, port = ARGV
+
+world_path = File.join worlds_root, world_name
+properties_path = File.join world_path, "server.properties"
+god_path = File.join world_path, "world.god"
+
+# create world path if it aint there
+FileUtils.mkdir_p world_path
+
+# create server.properties
+File.open(properties_path, 'w') {|file| file.puts server_properties(world_name, port)}
+
+# create world.god
+template = ERB.new File.read "#{LIB}/world.god.erb"
+File.open(god_path, 'w') {|file| file.puts template.result }
+
+# symlink server
+FileUtils.ln_s JAR, world_path unless File.exist?(File.join(world_path, 'server.jar'))
+
+def god_running?
+  `god status`
+  $?.exitstatus == 0
+end
+
+def god_load_config config_file
+  if god_running?
+    `god load #{config_file}`
+  else
+    `god -c #{config_file}`
+  end
+end
+
+# start world
+god_load_config god_path
+

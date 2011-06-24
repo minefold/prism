@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'worlds'
+
+abort "Usage: stop-world name" unless ARGV.length == 1
+world_name = ARGV.shift
+
+world = Worlds.running.find {|w| w[:name] == world_name }
+
+`god stop #{world[:god_name]}` if world
+
