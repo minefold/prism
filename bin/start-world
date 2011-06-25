@@ -13,7 +13,8 @@ require 'erb'
 require 'file/tail'
 
 abort "Usage: start-world name" unless ARGV.length == 1
-abort "server.jar not found. Run download-server" unless File.exists? JAR
+
+`./bin/download-server` unless File.exists? JAR
 
 def server_properties name, port
   { "level-name"     => name,
