@@ -2,27 +2,12 @@
 require 'bundler/setup'
 Bundler.require :default
 
-BIN = File.expand_path "..", __FILE__
-WORLDS = File.expand_path "../../worlds", __FILE__
-
 $:.unshift File.join File.dirname(__FILE__), '../lib'
-require 'fileutils'
-require 'worlds'
+require 'jobs'
 
 abort "Usage: stop-world name" unless ARGV.length == 1
 world_name = ARGV.shift
 
-world = Worlds.running.find {|w| w[:name] == world_name }
-
-puts "Stopping..."
-`bundle exec god stop #{world[:god_name]}` if world
-
-while Worlds.running.any? {|w| w[:name] == world_name } do
-end
-
-puts "Backing up..."
-`bundle exec #{BIN}/backup-world #{world_name}`
-abort "Backup error" if $?.exitstatus != 0
-
-puts "Removing local copy"
-FileUtils.rm_rf "#{WORLDS}/#{world_name}"
+Resque.enqueue Jobs::StopWorld, world_name
+Resque.enqueue Jobs::BackupWorld, world_name
+Resque.enqueue Jobs::RemoveWorld, world_name

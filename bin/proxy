@@ -32,7 +32,7 @@ module Client
       @username = data[raw_offset..-1].
         force_encoding('UTF-16BE').encode('UTF-8')
       
-      @world_name = "ginaz"
+      @world_name = "alpha"
       host = "0.0.0.0"
 
       log.info(:proxy) { "#{@username} connected, sending to #{@world_name}"}

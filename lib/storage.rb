@@ -1,3 +1,5 @@
+require 'fog'
+
 class Storage
   attr_reader :connection
   
