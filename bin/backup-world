@@ -5,8 +5,9 @@ Bundler.require :default, :backup
 ROOT = File.expand_path "../..", __FILE__
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
-require 'worlds'
 require 'fileutils'
+require 'worlds'
+require 'storage'
 
 FileUtils.mkdir_p "#{ROOT}/backups"
 
@@ -19,16 +20,7 @@ Dir.chdir "#{ROOT}/worlds" do
   `tar czf '#{world_archive}' '#{world_name}'`
 end
 
-connection = Fog::Storage.new({
-  :provider                 => 'AWS',
-  :aws_secret_access_key    => ENV['EC2_SECRET_KEY'],
-  :aws_access_key_id        => ENV['EC2_ACCESS_KEY']
-})
-
-directory = connection.directories.create(
-  :key    => "minefold.worlds", # globally unique name
-  :public => false
-)
+directory = Storage.new.worlds
 
 # TODO: investigate streaming of this file
 file = directory.files.create(
