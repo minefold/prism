@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+require 'bundler/setup'
+Bundler.require :default, :backup
+
+ROOT = File.expand_path "../..", __FILE__
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'worlds'
+require 'fileutils'
+
+FileUtils.mkdir_p "#{ROOT}/backups"
+
+world_name = ARGV.shift
+
+world_archive = "#{ROOT}/backups/#{world_name}.tar.gz"
+
+# tar gz world
+Dir.chdir "#{ROOT}/worlds" do
+  `tar czf '#{world_archive}' '#{world_name}'`
+end
+
+connection = Fog::Storage.new({
+  :provider                 => 'AWS',
+  :aws_secret_access_key    => ENV['EC2_SECRET_KEY'],
+  :aws_access_key_id        => ENV['EC2_ACCESS_KEY']
+})
+
+directory = connection.directories.create(
+  :key    => "minefold.worlds", # globally unique name
+  :public => false
+)
+
+# TODO: investigate streaming of this file
+file = directory.files.create(
+  :key    => "#{world_name}.tar.gz",
+  :body   => File.open(world_archive),
+  :public => false
+)
+
+FileUtils.rm world_archive
