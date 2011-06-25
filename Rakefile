@@ -1,7 +1,6 @@
 $:.unshift File.join File.dirname(__FILE__), 'lib'
 
 require 'rake/clean'
-require 'resque/tasks'
 
 CLEAN.add 'mc/*.txt', 'mc/server.log*'
 CLOBBER.add 'mc/world'
@@ -17,13 +16,6 @@ CLOBBER.add 'data'
 desc "Get latest mc server"
 task :get_latest_server do
   exec 'curl -L http://www.minecraft.net/download/minecraft_server.jar -o mc/server.jar'
-end
-
-task "resque:setup" do
-  require 'bundler/setup'
-  Bundler.require :default, :backup
-  
-  require 'jobs'
 end
 
 # namespace :foreman do
