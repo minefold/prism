@@ -57,15 +57,15 @@ File.open(god_path, 'w') {|file| file.puts template.result }
 FileUtils.ln_s JAR, world_path unless File.exist?(File.join(world_path, 'server.jar'))
 
 def god_running?
-  `god status`
+  `bundle exec god status`
   $?.exitstatus == 0
 end
 
 def god_load_config config_file
   if god_running?
-    `god load #{config_file}`
+    `bundle exec god load #{config_file}`
   else
-    `god -c #{config_file}`
+    `bundle exec god -c #{config_file}`
   end
 end
 
@@ -75,7 +75,7 @@ File.open(server_log, "w") {|file| file.print }
 
 # start world
 god_load_config god_path
-`god start minecraft-#{world_name}`
+`bundle exec god start minecraft-#{world_name}`
 
 
 # wait for start

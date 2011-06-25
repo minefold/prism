@@ -7,5 +7,5 @@ world_name = ARGV.shift
 
 world = Worlds.running.find {|w| w[:name] == world_name }
 
-`god stop #{world[:god_name]}` if world
+`bundle exec god stop #{world[:god_name]}` if world
 
