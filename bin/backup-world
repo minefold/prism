@@ -16,7 +16,7 @@ FileUtils.touch world_archive
 # tar gz world
 puts "Archiving"
 Dir.chdir "#{ROOT}/worlds" do
-  `tar czf -exclude='server.jar' '#{world_archive}' '#{world_name}'`
+  `tar -czfx 'server.jar' '#{world_archive}' '#{world_name}'`
 end
 
 directory = Storage.new.worlds
