@@ -46,7 +46,7 @@ class Worlds < Array
     end
   end
   
-  def initialize worker, worlds
+  def initialize worker = nil, worlds = []
     worlds.each {|w| w.worker = worker; self << w }
   end
   
@@ -98,13 +98,16 @@ class Worlds < Array
     world.start
     
     # wait for start
-    Timeout::timeout(180) do
-      File::Tail::Logfile.open(server_log) do |log|
-        log.max_interval = 0.1
-        log.interval = 0.1
+    begin
+      Timeout::timeout(180) do
+        File::Tail::Logfile.open(server_log) do |log|
+          log.max_interval = 0.1
+          log.interval = 0.1
 
-        log.tail { |line| puts line; raise File::Tail::BreakException if line =~ /Done/ }
+          log.tail { |line| puts line; raise File::Tail::BreakException if line =~ /Done/ }
+        end
       end
+    rescue File::Tail::BreakException
     end
     
     world
