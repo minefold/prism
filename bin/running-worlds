@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+require 'bundler/setup'
+Bundler.require :default
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'worlds'
+
+puts Worlds.running.map {|w| "name: #{w[:name]}  port: #{w[:port]}" }

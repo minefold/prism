@@ -1,18 +1,12 @@
 source :rubygems
 
-gem 'eventmachine', '>= 1.0.0.beta.3'
-gem 'ffi'
-gem 'em-zmq', :require => 'eventmachine/zmq'
-
-gem 'colored'
+gem 'god'
+gem 'file-tail', :require => 'file/tail'
 
 group :proxy do
-  gem 'redis'
+  gem 'eventmachine' #, '>= 1.0.0.beta.3'
 end
 
-group :sauron do
-  gem 'redis'
-end
-
-group :foreman do
+group :backup do
+  gem 'fog', ">= 0.9.0"
 end

@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby
+require 'bundler/setup'
+Bundler.require :default
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'environment'
+require 'storage'
+
+world_name = ARGV.shift
+
+FileUtils.mkdir_p "#{ROOT}/backups"
+
+world_archive = "#{ROOT}/backups/#{world_name}.tar.gz"
+
+FileUtils.touch world_archive
+
+# tar gz world
+puts "Archiving"
+Dir.chdir "#{ROOT}/worlds" do
+  `tar czf -exclude='server.jar' '#{world_archive}' '#{world_name}'`
+end
+
+directory = Storage.new.worlds
+
+# TODO: investigate streaming of this file
+puts "Uploading"
+file = directory.files.create(
+  :key    => "#{world_name}.tar.gz",
+  :body   => File.open(world_archive),
+  :public => false
+)
+
+FileUtils.rm world_archive

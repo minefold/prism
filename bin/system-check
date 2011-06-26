@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+require 'bundler/setup'
+Bundler.require :default
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'worlds'
+require 'bytes'
+require 'number_helper'
+
+def disk_used_space path
+  `df -Pk #{path} |grep ^/ | awk '{print $3;}'`.
+    to_i * 1.kilobyte
+end
+
+def disk_free_space path
+  `df -Pk #{path} |grep ^/ | awk '{print $4;}'`.
+    to_i * 1.kilobyte
+end
+
+def ps_info pid, keyword
+  `ps -o #{keyword}= -p #{pid}`
+end
+
+include Helpers::NumberHelper
+
+worlds = Worlds.running.map do |w|
+  w[:memory_usage] = ps_info(w[:pid], "rss").to_i * 1.kilobyte
+  w[:cpu_usage] = ps_info(w[:pid], "%cpu").to_f
+  w
+end
+
+# p 
+puts "Worlds"
+worlds.each do |w|
+  puts "  #{w[:name].rjust(10)}:#{w[:port].ljust(6)}   #{number_to_human_size(w[:memory_usage]).rjust(10)}    #{w[:cpu_usage]}% CPU"
+end
+
+puts
+puts "Disk"
+puts "  Used: #{number_to_human_size(disk_used_space(WORLDS_ROOT))}"
+puts "  Free: #{number_to_human_size(disk_free_space(WORLDS_ROOT))}"

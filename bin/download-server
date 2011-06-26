@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+require 'fileutils'
+
+worlds_root = File.expand_path "../../worlds", __FILE__
+
+FileUtils.mkdir_p worlds_root
+
+`curl -L http://www.minecraft.net/download/minecraft_server.jar -o '#{worlds_root}/server.jar'`
