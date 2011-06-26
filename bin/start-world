@@ -17,7 +17,7 @@ JAR = "#{WORLDS}/server.jar"
 
 abort "Usage: start-world name" unless ARGV.length == 1
 
-`./bin/download-server` unless File.exists? JAR
+`#{BIN}/download-server` unless File.exists? JAR
 
 def server_properties name, port
   { "level-name"     => name,
