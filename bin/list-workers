@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+require 'bundler/setup'
+Bundler.require :default, :backup
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'minefold'
+
+# create a connection
+Workers.running.each do |worker|
+  puts "#{worker.instance_id}    #{worker.public_ip_address}"
+  worker.worlds.each do |world|
+    puts "    #{world.name}:#{world.port}"
+  end
+end

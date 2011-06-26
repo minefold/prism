@@ -7,10 +7,10 @@ end
 # TODO: make this stuff restful
 get "/worlds/create" do
   result = `#{BIN}/start-world #{params[:id]}`
-  if $?.exitstatus == 0
-    redirect "/"
-  else
+  if $?.exitstatus != 0
     result
+  else
+    redirect "/"
   end
 end
 
