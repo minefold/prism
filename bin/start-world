@@ -75,7 +75,7 @@ template = ERB.new File.read "#{LIB}/world.god.erb"
 File.open(god_path, 'w') {|file| file.puts template.result }
 
 # symlink server
-FileUtils.ln_s JAR, world_path unless File.exist?(File.join(world_path, 'server.jar'))
+FileUtils.ln_s JAR, world_path unless File.exist? JAR
 
 def god_running?
   `bundle exec god status`

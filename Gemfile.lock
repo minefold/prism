@@ -6,21 +6,24 @@ GEM
     excon (0.6.3)
     file-tail (1.0.5)
       spruz (>= 0.1.0)
-    fog (0.7.2)
+    fog (0.9.0)
       builder
-      excon (>= 0.6.1)
+      excon (~> 0.6.1)
       formatador (>= 0.1.3)
       json
       mime-types
-      net-ssh (>= 2.1.3)
+      net-scp (>= 1.0.4)
+      net-ssh (>= 2.1.4)
       nokogiri (>= 1.4.4)
       ruby-hmac
-    formatador (0.1.3)
+    formatador (0.1.4)
     god (0.11.0)
-    json (1.5.1)
+    json (1.5.3)
     mime-types (1.16)
+    net-scp (1.0.4)
+      net-ssh (>= 1.99.1)
     net-ssh (2.1.4)
-    nokogiri (1.4.4)
+    nokogiri (1.4.6)
     ruby-hmac (0.4.0)
     spruz (0.2.8)
 
@@ -30,5 +33,5 @@ PLATFORMS
 DEPENDENCIES
   eventmachine
   file-tail
-  fog
+  fog (>= 0.9.0)
   god

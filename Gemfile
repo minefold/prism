@@ -8,5 +8,5 @@ group :proxy do
 end
 
 group :backup do
-  gem 'fog'
+  gem 'fog', ">= 0.9.0"
 end
