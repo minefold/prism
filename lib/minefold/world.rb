@@ -22,24 +22,6 @@ class World
     }.map {|values| values.join('=')}.join("\n")
   end
   
-  def god_running?
-    `bundle exec god status`
-    $?.exitstatus == 0
-  end
-
-  def god_load_config config_file
-    if god_running?
-      `bundle exec god load #{config_file}`
-    else
-      `bundle exec god -c #{config_file}`
-    end
-  end
-  
-  def start
-    god_load_config god_path
-    `bundle exec god start minecraft-#{name}`
-  end
-  
   def path
     "#{WORLDS}/#{name}"
   end
