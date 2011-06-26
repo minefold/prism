@@ -90,7 +90,7 @@ module Client
     log.info(:proxy) { "#{@world_name}: #{CONNECTED_PLAYERS[@world_name].length} player(s)"}
     if CONNECTED_PLAYERS[@world_name].length == 0
       EventMachine.defer( proc { @worker.stop_world @world_name  }, proc { 
-        EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-worker #{@worker.instance_id}" 
+        # EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-worker #{@worker.instance_id}" 
       })
     end
   end
