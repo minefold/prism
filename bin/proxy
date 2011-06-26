@@ -85,6 +85,7 @@ module Client
   # unbinds quicker...
   def unbind
     log.info(:proxy) { "#{@username} unbound"}
+    CONNECTED_PLAYERS[@world_name] ||= []
     CONNECTED_PLAYERS[@world_name].delete @username
     log.info(:proxy) { "#{@world_name}: #{CONNECTED_PLAYERS[@world_name].length} player(s)"}
     if CONNECTED_PLAYERS[@world_name].length == 0
