@@ -39,6 +39,7 @@ class Workers
 
     server.ssh bootstrap_commands.join(" && ")
 
+    puts "Waiting for worker to respond"
     worker_url = "http://#{server.public_ip_address}:3000"
 
     Timeout::timeout(20) do
@@ -48,6 +49,8 @@ class Workers
     end
 
     puts "#{server.id} started at #{worker_url}"
+    puts "Server not responding...." if $?.exitstatus != 0
+    
     Worker.new server
   end
 end
