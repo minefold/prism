@@ -6,8 +6,8 @@ class Storage
   def initialize
     @connection = Fog::Storage.new({
       :provider                 => 'AWS',
-      :aws_secret_access_key    => ENV['EC2_SECRET_KEY'],
-      :aws_access_key_id        => ENV['EC2_ACCESS_KEY']
+      :aws_secret_access_key    => EC2_SECRET_KEY,
+      :aws_access_key_id        => EC2_ACCESS_KEY
     })
   end
   

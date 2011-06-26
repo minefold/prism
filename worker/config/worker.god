@@ -15,9 +15,6 @@ God.watch do |w|
   w.restart_grace = 10.seconds
   w.pid_file = "#{APP_ROOT}/tmp/unicorn.pid"
   
-  w.env = { 'EC2_SECRET_KEY' => ENV['EC2_SECRET_KEY'],
-            'EC2_ACCESS_KEY' => ENV['EC2_ACCESS_KEY'] }
-
   # Cleanup the pid file (this is needed for processes running as a daemon)
   w.behavior(:clean_pid_file)
 

@@ -6,9 +6,12 @@ end
 
 # TODO: make this stuff restful
 get "/worlds/create" do
-  content_type :json
-  `#{BIN}/start-world #{params[:id]}`
-  redirect "/"
+  result = `#{BIN}/start-world #{params[:id]}`
+  if $?.exitstatus == 0
+    redirect "/"
+  else
+    result
+  end
 end
 
 get "/worlds/:id" do
