@@ -63,7 +63,9 @@ class Worlds < Array
     
     res = Net::HTTP.start(uri.host, uri.port) {|http| http.get("/worlds/#{world_name}") }
     server_info = JSON.parse(res.body)
-    World.new server_info["name"], server_info["port"]
+    world = World.new server_info["name"], server_info["port"]
+    world.worker = worker
+    world
   end
   
   
