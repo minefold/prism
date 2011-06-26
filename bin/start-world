@@ -62,6 +62,9 @@ else
   puts "New world"
 end
 
+# symlink server
+FileUtils.ln_s JAR, world_path unless File.exist? "#{world_path}/server.jar"
+
 # get a port number to use
 port = Worlds.next_available_port
 
@@ -73,8 +76,6 @@ worlds_root = WORLDS
 template = ERB.new File.read "#{LIB}/world.god.erb"
 File.open(god_path, 'w') {|file| file.puts template.result }
 
-# symlink server
-FileUtils.ln_s JAR, world_path unless File.exist? JAR
 
 def god_running?
   `bundle exec god status`
