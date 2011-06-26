@@ -5,6 +5,7 @@ God.watch do |w|
   w.interval = 5.seconds # default
 
   w.start = "cd #{ROOT} && ./bin/proxy"
+  w.log = "#{ROOT}/proxy/log/proxy.log"
 
   # Cleanup the pid file (this is needed for processes running as a daemon)
   w.behavior(:clean_pid_file)
