@@ -39,11 +39,11 @@ module Client
       end
       
       ensure_world_started = proc do
-        worker = Workers.running.find {|worker| worker.worlds.any? {|world| world.name == @world_name } }
-        worker = Workers.start unless worker
+        @worker = Workers.running.find {|worker| worker.worlds.any? {|world| world.name == @world_name } }
+        @worker = Workers.start unless @worker
         
-        world = worker.worlds.find {|world| world.name == @world_name }
-        world = worker.worlds.start @world_name unless world
+        world = @worker.worlds.find {|world| world.name == @world_name }
+        world = @worker.worlds.start @world_name unless world
         world
       end
       
@@ -89,7 +89,7 @@ module Client
     CONNECTED_PLAYERS[@world_name].delete @username
     log.info(:proxy) { "#{@world_name}: #{CONNECTED_PLAYERS[@world_name].length} player(s)"}
     if CONNECTED_PLAYERS[@world_name].length == 0
-      EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-world #{@world_name}"
+      EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-worker #{@worker.instance_id}"
     end
   end
 
