@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby
+require 'bundler/setup'
+Bundler.require :default, :backup
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'environment'
+
+# create a connection
+connection = Fog::Compute.new({
+  :provider                 => 'AWS',
+  :aws_secret_access_key    => ENV['EC2_SECRET_KEY'],
+  :aws_access_key_id        => ENV['EC2_ACCESS_KEY']
+})
+
+puts "Starting vm"
+server = connection.servers.bootstrap(
+  :private_key_path => '~/.ssh/minefold-dave.pem', 
+  # :public_key_path => '~/.ssh/id_rsa.pub', 
+  :username => 'ubuntu',
+  :image_id => 'ami-a0b74cc9',
+  :groups => %W{default proxy},
+  :key_name => 'minefold-dave',
+  :flavor_id => 'm1.large'
+)
+
+puts "Waiting for ready"
+server.wait_for { ready? }
+
+puts server.ssh('pwd')
+puts server.ssh(['pwd', 'whoami'])
+
+# puts "Shutting down"
+# server.destroy

@@ -7,15 +7,13 @@ Bundler.require :default, :backup
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'worlds'
 require 'storage'
-
-ROOT = File.expand_path "../..", __FILE__
-worlds_root = File.expand_path "../../worlds", __FILE__
-LIB = File.expand_path "../../lib", __FILE__
-JAR = "#{worlds_root}/server.jar"
-
+require 'environment'
 require 'fileutils'
 require 'erb'
 require 'file/tail'
+
+LIB = "#{ROOT}/lib"
+JAR = "#{WORLDS}/server.jar"
 
 abort "Usage: start-world name" unless ARGV.length == 1
 
@@ -39,7 +37,7 @@ end
 
 world_name = ARGV.shift
 
-world_path = File.join worlds_root, world_name
+world_path = File.join WORLDS, world_name
 properties_path = File.join world_path, "server.properties"
 god_path = File.join world_path, "world.god"
 
@@ -57,7 +55,7 @@ if archived_world
   File.open(archive, "w") do |tar|
     tar.write archived_world.body
   end
-  Dir.chdir worlds_root do
+  Dir.chdir WORLDS do
     `tar -xzf '#{archive}'`
   end
 else
@@ -71,6 +69,7 @@ port = Worlds.next_available_port
 File.open(properties_path, 'w') {|file| file.puts server_properties(world_name, port)}
 
 # create world.god
+worlds_root = WORLDS
 template = ERB.new File.read "#{LIB}/world.god.erb"
 File.open(god_path, 'w') {|file| file.puts template.result }
 
