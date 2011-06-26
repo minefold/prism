@@ -6,9 +6,7 @@ require 'logger'
 require 'json'
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
-require 'worlds'
-
-ROOT = File.expand_path "../..", __FILE__
+require 'minefold'
 
 Thread.abort_on_exception = true
 
@@ -32,8 +30,7 @@ module Client
       @username = data[raw_offset..-1].
         force_encoding('UTF-16BE').encode('UTF-8')
       
-      @world_name = "alpha"
-      host = "0.0.0.0"
+      @world_name = "bigbird"
 
       log.info(:proxy) { "#{@username} connected, sending to #{@world_name}"}
       
@@ -41,19 +38,28 @@ module Client
         send_data [0].pack('C')
       end
       
-      start_deferrable = EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/start-world #{@world_name}"
-      start_deferrable.callback do
-        port = Worlds.running.find{|w| w[:name] == @world_name }[:port]
-        @server = EventMachine.connect(host, port, Server) do |server|
-          server.plexer = self
-          log.info(:proxy) { "#{@username} proxied to #{host}:#{port}"}
-        end
-        keepalive.cancel
-        @f_connection_established.succeed
-        CONNECTED_PLAYERS[@world_name] ||= []
-        CONNECTED_PLAYERS[@world_name] << @username
-        log.info(:proxy) { "#{@world_name}: #{CONNECTED_PLAYERS[@world_name].length} player(s)"}
+      ensure_world_started = proc do
+        @worker = Workers.running.find {|worker| worker.worlds.any? {|world| world.name == @world_name } }
+        @worker = Workers.start unless @worker
+        
+        world = @worker.worlds.find {|world| world.name == @world_name }
+        world = @worker.worlds.start @world_name unless world
+        world
       end
+      
+      EventMachine.defer( ensure_world_started, proc { |world| 
+          host = world.worker.public_ip_address
+          @server = EventMachine.connect(host, world.port, Server) do |server|
+            server.plexer = self
+            log.info(:proxy) { "#{@username} proxied to #{host}:#{world.port}"}
+          end
+          keepalive.cancel
+          @f_connection_established.succeed
+          CONNECTED_PLAYERS[@world_name] ||= []
+          CONNECTED_PLAYERS[@world_name] << @username
+          log.info(:proxy) { "#{@world_name}: #{CONNECTED_PLAYERS[@world_name].length} player(s)"}
+        
+        })
       
     end
 
@@ -79,10 +85,11 @@ module Client
   # unbinds quicker...
   def unbind
     log.info(:proxy) { "#{@username} unbound"}
+    CONNECTED_PLAYERS[@world_name] ||= []
     CONNECTED_PLAYERS[@world_name].delete @username
     log.info(:proxy) { "#{@world_name}: #{CONNECTED_PLAYERS[@world_name].length} player(s)"}
     if CONNECTED_PLAYERS[@world_name].length == 0
-      EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-world #{@world_name}"
+      EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-worker #{@worker.instance_id}"
     end
   end
 

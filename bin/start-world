@@ -2,108 +2,14 @@
 # encoding: UTF-8
 
 require 'bundler/setup'
-Bundler.require :default, :backup
+Bundler.require :default
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
-require 'worlds'
-require 'storage'
-require 'environment'
-require 'fileutils'
-require 'erb'
-require 'file/tail'
-
-LIB = "#{ROOT}/lib"
-JAR = "#{WORLDS}/server.jar"
+require 'minefold'
 
 abort "Usage: start-world name" unless ARGV.length == 1
-
-`./bin/download-server` unless File.exists? JAR
-
-def server_properties name, port
-  { "level-name"     => name,
-    "hellworld"      => false,
-    "spawn-monsters" => false,
-    "online-mode"    => true,
-    "spawn-animals"  => true,
-    "max-players"    => 64,
-    "server-ip"      => "0.0.0.0",
-    "pvp"            => true,
-    "level-seed"     => '',
-    "server-port"    => port,
-    "allow-flight"   => false,
-    "white-list"     => false
-  }.map {|values| values.join('=')}.join("\n")
-end
-
 world_name = ARGV.shift
-
-world_path = File.join WORLDS, world_name
-properties_path = File.join world_path, "server.properties"
-god_path = File.join world_path, "world.god"
 
 exit 0 if Worlds.running.any? {|w| w[:name] == world_name }
 
-# create world path if it aint there
-FileUtils.mkdir_p world_path
-
-# check s3 for world
-archived_world = Storage.new.worlds.files.get("#{world_name}.tar.gz")
-if archived_world
-  FileUtils.mkdir_p "#{ROOT}/backups"
-  archive = "#{ROOT}/backups/#{world_name}.tar.gz"
-  puts "Retrieved world"
-  File.open(archive, "w") do |tar|
-    tar.write archived_world.body
-  end
-  Dir.chdir WORLDS do
-    `tar -xzf '#{archive}'`
-  end
-else
-  puts "New world"
-end
-
-# symlink server
-FileUtils.ln_s JAR, world_path unless File.exist? "#{world_path}/server.jar"
-
-# get a port number to use
-port = Worlds.next_available_port
-
-# create server.properties
-File.open(properties_path, 'w') {|file| file.puts server_properties(world_name, port)}
-
-# create world.god
-worlds_root = WORLDS
-template = ERB.new File.read "#{LIB}/world.god.erb"
-File.open(god_path, 'w') {|file| file.puts template.result }
-
-
-def god_running?
-  `bundle exec god status`
-  $?.exitstatus == 0
-end
-
-def god_load_config config_file
-  if god_running?
-    `bundle exec god load #{config_file}`
-  else
-    `bundle exec god -c #{config_file}`
-  end
-end
-
-# clear server log
-server_log = File.join(world_path, "server.log")
-File.open(server_log, "w") {|file| file.print }
-
-# start world
-god_load_config god_path
-`bundle exec god start minecraft-#{world_name}`
-
-
-# wait for start
-File::Tail::Logfile.open(server_log) do |log|
-  log.max_interval = 0.1
-  log.interval = 0.1
-  
-  log.tail { |line| puts line; exit 0 if line =~ /Done/ }
-end
-
+Worlds.new.start world_name
