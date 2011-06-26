@@ -55,7 +55,7 @@ class Worlds < Array
     worlds.each {|w| w.worker = worker; self << w }
   end
   
-  def self.start world_name
+  def start world_name
     uri = URI.parse worker.url
     res = Net::HTTP.start(uri.host, uri.port) {|http| http.get("/worlds/create?id=#{world_name}") }
     server_info = JSON.parse(res.body)
