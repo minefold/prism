@@ -39,7 +39,20 @@ module Client
       end
       
       ensure_world_started = proc do
-        @worker = Workers.running.find {|worker| worker.worlds.any? {|world| world.name == @world_name } }
+        # find the worker running world
+        running_workers = Workers.running
+        @worker = running_workers.find  do |worker| 
+          worker.worlds.any? {|world| world.name == @world_name }
+        end
+        
+        # find an empty worker
+        unless @worker
+          @worker = running_workers.find do |worker| 
+            worker.worlds.count == 0
+          end
+        end
+
+        # otherwise start a new worker
         @worker = Workers.start unless @worker
         
         @world = @worker.worlds.find {|world| world.name == @world_name }
