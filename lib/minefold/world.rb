@@ -7,18 +7,24 @@ class World
   end
   
   def server_properties
-    { "level-name"     => name,
-      "hellworld"      => false,
-      "spawn-monsters" => false,
-      "online-mode"    => true,
-      "spawn-animals"  => true,
-      "max-players"    => 64,
-      "server-ip"      => "0.0.0.0",
-      "pvp"            => true,
-      "level-seed"     => '',
-      "server-port"    => port,
-      "allow-flight"   => false,
-      "white-list"     => false
+    { 
+      "allow-flight"     => false,
+      "allow-nether"     => true,
+      "hellworld"        => false,
+      "level-name"       => name,
+      "level-seed"       => '',
+      "max-players"      => 255,
+      "motd"             => "Welcome to minefold.com!"
+      "online-mode"      => true,
+      "pvp"              => true,
+      "server-ip"        => "0.0.0.0",
+      "server-port"      => port,
+      "spawn-animals"    => true,
+      "spawn-monsters"   => false,
+      "spawn-protection" => true,
+      "view-distance"    => 10,
+      "white-list"       => false
+      
     }.map {|values| values.join('=')}.join("\n")
   end
   
