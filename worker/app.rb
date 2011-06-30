@@ -16,7 +16,7 @@ end
 
 get "/worlds/:id" do
   content_type :json
-  Worlds.running.find{|w| w[:name] == params[:id] }.to_json
+  Worlds.running.find{|w| w[:id] == params[:id] }.to_json
 end
 
 get "/worlds/:id/destroy" do

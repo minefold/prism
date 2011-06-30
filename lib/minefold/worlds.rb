@@ -16,8 +16,8 @@ class Worlds < Array
     Dir["#{PIDS}/minecraft-*.pid"].map do |pid_file|
       pid = File.read(pid_file)
       pid_file =~ /minecraft-(\w+)/
-      world_name= $1
-      properties_file = "#{WORLDS}/#{world_name}/server.properties"
+      world_id = $1
+      properties_file = "#{WORLDS}/#{world_id}/server.properties"
       server_properties = File.read properties_file if File.exists? properties_file
       server_properties =~ /port\=(\d+)/
       port = $1
@@ -25,46 +25,46 @@ class Worlds < Array
       {
         pid_file: pid_file,
         pid: pid,
-        name: world_name,
+        id: world_id,
         running: process_running?(pid),
         port: port,
         god_name: "minecraft-#{world_name}"
       }
     end
   end
-  
+
   def self.running
     present.select {|w| w[:running] }
   end
-  
+
   def self.next_available_port
     running_world_with_highest_port = running.sort_by{|w| w[:port].to_i }.last
     if running_world_with_highest_port
-      running_world_with_highest_port[:port].to_i + 1 
+      running_world_with_highest_port[:port].to_i + 1
     else
       4000
     end
   end
-  
+
   def initialize worker = nil, worlds = []
     worlds.each {|w| w.worker = worker; self << w }
   end
-  
-  def start world_name
-    puts "Starting world #{world_name}"
+
+  def start world_id
+    puts "Starting world #{world_id}"
     `#{BIN}/download-server` unless File.exists? JAR
 
-    world_path = File.join WORLDS, world_name
+    world_path = File.join WORLDS, world_id
     properties_path = File.join world_path, "server.properties"
 
     # create world path if it aint there
     FileUtils.mkdir_p world_path
 
     # check s3 for world
-    archived_world = Storage.new.worlds.files.get("#{world_name}.tar.gz")
+    archived_world = Storage.new.worlds.files.get("#{world_id}.tar.gz")
     if archived_world
       FileUtils.mkdir_p "#{ROOT}/backups"
-      archive = "#{ROOT}/backups/#{world_name}.tar.gz"
+      archive = "#{ROOT}/backups/#{world_id}.tar.gz"
       puts "Retrieved world"
       File.open(archive, "w") do |tar|
         tar.write archived_world.body
@@ -81,8 +81,8 @@ class Worlds < Array
 
     # get a port number to use
     port = Worlds.next_available_port
-    
-    world = World.new world_name, port
+
+    world = World.new world_id, port
 
     # create server.properties
     File.open(properties_path, 'w') {|file| file.puts world.server_properties }
@@ -96,7 +96,7 @@ class Worlds < Array
     File.open(server_log, "w") {|file| file.print }
 
     world.start
-    
+
     # wait for start
     begin
       Timeout::timeout(180) do
@@ -109,7 +109,7 @@ class Worlds < Array
       end
     rescue File::Tail::BreakException
     end
-    
+
     world
   end
 end

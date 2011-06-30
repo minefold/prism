@@ -3,22 +3,24 @@ require 'json'
 require 'timeout'
 
 class Workers
-  def self.connection
-    @connection ||= Fog::Compute.new({
+  def self.cloud
+    @cloud ||= Fog::Compute.new({
       :provider                 => 'AWS',
       :aws_secret_access_key    => EC2_SECRET_KEY,
       :aws_access_key_id        => EC2_ACCESS_KEY
     })
   end
-  
+
   def self.running
-    connection.servers.select {|s| s.state == 'running' && s.tags["Name"] != "Proxy" }.map{|s| Worker.new s }
+    cloud.servers.
+      select {|s| s.state == 'running' && s.tags["Name"] != "Proxy" }.
+      map{|s| Worker.new s }
   end
-  
+
   def self.start
     puts "Starting worker"
     server = connection.servers.bootstrap(
-      :private_key_path => '~/.ssh/minefold-dave.pem', 
+      :private_key_path => '~/.ssh/minefold-dave.pem',
       :username => 'ubuntu',
       :image_id => 'ami-8ca358e5',
       :groups => %W{default proxy},
@@ -31,7 +33,7 @@ class Workers
 
     puts "Bootstrapping"
     bootstrap_commands = [
-      "cd ~/minefold", 
+      "cd ~/minefold",
       "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
       "bundle",
       "god -c ~/minefold/worker/config/worker.god"
@@ -50,7 +52,7 @@ class Workers
 
     puts "#{server.id} started at #{worker_url}"
     puts "Server not responding...." if $?.exitstatus != 0
-    
+
     Worker.new server
   end
 end
