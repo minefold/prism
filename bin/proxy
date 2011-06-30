@@ -41,7 +41,7 @@ module Client
       #       as logging/stats need to be different.
       unbind unless @user
 
-      @world = @user['world_id']
+      @world_id = @user['world_id']
 
       log.info(:proxy) { "#{@username} connected, sending to #{@world}"}
 
@@ -50,10 +50,24 @@ module Client
       end
 
       ensure_world_started = proc do
-        @worker = Workers.running.find {|worker| worker.worlds.any? {|world| world.id == @world } }
+        # find the worker running world
+        running_workers = Workers.running
+        @worker = running_workers.find  do |worker|
+          worker.worlds.any? {|world| world.id == @world_id }
+        end
+
+        # find an empty worker
+        unless @worker
+          @worker = running_workers.find do |worker|
+            worker.worlds.count == 0
+          end
+        end
+
+        # otherwise start a new worker
         @worker = Workers.start unless @worker
 
-        @worker.worlds.find {|world| world.id == @world } || @worker.worlds.start(@world)
+        @world = @worker.worlds.find {|world| world.name == @world_id } ||
+                   @worker.worlds.start(@world_id)
       end
 
       EventMachine.defer( ensure_world_started, proc { |world|
@@ -90,11 +104,13 @@ module Client
 
   def unbind
     log.info(:proxy) { "#{@username} unbound"}
-    CONNECTED_PLAYERS[@world_name] ||= []
-    CONNECTED_PLAYERS[@world_name].delete @username
-    log.info(:proxy) { "#{@world}: #{CONNECTED_PLAYERS[@world].length} player(s)"}
-    if CONNECTED_PLAYERS[@world].length == 0
-      EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-worker #{@worker.instance_id}"
+    CONNECTED_PLAYERS[@world_id] ||= []
+    CONNECTED_PLAYERS[@world_id].delete @username
+    log.info(:proxy) { "#{@world_id}: #{CONNECTED_PLAYERS[@world_id].length} player(s)"}
+    if CONNECTED_PLAYERS[@world_id].length == 0
+      EventMachine.defer( proc { @worker.stop_world @world_id  }, proc {
+        # EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-worker #{@worker.instance_id}"
+      })
     end
   end
 

@@ -5,18 +5,18 @@ Bundler.require :default
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 
-world = ARGV.shift
+world_id = ARGV.shift
 
 FileUtils.mkdir_p "#{ROOT}/backups"
 
-world_archive = "#{ROOT}/backups/#{world}.tar.gz"
+world_archive = "#{ROOT}/backups/#{world_id}.tar.gz"
 
 FileUtils.touch world_archive
 
 # tar gz world
 puts "Archiving"
 Dir.chdir "#{ROOT}/worlds" do
-  `tar czf -exclude='server.jar' '#{world_archive}' '#{world}'`
+  `tar -czf '#{world_archive}' '#{world_id}' --exclude='server.jar'`
 end
 
 directory = Storage.new.worlds
