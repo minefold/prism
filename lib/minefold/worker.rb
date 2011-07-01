@@ -21,7 +21,7 @@ class Worker
     uri = URI.parse url
     res = Net::HTTP.start(uri.host, uri.port) {|http| http.get('/') }
     server_info = JSON.parse res.body
-    Worlds.new self, server_info.map {|h| World.new h["name"], h["port"]}
+    Worlds.new self, server_info.map {|h| World.new h["id"], h["port"]}
   end
   
   def stop_world world_id
