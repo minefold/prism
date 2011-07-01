@@ -14,7 +14,7 @@ class World
       "level-name"       => name,
       "level-seed"       => '',
       "max-players"      => 255,
-      "motd"             => "Welcome to minefold.com!"
+      "motd"             => "Welcome to minefold.com!",
       "online-mode"      => true,
       "pvp"              => true,
       "server-ip"        => "0.0.0.0",
