@@ -33,15 +33,15 @@ module Client
         force_encoding('UTF-16BE').encode('UTF-8')
 
       # Lookup username from Mongo
-      @user = DB['users'].find_one(:username => @username)
+      # @user = DB['users'].find_one(:username => @username)
 
       # TODO: Untested, mongo may raise an error. Hopefully, instead it
       #       returns nil and the client connected is dropped.
       # TODO: Separate method for dropping a connection rather than unbinding
       #       as logging/stats need to be different.
-      unbind unless @user
+      # unbind unless @user
 
-      @world_id = @user['world_id']
+      @world_id = 'bigbird' #@user['world_id']
 
       log.info(:proxy) { "#{@username} connected, sending to #{@world}"}
 
