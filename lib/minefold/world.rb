@@ -13,7 +13,7 @@ class World
       "allow-flight"     => false,
       "allow-nether"     => true,
       "hellworld"        => false,
-      "level-name"       => name,
+      "level-name"       => id,
       "level-seed"       => '',
       "max-players"      => 255,
       "motd"             => "Welcome to minefold.com!",
