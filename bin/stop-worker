@@ -5,8 +5,7 @@ Bundler.require :default
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'environment'
 
-# create a connection
-connection = Fog::Compute.new({
+compute_cloud = Fog::Compute.new({
   :provider                 => 'AWS',
   :aws_secret_access_key    => EC2_SECRET_KEY,
   :aws_access_key_id        => EC2_ACCESS_KEY
@@ -15,7 +14,7 @@ connection = Fog::Compute.new({
 abort "Usage: stop-vm instance_id" unless ARGV.length == 1
 instance_id = ARGV.shift
 
-server = connection.servers.find {|s| s.id == instance_id }
+server = compute_cloud.servers.find {|s| s.id == instance_id }
 
 if server
   puts "Stopping #{instance_id}"

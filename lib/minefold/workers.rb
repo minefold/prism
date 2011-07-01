@@ -3,8 +3,8 @@ require 'json'
 require 'timeout'
 
 class Workers
-  def self.cloud
-    @cloud ||= Fog::Compute.new({
+  def self.compute_cloud
+    @compute_cloud ||= Fog::Compute.new({
       :provider                 => 'AWS',
       :aws_secret_access_key    => EC2_SECRET_KEY,
       :aws_access_key_id        => EC2_ACCESS_KEY
@@ -12,14 +12,14 @@ class Workers
   end
 
   def self.running
-    cloud.servers.
+    compute_cloud.servers.
       select {|s| s.state == 'running' && s.tags["Name"] != "Proxy" }.
       map{|s| Worker.new s }
   end
 
   def self.start
     puts "Starting worker"
-    server = connection.servers.bootstrap(
+    server = compute_cloud.servers.bootstrap(
       :private_key_path => '~/.ssh/minefold-dave.pem',
       :username => 'ubuntu',
       :image_id => 'ami-8ca358e5',

@@ -5,7 +5,6 @@ Bundler.require :default
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 
-# create a connection
 Workers.running.each do |worker|
   puts "#{worker.instance_id}    #{worker.public_ip_address}"
   worker.worlds.each do |world|
