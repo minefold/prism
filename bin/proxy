@@ -52,7 +52,7 @@ module Client
       ensure_world_started = proc do
         # find the worker running world
         running_workers = Workers.running
-        @worker = running_workers.find  do |worker|
+        @worker = running_workers.find do |worker|
           worker.worlds.any? {|world| world.id == @world_id }
         end
 
@@ -66,7 +66,7 @@ module Client
         # otherwise start a new worker
         @worker = Workers.start unless @worker
 
-        @world = @worker.worlds.find {|world| world.name == @world_id } ||
+        @world = @worker.worlds.find {|world| world.id == @world_id } ||
                    @worker.worlds.start(@world_id)
       end
 
