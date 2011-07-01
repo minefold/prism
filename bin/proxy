@@ -10,7 +10,7 @@ require 'minefold'
 
 Thread.abort_on_exception = true
 
-DB = Mongo::Connection.new()['minefold']
+# DB = Mongo::Connection.new()['minefold']
 
 CONNECTED_PLAYERS = {}
 
