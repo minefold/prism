@@ -31,7 +31,7 @@ class Worlds < Array
         id: world_id,
         running: process_running?(pid),
         port: port,
-        god_name: "minecraft-#{world_name}"
+        god_name: "minecraft-#{world_id}"
       }
     end
   end

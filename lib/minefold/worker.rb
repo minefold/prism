@@ -24,9 +24,9 @@ class Worker
     Worlds.new self, server_info.map {|h| World.new h["name"], h["port"]}
   end
   
-  def stop_world world_name
+  def stop_world world_id
     uri = URI.parse url
-    res = Net::HTTP.start(uri.host, uri.port) {|http| http.get("/worlds/#{world_name}/destroy") }
+    res = Net::HTTP.start(uri.host, uri.port) {|http| http.get("/worlds/#{world_id}/destroy") }
     res.body
   end
 end
