@@ -10,6 +10,8 @@ require 'minefold'
 
 Thread.abort_on_exception = true
 
+DB = Mongo::Connection.new()['minefold']
+
 CONNECTED_PLAYERS = {}
 
 module Client
@@ -29,38 +31,46 @@ module Client
       # Way to be different, dude.
       @username = data[raw_offset..-1].
         force_encoding('UTF-16BE').encode('UTF-8')
-      
-      @world_name = "bigbird"
 
-      log.info(:proxy) { "#{@username} connected, sending to #{@world_name}"}
-      
+      # Lookup username from Mongo
+      @user = DB['users'].find_one(:username => @username)
+
+      # TODO: Untested, mongo may raise an error. Hopefully, instead it
+      #       returns nil and the client connected is dropped.
+      # TODO: Separate method for dropping a connection rather than unbinding
+      #       as logging/stats need to be different.
+      unbind unless @user
+
+      @world_id = @user['world_id']
+
+      log.info(:proxy) { "#{@username} connected, sending to #{@world}"}
+
       keepalive = EventMachine::PeriodicTimer.new(1) do
         send_data [0].pack('C')
       end
-      
+
       ensure_world_started = proc do
         # find the worker running world
         running_workers = Workers.running
-        @worker = running_workers.find  do |worker| 
-          worker.worlds.any? {|world| world.name == @world_name }
+        @worker = running_workers.find  do |worker|
+          worker.worlds.any? {|world| world.id == @world_id }
         end
-        
+
         # find an empty worker
         unless @worker
-          @worker = running_workers.find do |worker| 
+          @worker = running_workers.find do |worker|
             worker.worlds.count == 0
           end
         end
 
         # otherwise start a new worker
         @worker = Workers.start unless @worker
-        
-        @world = @worker.worlds.find {|world| world.name == @world_name }
-        @world = @worker.worlds.start @world_name unless @world
-        @world
+
+        @world = @worker.worlds.find {|world| world.name == @world_id } ||
+                   @worker.worlds.start(@world_id)
       end
-      
-      EventMachine.defer( ensure_world_started, proc { |world| 
+
+      EventMachine.defer( ensure_world_started, proc { |world|
           host = world.worker.public_ip_address
           @server = EventMachine.connect(host, world.port, Server) do |server|
             server.plexer = self
@@ -68,12 +78,12 @@ module Client
           end
           keepalive.cancel
           @f_connection_established.succeed
-          CONNECTED_PLAYERS[@world_name] ||= []
-          CONNECTED_PLAYERS[@world_name] << @username
-          log.info(:proxy) { "#{@world_name}: #{CONNECTED_PLAYERS[@world_name].length} player(s)"}
-        
+          CONNECTED_PLAYERS[@world] ||= []
+          CONNECTED_PLAYERS[@world] << @username
+          log.info(:proxy) { "#{@world}: #{CONNECTED_PLAYERS[@world].length} player(s)"}
+
         })
-      
+
     end
 
     # TODO: We need to check their auth details when they send it over the
@@ -92,18 +102,14 @@ module Client
     @f_connection_established.callback { send_data data}
   end
 
-  # It seems like eventmachine is quite slow unbinding the connection. I tried
-  # closing it earlier by parsing the 0x255 message but it still exhibited the
-  # same behaviour. Strangely, if you cancel loading the world the connection
-  # unbinds quicker...
   def unbind
     log.info(:proxy) { "#{@username} unbound"}
-    CONNECTED_PLAYERS[@world_name] ||= []
-    CONNECTED_PLAYERS[@world_name].delete @username
-    log.info(:proxy) { "#{@world_name}: #{CONNECTED_PLAYERS[@world_name].length} player(s)"}
-    if CONNECTED_PLAYERS[@world_name].length == 0
-      EventMachine.defer( proc { @worker.stop_world @world_name  }, proc { 
-        # EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-worker #{@worker.instance_id}" 
+    CONNECTED_PLAYERS[@world_id] ||= []
+    CONNECTED_PLAYERS[@world_id].delete @username
+    log.info(:proxy) { "#{@world_id}: #{CONNECTED_PLAYERS[@world_id].length} player(s)"}
+    if CONNECTED_PLAYERS[@world_id].length == 0
+      EventMachine.defer( proc { @worker.stop_world @world_id  }, proc {
+        # EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-worker #{@worker.instance_id}"
       })
     end
   end
@@ -119,6 +125,10 @@ module Server
   def send data
     send_data data
   end
+
+  # TODO: Unbind method. If the server on our end goes down, create a shit
+  #       storm.
+
 end
 
 EventMachine.run do

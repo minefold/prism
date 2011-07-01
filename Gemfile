@@ -2,10 +2,12 @@ source :rubygems
 
 gem 'god'
 gem 'file-tail', :require => 'file/tail'
-gem 'fog', ">= 0.9.0"
+gem 'fog', '>= 0.9.0'
 
 group :proxy do
-  gem 'eventmachine' #, '>= 1.0.0.beta.3'
+  gem 'eventmachine'
+  gem 'mongo'
+  gem 'bson_ext'
 end
 
 group :worker do

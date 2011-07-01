@@ -5,11 +5,11 @@ Bundler.require :default
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 
-abort "Usage: start-vm world_name" unless ARGV.length == 1
-world_name = ARGV.shift
+abort "Usage: start-vm world_id" unless ARGV.length == 1
+world_id = ARGV.shift
 
-worker = Workers.start 
+worker = Workers.start
 
-puts "Starting world #{world_name}"
-puts `curl -L #{worker.url}/worlds/create?id=#{world_name}`
+puts "Starting world #{world_id}"
+puts `curl -L #{worker.url}/worlds/create?id=#{world_id}`
 

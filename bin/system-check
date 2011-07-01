@@ -29,10 +29,10 @@ worlds = Worlds.running.map do |w|
   w
 end
 
-# p 
+# p
 puts "Worlds"
 worlds.each do |w|
-  puts "  #{w[:name].rjust(10)}:#{w[:port].ljust(6)}   #{number_to_human_size(w[:memory_usage]).rjust(10)}    #{w[:cpu_usage]}% CPU"
+  puts "  #{w[:id].rjust(10)}:#{w[:port].ljust(6)}   #{number_to_human_size(w[:memory_usage]).rjust(10)}    #{w[:cpu_usage]}% CPU"
 end
 
 puts
