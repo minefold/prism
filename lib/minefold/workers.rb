@@ -27,6 +27,7 @@ class Workers
 
   def self.start
     if server = stopped.first
+      server = server.server
       puts "Starting existing worker..."
       server.start
     else
