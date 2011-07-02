@@ -43,3 +43,8 @@ Connect to a world
 
 Tell player to connect to us1.minefold.com
 
+
+# Failure scenarios
+
+Start Worker > can't connect to worker after x seconds
+

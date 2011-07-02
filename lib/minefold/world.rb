@@ -30,12 +30,5 @@ class World
     }.map {|values| values.join('=')}.join("\n")
   end
 
-  def path
-    "#{WORLDS}/#{id}"
-  end
-
-  def god_path
-    "#{path}/world.god"
-  end
 
 end

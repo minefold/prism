@@ -8,13 +8,11 @@ group :proxy do
   gem 'eventmachine'
   gem 'mongo'
   gem 'bson_ext'
+  gem 'eventmachine_httpserver', :require => 'evma_httpserver'
 end
 
 group :worker do
   gem 'sinatra'
-  gem 'unicorn'
-end
-
-group :development do
   gem 'sinatra-reloader', :require => 'sinatra/reloader'
+  gem 'unicorn'
 end

@@ -7,12 +7,24 @@ require 'json'
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
+require 'proxy_info_handler'
 
 Thread.abort_on_exception = true
 
 # DB = Mongo::Connection.new()['minefold']
 
 CONNECTED_PLAYERS = {}
+
+WORKERS = Workers.running.inject({}) do |workers, worker| 
+  workers[worker.instance_id] = {
+    id: worker.instance_id, 
+    state: :running, 
+    worlds: worker.worlds.inject({}) {|worlds, world| worlds[world.id] = :running}
+  }
+  workers
+end
+
+p WORKERS
 
 module Client
   attr_accessor :log
@@ -133,10 +145,15 @@ end
 
 EventMachine.run do
   logger = Logger.new(STDOUT)
+  EventMachine.epoll
 
+  # listen for minecraft connections
   EventMachine.start_server('0.0.0.0', 25565, Client) do |connection|
     connection.log = logger
   end
+  
+  # listen for http connections
+  EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler  )
 
   # Graceful shutdown
   %w(INT TERM).each do |sig|

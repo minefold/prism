@@ -7,7 +7,7 @@ Bundler.require :default
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 
-abort "Usage: start-world id" unless ARGV.length == 1
+abort "Usage: start-local-world id" unless ARGV.length == 1
 world_id = ARGV.shift
 
 exit 0 if Worlds.running.any? {|w| w[:id] == world_id }
@@ -17,24 +17,21 @@ def god_running?
   $?.exitstatus == 0
 end
 
-def god_load_config config_file
+def start config_file, world_id
   if god_running?
     `bundle exec god load #{config_file}`
+    `bundle exec god start minecraft-#{world_id}`
   else
     `bundle exec god -c #{config_file}`
   end
 end
 
-def start
-  god_load_config god_path
-  `bundle exec god start minecraft-#{name}`
-end
-
 puts "Starting world #{world_id}"
 `#{BIN}/download-server` unless File.exists? JAR
 
-world_path = File.join WORLDS, world_id
-properties_path = File.join world_path, "server.properties"
+world_path = "#{WORLDS}/#{world_id}"
+properties_path = "#{world_path}/server.properties"
+god_path = "#{world_path}/world.god"
 
 # create world path if it aint there
 FileUtils.mkdir_p world_path
@@ -68,17 +65,15 @@ File.open(properties_path, 'w') {|file| file.puts world.server_properties }
 
 # create world.god
 template = ERB.new File.read "#{LIB}/world.god.erb"
-File.open(world.god_path, 'w') {|file| file.puts template.result(binding) }
+File.open(god_path, 'w') {|file| file.puts template.result(binding) }
 
 # clear server log
 server_log = File.join(world_path, "server.log")
 File.open(server_log, "w") {|file| file.print }
 
-god_load_config world.god_path
-`bundle exec god start minecraft-#{world_id}`
+start god_path, world_id
 
 puts "Waiting for server start..."
-# wait for start
 begin
   Timeout::timeout(180) do
     File::Tail::Logfile.open(server_log) do |log|

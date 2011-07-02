@@ -6,7 +6,7 @@ end
 
 # TODO: make this stuff restful
 get "/worlds/create" do
-  result = `#{BIN}/start-world #{params[:id]}`
+  result = `#{BIN}/start-local-world #{params[:id]}`
   if $?.exitstatus != 0
     result
   else

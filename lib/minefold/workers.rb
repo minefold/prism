@@ -10,32 +10,45 @@ class Workers
       :aws_access_key_id        => EC2_ACCESS_KEY
     })
   end
-
-  def self.running
+  
+  def self.existing
     compute_cloud.servers.
-      select {|s| s.state == 'running' && s.tags["Name"] != "Proxy" }.
+      select {|s| s.tags["Name"] != "Proxy" }.
       map{|s| Worker.new s }
   end
 
+  def self.running
+    existing.select {|w| w.server.state == 'running' }
+  end
+  
+  def self.stopped
+    existing.select {|w| w.server.state == 'stopped' }
+  end
+
   def self.start
-    puts "Starting worker"
-    server = compute_cloud.servers.bootstrap(
-      :private_key_path => '~/.ssh/minefold-dave.pem',
-      :username => 'ubuntu',
-      :image_id => 'ami-8ca358e5',
-      :groups => %W{default proxy},
-      :key_name => 'minefold-dave',
-      :flavor_id => 'm1.large',
-      :tags => {"Name" => "worker"}
-    )
-
+    if server = stopped.first
+      puts "Starting existing worker..."
+      server.start
+    else
+      puts "Starting new worker..."
+      server = compute_cloud.servers.bootstrap(
+        :private_key_path => '~/.ssh/minefold-dave.pem',
+        :username => 'ubuntu',
+        :image_id => 'ami-8ca358e5',
+        :groups => %W{default proxy},
+        :key_name => 'minefold-dave',
+        :flavor_id => 'm1.large',
+        :tags => {"Name" => "worker"}
+      )
+    end
+    
     server.wait_for { ready? }
-
-    puts "Bootstrapping"
+    puts "#{server.id} started at #{worker_url}"
+    puts "Bootstrapping..."
     bootstrap_commands = [
       "cd ~/minefold",
       "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
-      "bundle",
+      "bundle install --without proxy development",
       "god -c ~/minefold/worker/config/worker.god"
     ]
 
@@ -50,7 +63,6 @@ class Workers
       end while $?.exitstatus != 0
     end
 
-    puts "#{server.id} started at #{worker_url}"
     puts "Server not responding...." if $?.exitstatus != 0
 
     Worker.new server
