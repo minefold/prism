@@ -44,6 +44,7 @@ class Workers
     end
     
     server.wait_for { ready? }
+    worker_url = "http://#{server.public_ip_address}:3000"
     puts "#{server.id} started at #{worker_url}"
     puts "Bootstrapping..."
     bootstrap_commands = [
@@ -56,7 +57,6 @@ class Workers
     server.ssh bootstrap_commands.join(" && ")
 
     puts "Waiting for worker to respond"
-    worker_url = "http://#{server.public_ip_address}:3000"
 
     Timeout::timeout(20) do
       begin

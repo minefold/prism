@@ -24,8 +24,6 @@ WORKERS = Workers.running.inject({}) do |workers, worker|
   workers
 end
 
-p WORKERS
-
 module Client
   attr_accessor :log
 
