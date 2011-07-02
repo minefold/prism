@@ -29,7 +29,10 @@ class Workers
     if server = stopped.first
       server = server.server
       puts "Starting existing worker..."
+
       server.start
+      server.wait_for { ready? }
+      server.private_key_path = '~/.ssh/minefold-dave.pem'
     else
       puts "Starting new worker..."
       server = compute_cloud.servers.bootstrap(
@@ -42,8 +45,7 @@ class Workers
         :tags => {"Name" => "worker"}
       )
     end
-    
-    server.wait_for { ready? }
+      
     worker_url = "http://#{server.public_ip_address}:3000"
     puts "#{server.id} started at #{worker_url}"
     puts "Bootstrapping..."
@@ -54,7 +56,7 @@ class Workers
       "god -c ~/minefold/worker/config/worker.god"
     ]
 
-    server.ssh bootstrap_commands.join(" && ")
+    server.ssh bootstrap_commands
 
     puts "Waiting for worker to respond"
 
