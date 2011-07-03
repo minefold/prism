@@ -76,6 +76,7 @@ module Client
         }
         EM.defer(start_world_proc, proc { |world|
           if world
+            supervised_worker.world = world
             @supervised_world.state = :running
             proxy_client
           else
@@ -88,27 +89,32 @@ module Client
       else
         # either the world or the worker is still starting up
         info "another player is starting world. Waiting..."
+        if @claimed_world
+          p @supervised_world
+        end
         EM.defer(proc { sleep(5) }, proc { get_world_running })
       end
     else
       # no world claimed, we need to claim one so nobody else tries to start this world
+      @claimed_world = true # debugging...
+      
       @supervised_world = SUPERVISED_WORLDS[@world_id] = SupervisedWorld.new(:stopped)
       # now get the world started
-      if @supervised_worker = unused_workers.first
+      if supervised_worker = unused_workers.first
         # There is a running worker that isn't being used so lets use it
-        info "using running worker #{@supervised_worker.worker.instance_id} to start world"
-        @supervised_world.supervised_worker = @supervised_worker
+        info "using running worker #{supervised_worker.worker.instance_id} to start world"
+        @supervised_world.supervised_worker = supervised_worker
         get_world_running
-      elsif @supervised_worker = SUPERVISED_WORKERS.values.find {|sw| sw.stopped? }
+      elsif supervised_worker = SUPERVISED_WORKERS.values.find {|sw| sw.stopped? }
         # There is a stopped worker, we'll use that
-        @supervised_world.supervised_worker = @supervised_worker
+        @supervised_world.supervised_worker = supervised_worker
         # set it's state to starting so nobody else tries to use it
-        @supervised_worker.state = :starting
+        supervised_worker.state = :starting
         
-        info "starting stopped worker #{@supervised_worker.worker.instance_id}"
-        EM.defer(proc { @supervised_worker.worker.start! }, proc { 
-          @supervised_worker.state = :running
-          info "started stopped worker #{@supervised_worker.worker.instance_id}"
+        info "starting stopped worker #{supervised_worker.worker.instance_id}"
+        EM.defer(proc { supervised_worker.worker.start! }, proc { 
+          supervised_worker.state = :running
+          info "started stopped worker #{supervised_worker.worker.instance_id}"
           get_world_running
         })
       else
@@ -116,7 +122,7 @@ module Client
         info "creating new worker"
         EM.defer(proc { Workers.create }, proc { |worker| 
           @supervised_world.supervised_worker = SUPERVISED_WORKERS[worker.instance_id] =
-            SupervisedWorker.new(worker, :running)
+            SupervisedWorker.new(:running, worker)
           info "created new worker #{worker.instance_id}"
           get_world_running
         })
@@ -137,7 +143,7 @@ module Client
     @f_connection_established.succeed
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id] << @username
-    info "#{CONNECTED_PLAYERS[@world].length} player(s)"
+    info "#{CONNECTED_PLAYERS[@world_id].length} player(s)"
   end
 
   def receive_data data
@@ -204,7 +210,7 @@ module Client
   def stop_current_world
     sworker = @supervised_world.supervised_worker
     if sworker && sworker.worker
-      @supervised_world.supervised_worker = nil
+      @supervised_world = nil
       SUPERVISED_WORKERS.delete sworker.worker.instance_id
       SUPERVISED_WORLDS.delete @world_id
     

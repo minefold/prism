@@ -26,7 +26,7 @@ class Workers
   end
 
   def self.create
-    Worker.new compute_cloud.servers.bootstrap(
+    worker = Worker.new compute_cloud.servers.bootstrap(
       :private_key_path => '~/.ssh/minefold-dave.pem',
       :username => 'ubuntu',
       :image_id => 'ami-8ca358e5',
@@ -35,6 +35,9 @@ class Workers
       :flavor_id => 'm1.large',
       :tags => {"Name" => "worker"}
     )
+    
+    worker.bootstrap
+    worker
   end
   
 end

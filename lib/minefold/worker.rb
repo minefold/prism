@@ -39,7 +39,8 @@ class Worker
     begin
       server_info = JSON.parse http_get("/")
       Worlds.new self, server_info.map {|h| World.new self, h["id"], h["port"]}
-    rescue Errno::ECONNREFUSED
+    rescue => e
+      puts e.inspect
       []
     end
   end
@@ -55,17 +56,6 @@ class Worker
     http_get "/worlds/#{world_id}/destroy"
   end
   
-  private
-  
-  def uri
-    @uri ||= URI.parse url
-  end
-  
-  def http_get path
-    res = Net::HTTP.start(uri.host, uri.port) {|http| http.get path }
-    res.body
-  end
-  
   def bootstrap
     log "Bootstrapping..."
 
@@ -76,7 +66,8 @@ class Worker
       "god -c ~/minefold/worker/config/worker.god"
     ]
 
-    server.ssh bootstrap_commands
+    results = server.ssh bootstrap_commands.join(" && ")
+    log results if results.any? {|r| r.status != 0 }
 
     log "Waiting for worker to respond"
 
@@ -89,7 +80,18 @@ class Worker
     log "Server not responding...." if $?.exitstatus != 0
   end
   
-  def wait_for_sshcur
+  private
+  
+  def uri
+    @uri ||= URI.parse url
+  end
+  
+  def http_get path
+    res = Net::HTTP.start(uri.host, uri.port) {|http| http.get path }
+    res.body
+  end
+  
+  def wait_for_ssh
     Timeout::timeout(60) do
       begin
         Timeout::timeout(8) do
