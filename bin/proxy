@@ -217,12 +217,12 @@ module Client
       EM.defer(proc { sworker.worker.stop_world @world_id}, proc {
         @supervised_world.state = :stopped
         
-        info "stopping worker #{sworker.worker.instance_id}"
-        @supervised_world = nil
-        SUPERVISED_WORKERS.delete sworker.worker.instance_id
-        SUPERVISED_WORLDS.delete @world_id
-        
-        EM.defer { sworker.worker.stop! }
+        # info "stopping worker #{sworker.worker.instance_id}"
+        # @supervised_world = nil
+        # SUPERVISED_WORKERS.delete sworker.worker.instance_id
+        # SUPERVISED_WORLDS.delete @world_id
+        # 
+        # EM.defer { sworker.worker.stop! }
       })
       
     end
