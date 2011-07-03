@@ -214,6 +214,7 @@ module Client
       info "stopping world"
       @supervised_world.state = :stopping
       EM.defer(proc { sworker.worker.stop_world @world_id}, proc {
+        info "world stopped"
         @supervised_world.state = :stopped
         
         # info "stopping worker #{sworker.worker.instance_id}"
