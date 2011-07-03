@@ -46,6 +46,7 @@ module Client
     # scenarios:
     #  World is running > connect
     #  World is starting > retry later
+    #  World is stopping (backing up) > retry later
     #  World is stopped, worker is starting > retry later
     #  World is stopped, worker is running > start world then connect
     
@@ -76,7 +77,7 @@ module Client
         }
         EM.defer(start_world_proc, proc { |world|
           if world
-            supervised_worker.world = world
+            @supervised_world.world = world
             @supervised_world.state = :running
             proxy_client
           else
@@ -209,12 +210,20 @@ module Client
   
   def stop_current_world
     sworker = @supervised_world.supervised_worker
-    if sworker && sworker.worker
-      @supervised_world = nil
-      SUPERVISED_WORKERS.delete sworker.worker.instance_id
-      SUPERVISED_WORLDS.delete @world_id
-    
-      EM.defer { sworker.worker.stop! }
+    if @supervised_world.state != :stopping && sworker && sworker.worker
+      info "stopping world"
+      @supervised_world.state = :stopping
+      EM.defer(proc { sworker.worker.stop_world @world_id}, proc {
+        @supervised_world.state = :stopped
+        
+        info "stopping worker #{sworker.worker.instance_id}"
+        @supervised_world = nil
+        SUPERVISED_WORKERS.delete sworker.worker.instance_id
+        SUPERVISED_WORLDS.delete @world_id
+        
+        EM.defer { sworker.worker.stop! }
+      })
+      
     end
   end
 

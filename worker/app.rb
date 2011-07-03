@@ -21,7 +21,7 @@ end
 
 get "/worlds/:id/destroy" do
   content_type :json
-  `#{BIN}/stop-world #{params[:id]}`
+  `#{BIN}/stop-local-world #{params[:id]}`
   redirect "/"
 end
 

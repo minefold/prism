@@ -5,7 +5,7 @@ Bundler.require :default
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 
-abort "Usage: stop-world id" unless ARGV.length == 1
+abort "Usage: stop-local-world id" unless ARGV.length == 1
 world_id = ARGV.shift
 
 # Stop world
@@ -21,7 +21,7 @@ exit 0 unless Dir.exists? "#{WORLDS}/#{world_id}"
 
 # backup world
 puts "Backing up"
-`bundle exec #{BIN}/backup-world #{world_id}`
+`bundle exec #{BIN}/backup-local-world #{world_id}`
 abort "Backup failed" if $?.exitstatus != 0
 
 # remove world

@@ -16,15 +16,21 @@ FileUtils.touch world_archive
 # tar gz world
 puts "Archiving"
 Dir.chdir "#{ROOT}/worlds" do
-  `tar -czf '#{world_archive}' '#{world_id}' --exclude='server.jar'`
+  puts `pwd`
+  command = "tar -czf '#{world_archive}' '#{world_id}' --exclude='server.jar'"
+  puts command
+  
+  result = `#{command}`
+  puts result unless $?.exitstatus == 0
 end
+abort "error" unless $?.exitstatus == 0
 
 directory = Storage.new.worlds
 
 # TODO: investigate streaming of this file
 puts "Uploading"
 file = directory.files.create(
-  :key    => "#{world}.tar.gz",
+  :key    => "#{world_id}.tar.gz",
   :body   => File.open(world_archive),
   :public => false
 )
