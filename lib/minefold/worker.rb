@@ -5,7 +5,7 @@ class Worker
   
   def initialize server
     @server = server
-    server.private_key_path = '~/.ssh/minefold-dave.pem'
+    server.private_key_path = SSH_PRIVAYE_KEY_PATH
   end
   
   def instance_id

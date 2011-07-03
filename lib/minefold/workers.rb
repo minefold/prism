@@ -27,7 +27,7 @@ class Workers
 
   def self.create
     worker = Worker.new compute_cloud.servers.bootstrap(
-      :private_key_path => '~/.ssh/minefold-dave.pem',
+      :private_key_path => SSH_PRIVAYE_KEY_PATH,
       :username => 'ubuntu',
       :image_id => 'ami-8ca358e5',
       :groups => %W{default proxy},
