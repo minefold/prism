@@ -17,16 +17,93 @@ class Worker
     "http://#{public_ip_address}:3000"
   end
   
+  def start!
+    if server.state == 'stopped'
+      server.start
+      server.wait_for { ready? }
+      server.private_key_path = '~/.ssh/minefold-dave.pem'
+      wait_for_ssh
+      bootstrap
+    end
+  end
+  
+  def stop!
+    server.stop
+  end
+  
   def worlds
-    uri = URI.parse url
-    res = Net::HTTP.start(uri.host, uri.port) {|http| http.get('/') }
-    server_info = JSON.parse res.body
-    Worlds.new self, server_info.map {|h| World.new h["id"], h["port"]}
+    return [] unless public_ip_address
+    
+    begin
+      server_info = JSON.parse http_get("/")
+      Worlds.new self, server_info.map {|h| World.new self, h["id"], h["port"]}
+    rescue Errno::ECONNREFUSED
+      []
+    end
+  end
+  
+  def start_world world_id
+    http_get "/worlds/create?id=#{world_id}"
+
+    server_info = JSON.parse http_get("/worlds/#{world_id}")
+    World.new self, server_info["id"], server_info["port"]
   end
   
   def stop_world world_id
-    uri = URI.parse url
-    res = Net::HTTP.start(uri.host, uri.port) {|http| http.get("/worlds/#{world_id}/destroy") }
+    http_get "/worlds/#{world_id}/destroy"
+  end
+  
+  private
+  
+  def uri
+    @uri ||= URI.parse url
+  end
+  
+  def http_get path
+    res = Net::HTTP.start(uri.host, uri.port) {|http| http.get path }
     res.body
   end
+  
+  def bootstrap
+    log "Bootstrapping..."
+
+    bootstrap_commands = [
+      "cd ~/minefold",
+      "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
+      "bundle install --without proxy development test",
+      "god -c ~/minefold/worker/config/worker.god"
+    ]
+
+    server.ssh bootstrap_commands
+
+    log "Waiting for worker to respond"
+
+    Timeout::timeout(20) do
+      begin
+        `curl -s #{url}`
+      end while $?.exitstatus != 0
+    end
+
+    log "Server not responding...." if $?.exitstatus != 0
+  end
+  
+  def wait_for_ssh
+    Timeout::timeout(60) do
+      begin
+        Timeout::timeout(8) do
+          server.ssh "pwd"
+        end
+      rescue Errno::ECONNREFUSED
+        sleep(2)
+        retry
+      rescue Net::SSH::AuthenticationFailed, Timeout::Error
+        retry
+      end
+    end
+  end
+  
+  def log message
+    puts "[#{instance_id}] #{message}"
+  end
+  
 end

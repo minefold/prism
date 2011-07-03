@@ -4,8 +4,7 @@ require 'file/tail'
 require 'net/http'
 require 'json'
 
-
-class Worlds < Array
+class LocalWorlds
   def self.process_running? pid
     begin
       Process.getpgid pid.to_i
@@ -48,25 +47,13 @@ class Worlds < Array
       4000
     end
   end
+end
 
+class Worlds < Array
   attr_reader :worker
 
   def initialize worker, worlds = []
     @worker = worker
-    worlds.each {|w| w.worker = worker; self << w }
+    worlds.each {|w| self << w }
   end
-
-  def start world_id
-    uri = URI.parse worker.url
-    res = Net::HTTP.start(uri.host, uri.port) {|http| http.get("/worlds/create?id=#{world_id}") }
-    res.body
-
-    res = Net::HTTP.start(uri.host, uri.port) {|http| http.get("/worlds/#{world_id}") }
-    server_info = JSON.parse(res.body)
-    world = World.new server_info["id"], server_info["port"]
-    world.worker = worker
-    world
-  end
-
-
 end

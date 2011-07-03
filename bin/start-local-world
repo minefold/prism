@@ -26,6 +26,28 @@ def start config_file, world_id
   end
 end
 
+def server_properties world_id, port
+  {
+    "allow-flight"     => false,
+    "allow-nether"     => true,
+    "hellworld"        => false,
+    "level-name"       => world_id,
+    "level-seed"       => '',
+    "max-players"      => 255,
+    "motd"             => "Welcome to minefold.com!",
+    "online-mode"      => true,
+    "pvp"              => true,
+    "server-ip"        => "0.0.0.0",
+    "server-port"      => port,
+    "spawn-animals"    => true,
+    "spawn-monsters"   => false,
+    "spawn-protection" => true,
+    "view-distance"    => 10,
+    "white-list"       => false
+
+  }.map {|values| values.join('=')}.join("\n")
+end
+
 puts "Starting world #{world_id}"
 `#{BIN}/download-server` unless File.exists? JAR
 
@@ -56,12 +78,10 @@ end
 FileUtils.ln_s JAR, world_path unless File.exist? "#{world_path}/server.jar"
 
 # get a port number to use
-port = Worlds.next_available_port
-
-world = World.new world_id, port
+port = LocalWorlds.next_available_port
 
 # create server.properties
-File.open(properties_path, 'w') {|file| file.puts world.server_properties }
+File.open(properties_path, 'w') {|file| file.puts server_properties(world_id, port) }
 
 # create world.god
 template = ERB.new File.read "#{LIB}/world.god.erb"

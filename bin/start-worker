@@ -8,7 +8,7 @@ require 'minefold'
 abort "Usage: start-vm world_id" unless ARGV.length == 1
 world_id = ARGV.shift
 
-worker = Workers.start
+worker = Workers.create
 
 puts "Starting world #{world_id}"
 puts `curl -L #{worker.url}/worlds/create?id=#{world_id}`

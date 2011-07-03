@@ -8,32 +8,141 @@ require 'json'
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'proxy_info_handler'
+require 'sauron'
 
 Thread.abort_on_exception = true
 
 # DB = Mongo::Connection.new()['minefold']
 
 CONNECTED_PLAYERS = {}
+SUPERVISED_WORKERS = {}
+SUPERVISED_WORLDS = {}
 
-WORKERS = Workers.running.inject({}) do |workers, worker| 
-  workers[worker.instance_id] = {
-    id: worker.instance_id, 
-    state: :running, 
-    worlds: worker.worlds.inject({}) {|worlds, world| worlds[world.id] = :running}
-  }
-  workers
+def worker_in_use? sworker
+  SUPERVISED_WORLDS.values.any? {|sworld| sworld.supervised_worker == sworker  }
+end
+
+def unused_workers
+  SUPERVISED_WORKERS.values.select{|sworker| sworker.running? }.
+                            reject{|sworker| worker_in_use? sworker }
 end
 
 module Client
-  attr_accessor :log
+  attr_accessor :logger
 
   def post_init
     @f_connection_established = EM::DefaultDeferrable.new
+  end
+  
+  def info message
+    logger.info(:proxy) { "[#{@username||''}@#{@world_id||''}] #{message}" }
+  end
+
+  def warn message
+    logger.warn(:proxy) { message }
+  end
+  
+  def get_world_running
+    # scenarios:
+    #  World is running > connect
+    #  World is starting > retry later
+    #  World is stopped, worker is starting > retry later
+    #  World is stopped, worker is running > start world then connect
+    
+    #  World not claimed, running worker with no world available > start world then connect
+    #  World not claimed, stopped worker available > start worker then retry
+    #  World not claimed, no worker available > create new worker then connect
+    
+    #  Start world on instance failed > stop instance then retry
+    
+    @supervised_world ||= SUPERVISED_WORLDS[@world_id]
+    
+    if @supervised_world
+      if @supervised_world.running?
+        proxy_client
+      elsif @supervised_world.state == :stopped && @supervised_world.running_worker?
+        # we need to start the world on this worker
+        instance_id = @supervised_world.supervised_worker.worker.instance_id
+        
+        @supervised_world.state = :starting
+        info "starting world on #{instance_id}"
+        start_world_proc = proc { 
+          begin
+            @supervised_world.supervised_worker.worker.start_world @world_id 
+          rescue
+            nil
+          end
+        }
+        EM.defer(start_world_proc, proc { |world|
+          if world
+            @supervised_world.state = :running
+            proxy_client
+          else
+            # world couldn't be started so stop this worker and we'll try again
+            info "start world failed on #{instance_id}. Stopping instance"
+            stop_current_world
+            get_world_running
+          end
+        })
+      else
+        # either the world or the worker is still starting up
+        info "another player is starting world. Waiting..."
+        EM.defer(proc { sleep(5) }, proc { get_world_running })
+      end
+    else
+      # no world claimed, we need to claim one so nobody else tries to start this world
+      @supervised_world = SUPERVISED_WORLDS[@world_id] = SupervisedWorld.new(:stopped)
+      # now get the world started
+      if @supervised_worker = unused_workers.first
+        # There is a running worker that isn't being used so lets use it
+        info "using running worker #{@supervised_worker.worker.instance_id} to start world"
+        @supervised_world.supervised_worker = @supervised_worker
+        get_world_running
+      elsif @supervised_worker = SUPERVISED_WORKERS.values.find {|sw| sw.stopped? }
+        # There is a stopped worker, we'll use that
+        @supervised_world.supervised_worker = @supervised_worker
+        # set it's state to starting so nobody else tries to use it
+        @supervised_worker.state = :starting
+        
+        info "starting stopped worker #{@supervised_worker.worker.instance_id}"
+        EM.defer(proc { @supervised_worker.worker.start! }, proc { 
+          @supervised_worker.state = :running
+          info "started stopped worker #{@supervised_worker.worker.instance_id}"
+          get_world_running
+        })
+      else
+        # no worker available so we'll create a new one
+        info "creating new worker"
+        EM.defer(proc { Workers.create }, proc { |worker| 
+          @supervised_world.supervised_worker = SUPERVISED_WORKERS[worker.instance_id] =
+            SupervisedWorker.new(worker, :running)
+          info "created new worker #{worker.instance_id}"
+          get_world_running
+        })
+      end
+    end
+    
+    
+  end
+  
+  def proxy_client
+    host = @supervised_world.supervised_worker.worker.public_ip_address
+    port = @supervised_world.world.port
+    @server = EventMachine.connect(host, port, Server) do |server|
+      server.plexer = self
+      info "proxied to #{host}:#{port}"
+    end
+    @keepalive.cancel if @keepalive
+    @f_connection_established.succeed
+    CONNECTED_PLAYERS[@world_id] ||= []
+    CONNECTED_PLAYERS[@world_id] << @username
+    info "#{CONNECTED_PLAYERS[@world].length} player(s)"
   end
 
   def receive_data data
     raw = data.unpack('CN*')
     if raw[0] == 0x02
+      
       # 1 byte for type and 2 bytes for the string length
       raw_offset = 1 + 2
 
@@ -52,48 +161,18 @@ module Client
       # unbind unless @user
 
       @world_id = 'bigbird' #@user['world_id']
-
-      log.info(:proxy) { "#{@username} connected, sending to #{@world}"}
-
-      keepalive = EventMachine::PeriodicTimer.new(1) do
-        send_data [0].pack('C')
-      end
-
-      ensure_world_started = proc do
-        # find the worker running world
-        running_workers = Workers.running
-        @worker = running_workers.find do |worker|
-          worker.worlds.any? {|world| world.id == @world_id }
+      info "connected"
+      
+      @supervised_world ||= SUPERVISED_WORLDS[@world_id]
+      
+      if @supervised_world && @supervised_world.running?
+        proxy_client
+      else
+        @keepalive = EventMachine::PeriodicTimer.new(5) do
+          send_data [0].pack('C')
         end
-
-        # find an empty worker
-        unless @worker
-          @worker = running_workers.find do |worker|
-            worker.worlds.count == 0
-          end
-        end
-
-        # otherwise start a new worker
-        @worker = Workers.start unless @worker
-
-        @world = @worker.worlds.find {|world| world.id == @world_id } ||
-                   @worker.worlds.start(@world_id)
+        get_world_running
       end
-
-      EventMachine.defer( ensure_world_started, proc { |world|
-          host = world.worker.public_ip_address
-          @server = EventMachine.connect(host, world.port, Server) do |server|
-            server.plexer = self
-            log.info(:proxy) { "#{@username} proxied to #{host}:#{world.port}"}
-          end
-          keepalive.cancel
-          @f_connection_established.succeed
-          CONNECTED_PLAYERS[@world] ||= []
-          CONNECTED_PLAYERS[@world] << @username
-          log.info(:proxy) { "#{@world}: #{CONNECTED_PLAYERS[@world].length} player(s)"}
-
-        })
-
     end
 
     # TODO: We need to check their auth details when they send it over the
@@ -103,7 +182,7 @@ module Client
         @server.send data
       else
         close_connection
-        log.warn(:proxy) { 'unable to connect'}
+        warn 'unable to connect'
       end
     end
   end
@@ -113,15 +192,21 @@ module Client
   end
 
   def unbind
-    log.info(:proxy) { "#{@username} unbound"}
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id].delete @username
-    log.info(:proxy) { "#{@world_id}: #{CONNECTED_PLAYERS[@world_id].length} player(s)"}
+    info "client disconnected. #{CONNECTED_PLAYERS[@world_id].length} player(s) in world"
     if CONNECTED_PLAYERS[@world_id].length == 0
-      EventMachine.defer( proc { @worker.stop_world @world_id  }, proc {
-        # EventMachine::DeferrableChildProcess.open "#{ROOT}/bin/stop-worker #{@worker.instance_id}"
-      })
+      stop_current_world
     end
+  end
+  
+  def stop_current_world
+    sworker = @supervised_world.supervised_worker
+    @supervised_world.supervised_worker = nil
+    SUPERVISED_WORKERS.delete instance_id
+    SUPERVISED_WORLDS.delete @world_id
+    
+    EM.defer { sworker.worker.stop! }
   end
 
 end
@@ -144,10 +229,20 @@ end
 EventMachine.run do
   logger = Logger.new(STDOUT)
   EventMachine.epoll
+  
+  logger.info(:proxy) { 'collecting initial state'}
+  Workers.existing.each do |worker|
+    supervised_worker = SUPERVISED_WORKERS[worker.instance_id] = SupervisedWorker.new(worker.server.state.to_sym, worker)
 
+    worker.worlds.each do |world| 
+      # TODO: figure out the state of this world
+      SUPERVISED_WORLDS[world.id] = SupervisedWorld.new :running, supervised_worker, world
+    end
+  end
+  
   # listen for minecraft connections
   EventMachine.start_server('0.0.0.0', 25565, Client) do |connection|
-    connection.log = logger
+    connection.logger = logger
   end
   
   # listen for http connections

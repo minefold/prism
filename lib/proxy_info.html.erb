@@ -6,9 +6,9 @@
 <body>
   <h1>Workers</h1>
   <ul>
-    <% WORKERS.each do |worker| %>
+    <% WORKERS.each do |id, worker| %>
     <li>
-      <%= worker[:id] %>
+      <%= id %>
       <%= worker[:state] %>
       <ul>
         <% worker[:worlds].each do |world| %>

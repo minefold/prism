@@ -5,10 +5,19 @@ class ProxyInfoHandler  < EventMachine::Connection
     resp = EventMachine::DelegatedHttpResponse.new( self )
  
     operation = proc do
-      template = ERB.new File.read "#{LIB}/proxy_info.html.erb"
+      begin
+        template = ERB.new File.read "#{LIB}/proxy_info.html.erb"
       
-      resp.status = 200
-      resp.content = template.result(binding)
+        resp.status = 200
+        resp.content = template.result(binding)
+      rescue => e
+        resp.status = 500
+        resp.content = <<-EOS 
+          <html><head><title>Error</title></head>
+          <body><pre>#{e.message}\n#{e.backtrace.join("\n")}
+          </pre></body></html>
+          EOS
+      end
     end
  
     callback = proc do |res|
