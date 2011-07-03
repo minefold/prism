@@ -89,7 +89,7 @@ class Worker
     log "Server not responding...." if $?.exitstatus != 0
   end
   
-  def wait_for_ssh
+  def wait_for_sshcur
     Timeout::timeout(60) do
       begin
         Timeout::timeout(8) do

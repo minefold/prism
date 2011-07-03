@@ -69,7 +69,8 @@ module Client
         start_world_proc = proc { 
           begin
             @supervised_world.supervised_worker.worker.start_world @world_id 
-          rescue
+          rescue => e
+            warn "Start world error: #{e.message}\n#{e.backtrace.join("\n")}"
             nil
           end
         }
@@ -202,11 +203,13 @@ module Client
   
   def stop_current_world
     sworker = @supervised_world.supervised_worker
-    @supervised_world.supervised_worker = nil
-    SUPERVISED_WORKERS.delete sworker.worker.instance_id
-    SUPERVISED_WORLDS.delete @world_id
+    if sworker && sworker.worker
+      @supervised_world.supervised_worker = nil
+      SUPERVISED_WORKERS.delete sworker.worker.instance_id
+      SUPERVISED_WORLDS.delete @world_id
     
-    EM.defer { sworker.worker.stop! }
+      EM.defer { sworker.worker.stop! }
+    end
   end
 
 end

@@ -10,7 +10,7 @@ require 'minefold'
 abort "Usage: start-local-world id" unless ARGV.length == 1
 world_id = ARGV.shift
 
-exit 0 if Worlds.running.any? {|w| w[:id] == world_id }
+exit 0 if LocalWorlds.running.any? {|w| w[:id] == world_id }
 
 def god_running?
   `bundle exec god status`

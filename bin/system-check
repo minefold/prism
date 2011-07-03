@@ -23,7 +23,7 @@ end
 
 include Helpers::NumberHelper
 
-worlds = Worlds.running.map do |w|
+worlds = LocalWorlds.running.map do |w|
   w[:memory_usage] = ps_info(w[:pid], "rss").to_i * 1.kilobyte
   w[:cpu_usage] = ps_info(w[:pid], "%cpu").to_f
   w

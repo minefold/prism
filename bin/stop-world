@@ -9,11 +9,11 @@ abort "Usage: stop-world id" unless ARGV.length == 1
 world_id = ARGV.shift
 
 # Stop world
-world = Worlds.running.find {|w| w[:id] == world_id }
+world = LocalWorlds.running.find {|w| w[:id] == world_id }
 `bundle exec god stop #{world[:god_name]}` if world
 
 puts "Waiting for world to stop"
-while Worlds.running.any? {|w| w[:id] == world_id } do
+while LocalWorlds.running.any? {|w| w[:id] == world_id } do
 end
 puts "Done"
 
