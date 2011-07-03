@@ -1,3 +1,5 @@
+require 'net/ssh'
+
 class Worker
   attr_reader :server
   

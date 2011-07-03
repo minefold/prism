@@ -203,7 +203,7 @@ module Client
   def stop_current_world
     sworker = @supervised_world.supervised_worker
     @supervised_world.supervised_worker = nil
-    SUPERVISED_WORKERS.delete instance_id
+    SUPERVISED_WORKERS.delete sworker.worker.instance_id
     SUPERVISED_WORLDS.delete @world_id
     
     EM.defer { sworker.worker.stop! }
