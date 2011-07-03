@@ -31,7 +31,6 @@ class Workers
       :username => 'ubuntu',
       :image_id => 'ami-8ca358e5',
       :groups => %W{default proxy},
-      :key_name => 'minefold-dave',
       :flavor_id => 'm1.large',
       :tags => {"Name" => "worker"}
     )

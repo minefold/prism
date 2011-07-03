@@ -90,15 +90,10 @@ module Client
       else
         # either the world or the worker is still starting up
         info "another player is starting world. Waiting..."
-        if @claimed_world
-          p @supervised_world
-        end
-        EM.defer(proc { sleep(5) }, proc { get_world_running })
+        @wait_for_world ||= EventMachine::PeriodicTimer.new(5) { get_world_running }
       end
     else
       # no world claimed, we need to claim one so nobody else tries to start this world
-      @claimed_world = true # debugging...
-      
       @supervised_world = SUPERVISED_WORLDS[@world_id] = SupervisedWorld.new(:stopped)
       # now get the world started
       if supervised_worker = unused_workers.first
@@ -142,9 +137,10 @@ module Client
       info "proxied to #{host}:#{port}"
     end
     @keepalive.cancel if @keepalive
+    @wait_for_world.cancel if @wait_for_world
     @f_connection_established.succeed
     CONNECTED_PLAYERS[@world_id] ||= []
-    CONNECTED_PLAYERS[@world_id] << @username
+    CONNECTED_PLAYERS[@world_id] << @username unless CONNECTED_PLAYERS[@world_id].include? @username
     info "#{CONNECTED_PLAYERS[@world_id].length} player(s)"
   end
 
@@ -204,6 +200,9 @@ module Client
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id].delete @username
     info "client disconnected. #{CONNECTED_PLAYERS[@world_id].length} player(s) in world"
+    @keepalive.cancel if @keepalive
+    @wait_for_world.cancel if @wait_for_world
+    
     if CONNECTED_PLAYERS[@world_id].length == 0
       stop_current_world
     end

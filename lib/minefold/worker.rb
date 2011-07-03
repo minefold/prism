@@ -5,6 +5,7 @@ class Worker
   
   def initialize server
     @server = server
+    server.private_key_path = '~/.ssh/minefold-dave.pem'
   end
   
   def instance_id
@@ -23,7 +24,6 @@ class Worker
     if server.state == 'stopped'
       server.start
       server.wait_for { ready? }
-      server.private_key_path = '~/.ssh/minefold-dave.pem'
       wait_for_ssh
       bootstrap
     end
