@@ -45,6 +45,14 @@ class Worker
     end
   end
   
+  def uptime
+    if server.state == 'running'
+      result = server.ssh("uptime").first.stdout.split(/up |,/)[1]  # These are backticks,upper left key on my keyboard
+      hours, minutes = result.split(':').map{|r| r.to_i }
+      hours * 60 * 60 + minutes * 60
+    end
+  end
+  
   def start_world world_id
     http_get "/worlds/create?id=#{world_id}"
 

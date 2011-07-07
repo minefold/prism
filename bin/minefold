@@ -7,11 +7,20 @@ require 'minefold'
 require 'cli'
 
 def usage
-  puts "minefold <args>"
-  puts "  player:[username]"
-  puts "  player:[username] add-minutes:[amount]"
-  puts ""
-  puts "  world:[world_id]"
+  puts <<-EOS
+    usage: minefold <args>
+      
+      player:[username]
+      player:[username] add-minutes:[amount]
+  
+      proxy tail-log
+  
+      world:[world_id]
+  
+      workers
+      
+      worker:[instance_id]
+EOS
 end
 
 abort usage unless ARGV.any?
@@ -33,6 +42,12 @@ when 'player'
   PlayerCommand.new resource_id
 when 'world'
   WorldCommand.new resource_id
+when 'worker'
+  WorkerCommand.new resource_id
+when 'workers'
+  WorkersCommand.new
+when 'proxy'
+  ProxyCommand.new
 else
   abort usage
 end
