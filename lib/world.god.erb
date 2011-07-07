@@ -19,7 +19,7 @@ God.watch do |w|
   w.group = "minecraft"
   w.name = "chatty-<%= world_id %>"
   w.interval = 3.seconds
-  w.start = "<%= BIN %>/chatty <%= world_id %>"
+  w.start = "bundle exec <%= BIN %>/chatty <%= world_id %>"
   w.log = "<%= LOG_PATH %>/chatty-<%= world_id %>.log"
   w.start_grace = 1.seconds
   
