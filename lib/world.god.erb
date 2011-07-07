@@ -1,12 +1,27 @@
-SERVER_ROOT = '<%= WORLDS %>'
-
 God.watch do |w|
   w.group = "minecraft"
   w.name = "minecraft-<%= world_id %>"
   w.interval = 3.seconds
-  w.dir = File.join SERVER_ROOT, "<%= world_id %>"
+  w.dir = "<%= WORLDS %>/<%= world_id %>"
   w.start = "java -Xmx1024M -Xms1024M -jar server.jar nogui"
   w.start_grace = 10.seconds
+  
+  w.behavior(:clean_pid_file)
+
+  w.start_if do |start|
+    start.condition(:process_running) do |c|
+      c.running = false
+    end
+  end
+end
+
+God.watch do |w|
+  w.group = "minecraft"
+  w.name = "chatty-<%= world_id %>"
+  w.interval = 3.seconds
+  w.start = "<%= BIN %>/chatty <%= world_id %>"
+  w.log = "<%= LOG_PATH %>/chatty-<%= world_id %>.log"
+  w.start_grace = 1.seconds
   
   w.behavior(:clean_pid_file)
 

@@ -2,10 +2,10 @@ ROOT = File.expand_path '../../', File.dirname(__FILE__)
 
 God.watch do |w|
   w.name = "proxy"
-  w.interval = 5.seconds # default
+  w.interval = 5.seconds
 
   w.start = "bundle exec #{ROOT}/bin/proxy"
-  w.log = "#{ROOT}/proxy/log/proxy.log"
+  w.log = "#{ROOT}/log/proxy.log"
   w.dir = ROOT
 
   # Cleanup the pid file (this is needed for processes running as a daemon)

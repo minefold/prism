@@ -1,0 +1,46 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+Bundler.require :default, :chatty
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'environment'
+require 'time'
+
+abort "Usage: start-vm world_id" unless ARGV.length == 1
+world_id = ARGV.shift
+server_log = "#{WORLDS}/#{world_id}/server.log"
+
+class LogLine
+  attr_reader :line, :timestamp, :level, :message, :chat_user, :chat_message
+  
+  def initialize line
+    @line = line
+    line =~ /(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\s\[(\w+)\]\s(.*)/
+    @timestamp = Time.parse $1
+    @level = $2
+    @message = $3
+    
+    message =~ /\<(\w+)\> (.*)/
+    @chat_user = $1
+    @chat_message = $2
+  end
+end
+
+EM.run do
+  DB_CONNECTION = Mongo::Connection.from_uri(ENV['MONGOHQ_URL'])
+  db_name = 'minefold'
+  if DB_CONNECTION.auths.any?
+    db_name = DB_CONNECTION.auths.first['db_name']
+  end
+  DB = DB_CONNECTION[db_name]
+  
+  worlds_collection = DB['worlds']
+  
+  EventMachine::file_tail server_log do |filetail, l|
+    line = LogLine.new l
+    result = worlds_collection.update({"_id" => BSON::ObjectId(world_id)}, {"$push" => {"chat_messages" => { created_at:line.timestamp, username:line.chat_user, message:line.chat_message } }})
+    puts "[#{result}] #{line.timestamp} [#{line.chat_user}] #{line.chat_message}"
+    
+  end
+end

@@ -21,3 +21,9 @@ group :test do
   gem 'rspec', '~> 2.6.0'
   gem "ZenTest", "~> 4.4.2"
 end
+
+group :chatty do
+  gem 'eventmachine'
+  gem 'eventmachine-tail', '~> 0.6.1'
+  gem 'mongo'
+end
