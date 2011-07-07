@@ -40,8 +40,9 @@ EM.run do
   
   EventMachine::file_tail server_log do |filetail, l|
     line = LogLine.new l
-    result = worlds_collection.update({"_id" => BSON::ObjectId(world_id)}, {"$push" => {"chat_messages" => { created_at:line.timestamp, username:line.chat_user, message:line.chat_message } }})
-    puts "[#{result}] #{line.timestamp} [#{line.chat_user}] #{line.chat_message}"
-    
+    if l.chat_user
+      result = worlds_collection.update({"_id" => BSON::ObjectId(world_id)}, {"$push" => {"chat_messages" => { created_at:line.timestamp, username:line.chat_user, message:line.chat_message } }})
+      puts "[#{result}] #{line.timestamp} [#{line.chat_user}] #{line.chat_message}"
+    end
   end
 end

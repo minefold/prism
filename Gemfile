@@ -28,3 +28,9 @@ group :chatty do
   gem 'mongo'
   gem 'bson_ext'
 end
+
+group :cli do
+  gem 'mongo'
+  gem 'bson_ext'
+  gem 'hirb'
+end

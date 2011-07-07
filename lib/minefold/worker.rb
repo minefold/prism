@@ -62,7 +62,7 @@ class Worker
     bootstrap_commands = [
       "cd ~/minefold",
       "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
-      "bundle install --without proxy development test",
+      "bundle install --without proxy development test cli",
       "god -c ~/minefold/worker/config/worker.god"
     ]
 

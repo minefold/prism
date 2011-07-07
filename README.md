@@ -48,3 +48,8 @@ Tell player to connect to us1.minefold.com
 
 Start Worker > can't connect to worker after x seconds
 
+
+BILLING
+
+Players have credit which is counted in minutes of play
+proxy deducts credit every 5 minutes and on disconnection

@@ -144,6 +144,11 @@ module Client
     @keepalive.cancel if @keepalive
     @wait_for_world.cancel if @wait_for_world
     @f_connection_established.succeed
+    
+    @credit_muncher = EventMachine::PeriodicTimer.new(60) do
+      deduct_minutes 1
+    end
+    
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id] << @username unless CONNECTED_PLAYERS[@world_id].include? @username
     info "#{CONNECTED_PLAYERS[@world_id].length} player(s)"
@@ -173,9 +178,14 @@ module Client
         return close_connection
       end
       
-      @world_id = @user['world_id']
+      unless @user['minutes_remaining'] > 0
+        info "no credit remaining"
+        return close_connection
+      end
       
-      info "connected"
+      @user_id, @world_id = @user['_id'], @user['world_id']
+      
+      info "connected. #{@user['minutes_remaining']} minutes remaining"
       
       @supervised_world ||= SUPERVISED_WORLDS[@world_id]
       
@@ -188,7 +198,7 @@ module Client
         get_world_running
       end
     end
-
+    
     # TODO: We need to check their auth details when they send it over the
     # wire somebody might be spoofing a username to get free access
     @f_connection_established.callback do
@@ -205,19 +215,6 @@ module Client
     @f_connection_established.callback { send_data data}
   end
 
-  def unbind
-    super
-    CONNECTED_PLAYERS[@world_id] ||= []
-    CONNECTED_PLAYERS[@world_id].delete @username
-    info "client disconnected. #{CONNECTED_PLAYERS[@world_id].length} player(s) in world"
-    @keepalive.cancel if @keepalive
-    @wait_for_world.cancel if @wait_for_world
-    
-    if CONNECTED_PLAYERS[@world_id].length == 0
-      stop_current_world
-    end
-  end
-  
   def stop_current_world
     return unless @supervised_world && @supervised_world.supervised_worker
     
@@ -239,7 +236,44 @@ module Client
       
     end
   end
+  
+  def deduct_minutes amount
+    EM.defer do
+      user = DB['users'].find_and_modify({ 
+                    query: {"_id"  => @user_id},
+                    update:{"$inc" => {"minutes_remaining"=>-amount }}
+                  })
 
+      if user['minutes_remaining'] <= amount
+        EM.next_tick do
+          info "disconnecting. 0 minutes remaining"
+          close_connection
+        end
+      end
+    end
+  end
+  
+  # sometimes crashes the client...
+  # def send_chat_message message
+  #   
+  #   data = [0x03].pack('C')
+  #   data << [message.size, message.encode('UTF-16BE')].pack("na*")
+  #   send_data data
+  # end
+  
+  def unbind
+    CONNECTED_PLAYERS[@world_id] ||= []
+    CONNECTED_PLAYERS[@world_id].delete @username
+    info "client disconnected. #{CONNECTED_PLAYERS[@world_id].length} player(s) in world"
+    
+    @keepalive.cancel if @keepalive
+    @wait_for_world.cancel if @wait_for_world
+    @credit_muncher.cancel if @credit_muncher
+    
+    if CONNECTED_PLAYERS[@world_id].length == 0
+      stop_current_world
+    end
+  end
 end
 
 module Server
