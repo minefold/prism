@@ -18,6 +18,7 @@ end
 God.watch do |w|
   w.group = "minecraft"
   w.name = "chatty-<%= world_id %>"
+  w.env = { 'MONGOHQ_URL' => '<%= MONGOHQ_URL %>'}
   w.interval = 3.seconds
   w.start = "bundle exec <%= BIN %>/chatty <%= world_id %>"
   w.dir = "<%= ROOT %>"

@@ -28,6 +28,7 @@ class LogLine
 end
 
 EM.run do
+  puts "Mongo: #{ENV['MONGOHQ_URL']}"
   DB_CONNECTION = Mongo::Connection.from_uri(ENV['MONGOHQ_URL'])
   db_name = 'minefold'
   if DB_CONNECTION.auths.any?
