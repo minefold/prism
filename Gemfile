@@ -26,4 +26,5 @@ group :chatty do
   gem 'eventmachine'
   gem 'eventmachine-tail', '~> 0.6.1'
   gem 'mongo'
+  gem 'bson_ext'
 end
