@@ -12,17 +12,17 @@ world_id = ARGV.shift
 server_log = "#{WORLDS}/#{world_id}/server.log"
 
 class LogLine
-  attr_reader :line, :timestamp, :level, :message, :chat_user, :chat_message
-  
+  attr_reader :line, :timestamp, :level, :message, :username, :chat_message
+
   def initialize line
     @line = line
     line =~ /(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\s\[(\w+)\]\s(.*)/
     @timestamp = Time.parse $1
     @level = $2
     @message = $3
-    
+
     message =~ /\<(\w+)\> (.*)/
-    @chat_user = $1
+    @usename = $1
     @chat_message = $2
   end
 end
@@ -35,14 +35,25 @@ EM.run do
     db_name = DB_CONNECTION.auths.first['db_name']
   end
   DB = DB_CONNECTION[db_name]
-  
-  worlds_collection = DB['worlds']
-  
+
+  users_collection = DB['users']
+  wall_items_collection = DB['wall_items']
+
   EventMachine::file_tail server_log do |filetail, l|
     line = LogLine.new l
     if l.chat_user
-      result = worlds_collection.update({"_id" => BSON::ObjectId(world_id)}, {"$push" => {"chat_messages" => { created_at:line.timestamp, username:line.chat_user, message:line.chat_message } }})
-      puts "[#{result}] #{line.timestamp} [#{line.chat_user}] #{line.chat_message}"
+      # TODO: WHAT IF THE USER DOESN'T EXIST?
+      user = users_collection.find({'username' => l.chat_user}).first
+
+      result = worlds_collection.insert(
+        '_type' => 'ChatMessage',
+        'message' => line.chat_message,
+        'user_id' => user['_id'],
+        'username' => line.username,
+        'created_at' => line.timestamp,
+        'updated_at' => line.timestamp
+      )
+      puts "[#{result}] #{line.timestamp} [#{line.username}] #{line.chat_message}"
     end
   end
 end
