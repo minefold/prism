@@ -15,9 +15,11 @@ Thread.abort_on_exception = true
 abort "Need to set MONGOHQ_URL" unless ENV['MONGOHQ_URL']
 
 DB_CONNECTION = Mongo::Connection.from_uri(ENV['MONGOHQ_URL'])
-db_name = DB_CONNECTION.auths.first['db_name']
+db_name = 'minefold'
+if DB_CONNECTION.auths.any?
+  db_name = DB_CONNECTION.auths.first['db_name']
+end
 DB = DB_CONNECTION[db_name]
-
 
 CONNECTED_PLAYERS = {}
 SUPERVISED_WORKERS = {}
@@ -178,14 +180,14 @@ module Client
         return close_connection
       end
       
-      unless @user['minutes_remaining'] > 0
+      unless @user['credits'] > 0
         info "no credit remaining"
         return close_connection
       end
       
-      @user_id, @world_id = @user['_id'], @user['world_id']
+      @user_id, @world_id = @user['_id'].to_s, @user['world_id'].to_s
       
-      info "connected. #{@user['minutes_remaining']} minutes remaining"
+      info "connected. #{@user['credits']} credits remaining"
       
       @supervised_world ||= SUPERVISED_WORLDS[@world_id]
       
@@ -241,10 +243,10 @@ module Client
     EM.defer do
       user = DB['users'].find_and_modify({ 
                     query: {"_id"  => @user_id},
-                    update:{"$inc" => {"minutes_remaining"=>-amount }}
+                    update:{"$inc" => {"credits"=>-amount }}
                   })
 
-      if user['minutes_remaining'] <= amount
+      if user['credits'] <= amount
         EM.next_tick do
           info "disconnecting. 0 minutes remaining"
           close_connection
@@ -311,7 +313,7 @@ EventMachine.run do
   end
   
   # listen for http connections
-  EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler  )
+  EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
 
   # Graceful shutdown
   %w(INT TERM).each do |sig|
