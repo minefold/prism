@@ -6,6 +6,7 @@ Bundler.require :default
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
+require 'erb'
 
 abort "Usage: start-local-world id" unless ARGV.length == 1
 world_id = ARGV.shift

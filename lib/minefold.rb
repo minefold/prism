@@ -1,4 +1,5 @@
 require 'environment'
+require 'minefold/local_worlds'
 require 'minefold/storage'
 require 'minefold/workers'
 require 'minefold/worker'
