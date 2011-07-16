@@ -1,5 +1,5 @@
 God.watch do |w|
-  w.group = "minecraft"
+  w.group = "<%= world_id %>"
   w.name = "minecraft-<%= world_id %>"
   w.interval = 3.seconds
   w.dir = "<%= WORLDS %>/<%= world_id %>"
@@ -17,7 +17,7 @@ God.watch do |w|
 end
 
 God.watch do |w|
-  w.group = "minecraft"
+  w.group = "<%= world_id %>"
   w.name = "chatty-<%= world_id %>"
   w.env = { 'MONGOHQ_URL' => '<%= MONGOHQ_URL %>'}
   w.interval = 3.seconds

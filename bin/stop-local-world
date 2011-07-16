@@ -10,7 +10,7 @@ world_id = ARGV.shift
 
 # Stop world
 world = LocalWorlds.running.find {|w| w[:id] == world_id }
-`bundle exec god stop #{world[:god_name]}` if world
+`bundle exec god stop #{world_id}` if world
 
 puts "Waiting for world to stop"
 while LocalWorlds.running.any? {|w| w[:id] == world_id } do

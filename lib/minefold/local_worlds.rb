@@ -23,8 +23,7 @@ class LocalWorlds
         pid: pid,
         id: world_id,
         running: process_running?(pid),
-        port: port,
-        god_name: "minecraft-#{world_id}"
+        port: port
       }
     end
   end
