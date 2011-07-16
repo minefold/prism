@@ -33,6 +33,7 @@ EM.run do
   users_collection = DB['users']
   wall_items_collection = DB['wall_items']
 
+  puts "online tailing:#{server_log}"
   EventMachine::file_tail server_log do |filetail, l|
     line = LogLine.new l
     if l.chat_user
