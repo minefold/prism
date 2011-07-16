@@ -29,7 +29,7 @@ class Workers
     worker = Worker.new compute_cloud.servers.bootstrap(
       :private_key_path => SSH_PRIVATE_KEY_PATH,
       :username => 'ubuntu',
-      :image_id => 'ami-3cb14b55',
+      :image_id => 'ami-153afe7c',
       :groups => %W{default proxy},
       :flavor_id => 'm1.large',
       :tags => {"Name" => "worker"}
