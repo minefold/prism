@@ -4,7 +4,7 @@ require 'bundler/setup'
 Bundler.require :default, :chatty
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
-require 'environment'
+require 'minefold'
 require 'time'
 
 abort "Usage: start-vm world_id" unless ARGV.length == 1
