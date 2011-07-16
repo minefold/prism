@@ -5,6 +5,7 @@ God.watch do |w|
   w.dir = "<%= WORLDS %>/<%= world_id %>"
   w.start = "java -Xmx1024M -Xms1024M -jar server.jar nogui"
   w.start_grace = 10.seconds
+  w.log_cmd = '/usr/bin/logger -t "<%= world_id %>:server"'
   
   w.behavior(:clean_pid_file)
 
@@ -22,7 +23,7 @@ God.watch do |w|
   w.interval = 3.seconds
   w.start = "bundle exec <%= BIN %>/chatty <%= world_id %>"
   w.dir = "<%= ROOT %>"
-  w.log = "<%= LOG_PATH %>/chatty-<%= world_id %>.log"
+  w.log_cmd = '/usr/bin/logger -t "<%= world_id %>:chatty"'
   w.start_grace = 1.seconds
   
   w.behavior(:clean_pid_file)

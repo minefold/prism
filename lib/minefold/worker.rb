@@ -71,7 +71,7 @@ class Worker
       "cd ~/minefold",
       "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
       "bundle install --without proxy development test cli",
-      "god -c ~/minefold/worker/config/worker.god"
+      "god -c ~/minefold/worker/config/worker.god --no-syslog"
     ]
 
     results = server.ssh bootstrap_commands.join(" && ")
