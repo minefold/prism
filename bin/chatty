@@ -12,7 +12,7 @@ world_id = ARGV.shift
 server_log = "#{WORLDS}/#{world_id}/server.log"
 
 class LogLine
-  attr_reader :line, :timestamp, :level, :message, :username, :chat_message
+  attr_reader :line, :timestamp, :level, :message, :chat_user, :chat_message
 
   def initialize line
     @line = line
@@ -22,7 +22,7 @@ class LogLine
     @message = $3
 
     message =~ /\<(\w+)\> (.*)/
-    @usename = $1
+    @chat_user = $1
     @chat_message = $2
   end
 end
@@ -36,9 +36,9 @@ EM.run do
   puts "online tailing:#{server_log}"
   EventMachine::file_tail server_log do |filetail, l|
     line = LogLine.new l
-    if l.chat_user
+    if line.chat_user
       # TODO: WHAT IF THE USER DOESN'T EXIST?
-      user = users_collection.find({'username' => l.chat_user}).first
+      user = users_collection.find({'username' => line.chat_user}).first
 
       result = worlds_collection.insert(
         '_type' => 'ChatMessage',
@@ -48,7 +48,7 @@ EM.run do
         'created_at' => line.timestamp,
         'updated_at' => line.timestamp
       )
-      puts "[#{result}] #{line.timestamp} [#{line.username}] #{line.chat_message}"
+      puts "[#{result}] #{line.timestamp} [#{line.chat_user}] #{line.chat_message}"
     end
   end
 end
