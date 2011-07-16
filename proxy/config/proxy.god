@@ -5,7 +5,7 @@ God.watch do |w|
   w.interval = 5.seconds
 
   w.start = "bundle exec #{ROOT}/bin/proxy"
-  w.log_cmd = = '/usr/bin/logger -t proxy'
+  w.log_cmd = '/usr/bin/logger -t proxy'
   w.dir = ROOT
 
   # Cleanup the pid file (this is needed for processes running as a daemon)
