@@ -27,7 +27,7 @@ class Workers
 
   def self.create
     worker = Worker.new compute_cloud.servers.bootstrap(
-      :private_key_path => SSH_PRIVAYE_KEY_PATH,
+      :private_key_path => SSH_PRIVATE_KEY_PATH,
       :username => 'ubuntu',
       :image_id => 'ami-3cb14b55',
       :groups => %W{default proxy},

@@ -12,4 +12,4 @@ EC2_SECRET_KEY="4VI8OqUBN6LSDP6cAWXUo0FM1L/uURRGIGyQCxvq"
 EC2_ACCESS_KEY="AKIAJPN5IJVEBB2QE35A"
 MONGOHQ_URL="mongodb://heroku:os304dfe5d3tbkn3r1ko8j@staff.mongohq.com:10002/app578527"
 
-SSH_PRIVAYE_KEY_PATH="#{ROOT}/.ssh/minefold.pem"
+SSH_PRIVATE_KEY_PATH="#{ROOT}/.ssh/minefold.pem"

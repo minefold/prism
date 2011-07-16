@@ -28,12 +28,7 @@ abort usage unless ARGV.any?
 args = ARGV.clone
 args = ARGV.map {|a| a.split(':') }
 
-DB_CONNECTION = Mongo::Connection.from_uri(ENV['MONGOHQ_URL'])
-db_name = 'minefold'
-if DB_CONNECTION.auths.any?
-  db_name = DB_CONNECTION.auths.first['db_name']
-end
-DB = DB_CONNECTION[db_name]
+DB = MinefoldDb.connection
 
 resource_name, resource_id = args.shift
 

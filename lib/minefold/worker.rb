@@ -5,7 +5,7 @@ class Worker
   
   def initialize server
     @server = server
-    server.private_key_path = SSH_PRIVAYE_KEY_PATH
+    server.private_key_path = SSH_PRIVATE_KEY_PATH
   end
   
   def instance_id

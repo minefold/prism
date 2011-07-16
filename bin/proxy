@@ -5,20 +5,14 @@ Bundler.require :default, :proxy
 require 'json'
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'environment'
 require 'minefold'
 require 'proxy_info_handler'
 require 'sauron'
 
 Thread.abort_on_exception = true
 
-abort "Need to set MONGOHQ_URL" unless ENV['MONGOHQ_URL']
-
-DB_CONNECTION = Mongo::Connection.from_uri(ENV['MONGOHQ_URL'])
-db_name = 'minefold'
-if DB_CONNECTION.auths.any?
-  db_name = DB_CONNECTION.auths.first['db_name']
-end
-DB = DB_CONNECTION[db_name]
+DB = MinefoldDb.connection
 
 CONNECTED_PLAYERS = {}
 SUPERVISED_WORKERS = {}
