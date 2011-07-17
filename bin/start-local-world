@@ -21,7 +21,7 @@ end
 def start config_file, world_id
   if god_running?
     `bundle exec god load #{config_file}`
-    `bundle exec god start minecraft-#{world_id}`
+    `bundle exec god start #{world_id}`
   else
     `bundle exec god -c #{config_file}`
   end
