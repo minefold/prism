@@ -7,6 +7,8 @@ $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'time'
 
+STDOUT.sync = true
+
 abort "Usage: start-vm world_id" unless ARGV.length == 1
 world_id = ARGV.shift
 server_log = "#{WORLDS}/#{world_id}/server.log"
