@@ -11,5 +11,6 @@ PIDS = "#{ENV['HOME']}/.god/pids"
 EC2_SECRET_KEY="4VI8OqUBN6LSDP6cAWXUo0FM1L/uURRGIGyQCxvq"
 EC2_ACCESS_KEY="AKIAJPN5IJVEBB2QE35A"
 MONGOHQ_URL="mongodb://heroku:os304dfe5d3tbkn3r1ko8j@staff.mongohq.com:10002/app578527"
+REDISTOGO_URL="redis://redistogo:9b5f916f86dd29f26ca4af54c3f8f768@catfish.redistogo.com:9527/"
 
 SSH_PRIVATE_KEY_PATH="#{ROOT}/.ssh/minefold.pem"
