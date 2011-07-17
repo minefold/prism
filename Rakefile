@@ -9,6 +9,7 @@ RSpec::Core::RakeTask.new do |t|
   t.pattern = 'spec/**/*_spec.rb'
 end
 
+require 'resque'
 require 'resque/tasks'
 
 task "resque:setup" do
