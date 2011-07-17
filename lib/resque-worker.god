@@ -2,6 +2,8 @@ root = File.expand_path '../', File.dirname(__FILE__)
 redistogo_url = ENV['REDISTOGO_URL'] || "redis://redistogo:9b5f916f86dd29f26ca4af54c3f8f768@catfish.redistogo.com:9527/"
 num_workers = 1
 
+God.pid_file_directory = "#{ENV['HOME']}/.god/pids"
+
 num_workers.times do |num|
   God.watch do |w|
     w.dir      = "#{root}"
