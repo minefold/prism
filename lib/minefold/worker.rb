@@ -76,7 +76,7 @@ class Worker
     log "Bootstrapping..."
 
     bootstrap_commands = [
-      "rm /home/ubuntu/.god/pids/*",
+      "sudo rm -f /home/ubuntu/.god/pids/*",
       "cd ~/minefold",
       "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
       "bundle install --without proxy development test cli",
