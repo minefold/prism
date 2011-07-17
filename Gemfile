@@ -9,6 +9,7 @@ group :proxy do
   gem 'mongo'
   gem 'bson_ext'
   gem 'eventmachine_httpserver', :require => 'evma_httpserver'
+  gem 'resque'
 end
 
 group :worker do

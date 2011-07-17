@@ -20,6 +20,8 @@ def usage
       workers
       
       worker:[instance_id]
+      worker:[instance_id] stop
+      worker:[instance_id] terminate
 EOS
 end
 

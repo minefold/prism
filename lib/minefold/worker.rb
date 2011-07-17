@@ -45,7 +45,7 @@ class Worker
     end
   end
   
-  def uptime
+  def uptime_minutes
     if server.state == 'running'
       uptime_message = server.ssh("uptime").first.stdout
       result = uptime_message.split(/up |,/)[1]  # These are backticks,upper left key on my keyboard
@@ -57,7 +57,7 @@ class Worker
       else
         hours, minutes = result.split(':').map{|r| r.to_i }
       end
-      hours * 60 * 60 + minutes * 60
+      hours * 60 + minutes
     end
   end
   

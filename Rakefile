@@ -12,7 +12,8 @@ end
 require 'resque/tasks'
 
 task "resque:setup" do
-  require 'environment'
+  require 'mongo'
+  require 'minefold'
   require 'jobs'
   require 'fog'
 end
