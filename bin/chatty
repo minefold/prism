@@ -53,7 +53,7 @@ EM.run do
         'user_id' => user['_id'],
         
         'message' => line.chat_message,
-        'username' => line.username,
+        'username' => line.chat_user,
         'created_at' => line.timestamp,
         'updated_at' => line.timestamp
       )
