@@ -34,7 +34,8 @@ EM.run do
   connection = MinefoldDb.connection
 
   users_collection = connection['users']
-  wall_items_collection = connection['wall_items']
+  worlds_collection = connection['worlds']
+  world_objectid = BSON::ObjectId(world_id)
 
   puts "online tailing:#{server_log}"
   EventMachine::file_tail server_log do |filetail, l|
@@ -45,8 +46,13 @@ EM.run do
 
       result = worlds_collection.insert(
         '_type' => 'ChatMessage',
-        'message' => line.chat_message,
+        
+        'wall_type' => 'World', 
+        'wall_id' => world_objectid,
+
         'user_id' => user['_id'],
+        
+        'message' => line.chat_message,
         'username' => line.username,
         'created_at' => line.timestamp,
         'updated_at' => line.timestamp
