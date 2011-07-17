@@ -6,6 +6,7 @@ GEM
     bson (1.3.1)
     bson_ext (1.3.1)
     builder (3.0.0)
+    daemons (1.1.4)
     diff-lcs (1.1.2)
     eventmachine (1.0.0.beta.3)
     eventmachine-tail (0.6.1)
@@ -28,7 +29,6 @@ GEM
     god (0.11.0)
     hirb (0.4.5)
     json (1.5.3)
-    kgio (2.5.0)
     mime-types (1.16)
     mongo (1.3.1)
       bson (>= 1.3.1)
@@ -70,10 +70,11 @@ GEM
       monkey-lib (~> 0.5.0)
       sinatra (~> 1.0)
     spruz (0.2.8)
+    thin (1.2.11)
+      daemons (>= 1.0.9)
+      eventmachine (>= 0.12.6)
+      rack (>= 1.0.0)
     tilt (1.3.2)
-    unicorn (3.7.0)
-      kgio (~> 2.3)
-      rack
     vegas (0.1.8)
       rack (>= 1.0.0)
 
@@ -95,4 +96,4 @@ DEPENDENCIES
   rspec (~> 2.6.0)
   sinatra
   sinatra-reloader
-  unicorn
+  thin

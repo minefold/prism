@@ -1,44 +1,55 @@
-APP_ROOT = File.expand_path '../', File.dirname(__FILE__)
+root = File.expand_path '../', File.dirname(__FILE__)
 
 God.watch do |w|
-  w.name = "unicorn"
-  w.interval = 30.seconds # default
-
-  w.start = "cd #{APP_ROOT} && unicorn -c #{APP_ROOT}/config/unicorn.rb -D"
-
-  # -QUIT = graceful shutdown, waits for workers to finish their current request before finishing
-  w.stop = "kill -QUIT `cat #{APP_ROOT}/tmp/unicorn.pid`"
-
-  w.restart = "kill -USR2 `cat #{APP_ROOT}/tmp/unicorn.pid`"
-
-  w.start_grace = 10.seconds
-  w.restart_grace = 10.seconds
-  w.pid_file = "#{APP_ROOT}/tmp/unicorn.pid"
+  w.name = "worker-app"
+  w.interval = 5.seconds # default
+  w.start = "thin start -p 3000"
+  w.log_cmd = "/usr/bin/logger -t '#{w.name}'"
+  w.dir = root
   
-  # Cleanup the pid file (this is needed for processes running as a daemon)
   w.behavior(:clean_pid_file)
-
-  # Conditions under which to start the process
-  w.start_if do |start|
-    start.condition(:process_running) do |c|
-      c.interval = 5.seconds
-      c.running = false
+  
+  # determine the state on startup
+  w.transition(:init, { true => :up, false => :start }) do |on|
+    on.condition(:process_running) do |c|
+      c.running = true
     end
   end
-
-  # Conditions under which to restart the process
-  w.restart_if do |restart|
-    restart.condition(:memory_usage) do |c|
-      c.above = 150.megabytes
-      c.times = [3, 5] # 3 out of 5 intervals
+  
+  # determine when process has finished starting
+  w.transition([:start, :restart], :up) do |on|
+    on.condition(:process_running) do |c|
+      c.running = true
     end
-
-    restart.condition(:cpu_usage) do |c|
-      c.above = 50.percent
+    
+    # failsafe
+    on.condition(:tries) do |c|
       c.times = 5
+      c.transition = :start
     end
   end
 
+  # start if process is not running
+  w.transition(:up, :start) do |on|
+    on.condition(:process_exits)
+  end
+  
+  # restart if memory or cpu is too high
+  w.transition(:up, :restart) do |on|
+    on.condition(:memory_usage) do |c|
+      c.interval = 20
+      c.above = 50.megabytes
+      c.times = [3, 5]
+    end
+    
+    on.condition(:cpu_usage) do |c|
+      c.interval = 10
+      c.above = 10.percent
+      c.times = [3, 5]
+    end
+  end
+  
+  # lifecycle
   w.lifecycle do |on|
     on.condition(:flapping) do |c|
       c.to_state = [:start, :restart]

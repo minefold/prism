@@ -15,7 +15,7 @@ end
 group :worker do
   gem 'sinatra'
   gem 'sinatra-reloader', :require => 'sinatra/reloader'
-  gem 'unicorn'
+  gem 'thin'
 end
 
 group :test do
