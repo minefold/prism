@@ -76,10 +76,11 @@ class Worker
     log "Bootstrapping..."
 
     bootstrap_commands = [
+      "rm /home/ubuntu/.god/pids/*",
       "cd ~/minefold",
       "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
       "bundle install --without proxy development test cli",
-      "sudo god -c ~/minefold/worker/config/worker.god"
+      "sudo god -c ~/minefold/worker/config/worker.god",
     ]
 
     results = server.ssh bootstrap_commands.join(" && ")

@@ -14,16 +14,16 @@ world_id = ARGV.shift
 exit 0 if LocalWorlds.running.any? {|w| w[:id] == world_id }
 
 def god_running?
-  `bundle exec god status`
+  `sudo bundle exec god status`
   $?.exitstatus == 0
 end
 
 def start config_file, world_id
   if god_running?
-    `bundle exec god load #{config_file}`
-    `bundle exec god start #{world_id}`
+    `sudo bundle exec god load #{config_file}`
+    `sudo bundle exec god start #{world_id}`
   else
-    `bundle exec god -c #{config_file}`
+    `sudo bundle exec god -c #{config_file}`
   end
 end
 
