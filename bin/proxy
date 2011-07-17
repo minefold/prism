@@ -288,9 +288,11 @@ end
 EventMachine.epoll
 EventMachine.run do
   # log = Logger.new(STDOUT)
+  p STDOUT.sync
+  STDOUT.sync = true
   
   STDOUT.puts 'collecting initial state'
-  STDOUT.flush
+  # STDOUT.flush
   
   Workers.existing.each do |worker|
     supervised_worker = SUPERVISED_WORKERS[worker.instance_id] = SupervisedWorker.new(worker.server.state.to_sym, worker)
@@ -316,5 +318,5 @@ EventMachine.run do
   end
 
   STDOUT.puts 'started on 0.0.0.0:25565'
-  STDOUT.flush
+  # STDOUT.flush
 end
