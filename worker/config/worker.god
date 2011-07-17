@@ -35,19 +35,19 @@ God.watch do |w|
   end
   
   # restart if memory or cpu is too high
-  w.transition(:up, :restart) do |on|
-    on.condition(:memory_usage) do |c|
-      c.interval = 20
-      c.above = 50.megabytes
-      c.times = [3, 5]
-    end
-    
-    on.condition(:cpu_usage) do |c|
-      c.interval = 10
-      c.above = 10.percent
-      c.times = [3, 5]
-    end
-  end
+  # w.transition(:up, :restart) do |on|
+  #   on.condition(:memory_usage) do |c|
+  #     c.interval = 20
+  #     c.above = 50.megabytes
+  #     c.times = [3, 5]
+  #   end
+  #   
+  #   on.condition(:cpu_usage) do |c|
+  #     c.interval = 10
+  #     c.above = 10.percent
+  #     c.times = [3, 5]
+  #   end
+  # end
   
   # lifecycle
   w.lifecycle do |on|

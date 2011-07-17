@@ -24,6 +24,10 @@ class WorkerCommand
     worker.server.destroy
   end
   
+  def ssh
+    exec %Q{ssh -i #{ROOT}/.ssh/minefold.pem ubuntu@#{worker.public_ip_address}}
+  end
+  
   private
   
   def worker
