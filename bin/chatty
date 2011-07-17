@@ -35,6 +35,8 @@ EM.run do
 
   users_collection = connection['users']
   worlds_collection = connection['worlds']
+  wall_items_collection = connection['wall_items']
+  
   world_objectid = BSON::ObjectId(world_id)
 
   puts "online tailing:#{server_log}"
@@ -44,7 +46,7 @@ EM.run do
       # TODO: WHAT IF THE USER DOESN'T EXIST?
       user = users_collection.find({'username' => line.chat_user}).first
 
-      result = worlds_collection.insert(
+      result = wall_items_collection.insert(
         '_type' => 'ChatMessage',
         
         'wall_type' => 'World', 
