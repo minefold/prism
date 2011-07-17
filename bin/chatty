@@ -29,11 +29,12 @@ class LogLine
   end
 end
 
+EM.epoll
 EM.run do
-  DB = MinefoldDb.connection
+  connection = MinefoldDb.connection
 
-  users_collection = DB['users']
-  wall_items_collection = DB['wall_items']
+  users_collection = connection['users']
+  wall_items_collection = connection['wall_items']
 
   puts "online tailing:#{server_log}"
   EventMachine::file_tail server_log do |filetail, l|

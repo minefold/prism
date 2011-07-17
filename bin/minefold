@@ -28,8 +28,6 @@ abort usage unless ARGV.any?
 args = ARGV.clone
 args = ARGV.map {|a| a.split(':') }
 
-DB = MinefoldDb.connection
-
 resource_name, resource_id = args.shift
 
 resource = case resource_name

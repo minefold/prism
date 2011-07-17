@@ -18,7 +18,7 @@ class PlayerCommand
   private
   
   def users
-    DB['users']
+    MinefoldDb.connection['users']
   end
   
   def player

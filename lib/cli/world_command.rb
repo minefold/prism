@@ -18,7 +18,7 @@ class WorldCommand
   private
   
   def worlds
-    DB['worlds']
+    MinefoldDb.connection['worlds']
   end
   
   def world
