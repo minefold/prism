@@ -16,7 +16,6 @@ class Worker
     "http://#{public_ip_address}:3000"
   end
   
-  
   def instance_id
     server.id
   end
@@ -37,6 +36,10 @@ class Worker
   def stop!
     server.stop
   end
+
+  def terminate!
+    server.destroy
+  end
   
   def worlds
     return [] unless public_ip_address
@@ -50,20 +53,27 @@ class Worker
     end
   end
   
-  def uptime_minutes
-    if server.state == 'running'
-      uptime_message = server.ssh("uptime").first.stdout
-      result = uptime_message.split(/up |,/)[1]  # These are backticks,upper left key on my keyboard
-      # puts uptime_message
-      # puts result
-      hours, minutes = 0, 0
-      if result =~ /(\d+) min/
-        minutes = $1.to_i
-      else
-        hours, minutes = result.split(':').map{|r| r.to_i }
-      end
-      hours * 60 + minutes
+  def uptime_minutes!
+    @uptime_minutes = begin
+      56
+      # if server.state == 'running'
+      #   uptime_message = server.ssh("uptime").first.stdout
+      #   result = uptime_message.split(/up |,/)[1]  # These are backticks,upper left key on my keyboard
+      #   # puts uptime_message
+      #   # puts result
+      #   hours, minutes = 0, 0
+      #   if result =~ /(\d+) min/
+      #     minutes = $1.to_i
+      #   else
+      #     hours, minutes = result.split(':').map{|r| r.to_i }
+      #   end
+      #   hours * 60 + minutes
+      # end
     end
+  end
+  
+  def uptime_minutes
+    @uptime_minutes ||= uptime_minutes!
   end
   
   def start_world world_id

@@ -313,5 +313,21 @@ EventMachine.run do
     end
   end
 
+  find_idle_workers = proc { Workers.running.select{|w| w.worlds.count == 0 && (w.uptime_minutes! % 60) > 55 } }
+  
+  EventMachine::PeriodicTimer.new(5 * 60) do 
+    # shutdown idle workers
+    
+    EM.defer(find_idle_workers, proc { |workers|
+        workers.each do |w|
+          SUPERVISED_WORKERS.delete w.instance_id
+          EM.defer do
+            puts "Stopping idle worker:#{w.instance_id} uptime:#{w.uptime_minutes}"
+            w.stop!
+          end
+        end
+    })
+  end
+
   puts 'started on 0.0.0.0:25565'
 end
