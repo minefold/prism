@@ -100,15 +100,7 @@ module Client
         # There is a running worker that isn't being used so lets use it
         info "using running worker #{supervised_worker.worker.instance_id} to start world"
         @supervised_world.supervised_worker = supervised_worker
-        EM.defer(proc { 
-            begin
-              supervised_worker.worker.prepare_for_minefold
-            rescue
-              info "Terminating unresponsive worker:#{supervised_worker.worker.instance_id}"
-              supervised_worker.worker.terminate!
-              SUPERVISED_WORKERS.delete supervised_worker.worker.instance_id
-            end
-          }, proc { EM.next_tick { get_world_running } })
+        EM.next_tick { get_world_running }
       elsif supervised_worker = SUPERVISED_WORKERS.values.find {|sw| sw.stopped? }
         # There is a stopped worker, we'll use that
         @supervised_world.supervised_worker = supervised_worker
