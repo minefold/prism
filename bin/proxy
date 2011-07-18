@@ -105,7 +105,7 @@ module Client
               supervised_worker.worker.prepare_for_minefold
             rescue
               info "Stopping unresponsive worker:#{supervised_worker.worker.instance_id}"
-              w.stop!
+              supervised_worker.worker.stop!
             end
           }, proc { EM.next_tick { get_world_running } })
       elsif supervised_worker = SUPERVISED_WORKERS.values.find {|sw| sw.stopped? }
