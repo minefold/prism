@@ -78,8 +78,6 @@ class Worker
   end
   
   def bootstrap
-    log "Bootstrapping..."
-
     bootstrap_commands = [
       "sudo rm -f /home/ubuntu/.god/pids/*",
       "cd ~/minefold",
