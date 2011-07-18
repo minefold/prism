@@ -303,7 +303,7 @@ EventMachine.run do
 
   find_idle_workers = proc { Workers.running.select{|w| w.worlds.count == 0 && (w.uptime_minutes! % 60) > 55 } }
   
-  EventMachine::PeriodicTimer.new(5 * 60) do 
+  idle_killer = EventMachine::PeriodicTimer.new(5 * 60) do 
     # shutdown idle workers
     
     EM.defer(find_idle_workers, proc { |workers|
@@ -320,6 +320,7 @@ EventMachine.run do
   # Graceful shutdown
   %w(INT TERM).each do |sig|
     Signal.trap(sig) do
+      idle_killer.cancel
       EventMachine.stop
       puts 'terminated'
     end
