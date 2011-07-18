@@ -99,7 +99,7 @@ module Client
       if supervised_worker = unused_workers.first
         # There is a running worker that isn't being used so lets use it
         info "using running worker #{supervised_worker.worker.instance_id} to start world"
-        info "bootstrapping #{supervised_worker.worker.instance_id}"
+        info "preparing worker #{supervised_worker.worker.instance_id}"
         @supervised_world.supervised_worker = supervised_worker
         EM.defer(proc { supervised_worker.worker.bootstrap }, proc { get_world_running })
       elsif supervised_worker = SUPERVISED_WORKERS.values.find {|sw| sw.stopped? }

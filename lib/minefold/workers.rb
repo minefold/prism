@@ -35,7 +35,7 @@ class Workers
       :tags => {"Name" => "worker"}
     )
     
-    worker.bootstrap
+    worker.prepare_for_minefold
     worker
   end
   

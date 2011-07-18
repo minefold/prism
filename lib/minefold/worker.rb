@@ -30,7 +30,7 @@ class Worker
       server.start
       server.wait_for { ready? }
       wait_for_ssh
-      bootstrap
+      prepare_for_minefold
     end
   end
   
@@ -77,8 +77,8 @@ class Worker
     self.class.get "/worlds/#{world_id}/destroy"
   end
   
-  def bootstrap
-    bootstrap_commands = [
+  def prepare_for_minefold
+    commands = [
       "sudo rm -f /home/ubuntu/.god/pids/*",
       "cd ~/minefold",
       "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
@@ -86,13 +86,16 @@ class Worker
       "sudo god -c ~/minefold/worker/config/worker.god",
     ]
 
-    results = server.ssh bootstrap_commands.join(" && ")
+    results = server.ssh commands.join(" && ")
     log results if results.any? {|r| r.status != 0 }
 
     log "Waiting for worker to respond"
     Timeout::timeout(20) do
       begin
         self.class.get("", timeout:2).body
+      rescue Errno::ECONNREFUSED
+        sleep 1
+        retry
       rescue Timeout::Error
         retry
       end
@@ -113,7 +116,7 @@ class Worker
           server.ssh "pwd"
         end
       rescue Errno::ECONNREFUSED
-        sleep(2)
+        sleep 2
         retry
       rescue Net::SSH::AuthenticationFailed, Timeout::Error
         retry
