@@ -8,8 +8,6 @@ class Worker
   def initialize server
     @server = server
     server.private_key_path = SSH_PRIVATE_KEY_PATH
-    
-    self.class.base_uri url
   end
   
   def url
@@ -45,7 +43,7 @@ class Worker
     return [] unless public_ip_address
     
     begin
-      server_info = JSON.parse self.class.get("/", timeout:60).body
+      server_info = JSON.parse get("/", timeout:60).body
       Worlds.new self, server_info.map {|h| World.new self, h["id"], h["port"]}
     rescue => e
       puts e.inspect
@@ -76,17 +74,18 @@ class Worker
   end
   
   def start_world world_id
-    self.class.get("/worlds/create?id=#{world_id}", timeout:3 * 60)
+    get("/worlds/create?id=#{world_id}", timeout:3 * 60)
 
-    server_info = JSON.parse self.class.get("/worlds/#{world_id}").body
+    server_info = JSON.parse get("/worlds/#{world_id}").body
     World.new self, server_info["id"], server_info["port"]
   end
   
   def stop_world world_id
-    self.class.get "/worlds/#{world_id}/destroy"
+    get "/worlds/#{world_id}/destroy"
   end
   
   def prepare_for_minefold
+    puts "Preparing worker for minefold"
     commands = [
       "sudo rm -f /home/ubuntu/.god/pids/*",
       "cd ~/minefold",
@@ -101,7 +100,7 @@ class Worker
     log "Waiting for worker to respond"
     Timeout::timeout(20) do
       begin
-        self.class.get("", timeout:2).body
+        get("", timeout:2).body
       rescue Errno::ECONNREFUSED
         sleep 1
         retry
@@ -114,11 +113,17 @@ class Worker
   
   private
   
+  def get url, options={}
+    self.class.base_uri url
+    self.class.get url, options
+  end
+  
   def uri
     @uri ||= URI.parse url
   end
   
   def wait_for_ssh
+    puts "Waiting for ssh access"
     Timeout::timeout(60) do
       begin
         Timeout::timeout(8) do

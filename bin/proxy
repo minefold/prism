@@ -309,14 +309,6 @@ EventMachine.run do
   # listen for http connections
   EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
 
-  # Graceful shutdown
-  %w(INT TERM).each do |sig|
-    Signal.trap(sig) do
-      EventMachine.stop
-      puts 'terminated'
-    end
-  end
-
   find_idle_workers = proc { Workers.running.select{|w| w.worlds.count == 0 && (w.uptime_minutes! % 60) > 55 } }
   
   EventMachine::PeriodicTimer.new(5 * 60) do 
@@ -331,6 +323,14 @@ EventMachine.run do
           end
         end
     })
+  end
+
+  # Graceful shutdown
+  %w(INT TERM).each do |sig|
+    Signal.trap(sig) do
+      EventMachine.stop
+      puts 'terminated'
+    end
   end
 
   puts 'started on 0.0.0.0:25565'
