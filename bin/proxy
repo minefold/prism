@@ -308,6 +308,7 @@ EventMachine.run do
     end
     idle_workers = running_workers.select{|w| w.worlds.count == 0 && (w.uptime_minutes! % 60) > 55 } 
     puts "Found #{idle_workers.count} idle workers"
+    idle_workers
   }
   
   idle_killer = EventMachine::PeriodicTimer.new(4 * 60) do 
