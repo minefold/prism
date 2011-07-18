@@ -112,7 +112,7 @@ module Client
         EM.defer(proc { supervised_worker.worker.start! }, proc { 
           supervised_worker.state = :running
           info "started stopped worker #{supervised_worker.worker.instance_id}"
-          get_world_running
+          EM.next_tick { get_world_running }
         })
       else
         # no worker available so we'll create a new one
@@ -121,7 +121,7 @@ module Client
           @supervised_world.supervised_worker = SUPERVISED_WORKERS[worker.instance_id] =
             SupervisedWorker.new(:running, worker)
           info "created new worker #{worker.instance_id}"
-          get_world_running
+          EM.next_tick { get_world_running }
         })
       end
     end
@@ -138,15 +138,17 @@ module Client
     end
     @keepalive.cancel if @keepalive
     @wait_for_world.cancel if @wait_for_world
-    @f_connection_established.succeed
     
     @credit_muncher = EventMachine::PeriodicTimer.new(60) do
       deduct_minutes 1
     end
+    puts "starting credit muncher:#{@credit_muncher}"
     
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id] << @username unless CONNECTED_PLAYERS[@world_id].include? @username
     info "#{CONNECTED_PLAYERS[@world_id].length} player(s)"
+    
+    @f_connection_established.succeed
   end
 
   def receive_data data
@@ -234,6 +236,7 @@ module Client
   
   def deduct_minutes amount
     EM.defer do
+      puts "deducting 1 credit"
       user = DB['users'].find_and_modify({ 
                     query: {"_id"  => @user_objectid},
                     update:{"$inc" => {"credits"=>-amount }}
@@ -263,6 +266,7 @@ module Client
     
     @keepalive.cancel if @keepalive
     @wait_for_world.cancel if @wait_for_world
+    puts "stopping credit muncher:#{@credit_muncher}"
     @credit_muncher.cancel if @credit_muncher
     
     if CONNECTED_PLAYERS[@world_id].length == 0
