@@ -85,7 +85,7 @@ class Worker
   end
   
   def prepare_for_minefold
-    puts "Preparing worker for minefold"
+    puts "Preparing worker:#{instance_id} for minefold"
     commands = [
       "sudo rm -f /home/ubuntu/.god/pids/*",
       "cd ~/minefold",
@@ -100,7 +100,7 @@ class Worker
     log "Waiting for worker to respond"
     Timeout::timeout(20) do
       begin
-        get("", timeout:2).body
+        get("/", timeout:2).body
       rescue Errno::ECONNREFUSED
         sleep 1
         retry
