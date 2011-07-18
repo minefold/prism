@@ -95,7 +95,7 @@ class Worker
     ]
 
     results = server.ssh commands.join(" && ")
-    log results if results.any? {|r| r.status != 0 }
+    log results #if results.any? {|r| r.status != 0 }
 
     log "Waiting for worker to respond"
     Timeout::timeout(20) do
