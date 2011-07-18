@@ -3,6 +3,7 @@ source :rubygems
 gem 'god'
 gem 'file-tail', :require => 'file/tail'
 gem 'fog', '>= 0.9.0'
+gem 'httparty'
 
 group :proxy do
   gem 'eventmachine'
@@ -10,7 +11,6 @@ group :proxy do
   gem 'bson_ext'
   gem 'eventmachine_httpserver', :require => 'evma_httpserver'
   gem 'resque'
-  gem 'httparty'
 end
 
 group :worker do
