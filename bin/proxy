@@ -101,7 +101,7 @@ module Client
         info "using running worker #{supervised_worker.worker.instance_id} to start world"
         info "preparing worker #{supervised_worker.worker.instance_id}"
         @supervised_world.supervised_worker = supervised_worker
-        EM.defer(proc { supervised_worker.worker.bootstrap }, proc { get_world_running })
+        EM.defer(proc { supervised_worker.worker.prepare_for_minefold }, proc { get_world_running })
       elsif supervised_worker = SUPERVISED_WORKERS.values.find {|sw| sw.stopped? }
         # There is a stopped worker, we'll use that
         @supervised_world.supervised_worker = supervised_worker
