@@ -104,8 +104,9 @@ module Client
             begin
               supervised_worker.worker.prepare_for_minefold
             rescue
-              info "Stopping unresponsive worker:#{supervised_worker.worker.instance_id}"
-              supervised_worker.worker.stop!
+              info "Terminating unresponsive worker:#{supervised_worker.worker.instance_id}"
+              supervised_worker.worker.terminate!
+              SUPERVISED_WORKERS.delete supervised_worker.worker.instance_id
             end
           }, proc { EM.next_tick { get_world_running } })
       elsif supervised_worker = SUPERVISED_WORKERS.values.find {|sw| sw.stopped? }
@@ -228,13 +229,6 @@ module Client
       EM.defer(proc { sworker.worker.stop_world @world_id}, proc {
         info "world stopped"
         @supervised_world.state = :stopped
-        
-        # info "stopping worker #{sworker.worker.instance_id}"
-        # @supervised_world = nil
-        # SUPERVISED_WORKERS.delete sworker.worker.instance_id
-        # SUPERVISED_WORLDS.delete @world_id
-        # 
-        # EM.defer { sworker.worker.stop! }
       })
       
     end
