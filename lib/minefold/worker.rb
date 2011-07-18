@@ -1,12 +1,21 @@
 require 'net/ssh'
 
 class Worker
+  include HTTParty
+  
   attr_reader :server
   
   def initialize server
     @server = server
     server.private_key_path = SSH_PRIVATE_KEY_PATH
+    
+    self.class.base_uri url
   end
+  
+  def url
+    "http://#{public_ip_address}:3000"
+  end
+  
   
   def instance_id
     server.id
@@ -14,10 +23,6 @@ class Worker
   
   def public_ip_address
     server.public_ip_address
-  end
-  
-  def url
-    "http://#{public_ip_address}:3000"
   end
   
   def start!
@@ -37,7 +42,7 @@ class Worker
     return [] unless public_ip_address
     
     begin
-      server_info = JSON.parse http_get("/")
+      server_info = JSON.parse self.class.get("/", timeout:60).body
       Worlds.new self, server_info.map {|h| World.new self, h["id"], h["port"]}
     rescue => e
       puts e.inspect
@@ -62,14 +67,14 @@ class Worker
   end
   
   def start_world world_id
-    http_get "/worlds/create?id=#{world_id}"
+    self.class.get("/worlds/create?id=#{world_id}", timeout:3 * 60)
 
-    server_info = JSON.parse http_get("/worlds/#{world_id}")
+    server_info = JSON.parse self.class.get("/worlds/#{world_id}").body
     World.new self, server_info["id"], server_info["port"]
   end
   
   def stop_world world_id
-    http_get "/worlds/#{world_id}/destroy"
+    self.class.get "/worlds/#{world_id}/destroy"
   end
   
   def bootstrap
@@ -87,25 +92,20 @@ class Worker
     log results if results.any? {|r| r.status != 0 }
 
     log "Waiting for worker to respond"
-
     Timeout::timeout(20) do
       begin
-        `curl -s #{url}`
-      end while $?.exitstatus != 0
+        self.class.get("", timeout:2).body
+      rescue Timeout::Error
+        retry
+      end
     end
-
-    log "Server not responding...." if $?.exitstatus != 0
+    
   end
   
   private
   
   def uri
     @uri ||= URI.parse url
-  end
-  
-  def http_get path
-    res = Net::HTTP.start(uri.host, uri.port) {|http| http.get path }
-    res.body
   end
   
   def wait_for_ssh

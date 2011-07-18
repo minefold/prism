@@ -10,6 +10,7 @@ group :proxy do
   gem 'bson_ext'
   gem 'eventmachine_httpserver', :require => 'evma_httpserver'
   gem 'resque'
+  gem 'httparty'
 end
 
 group :worker do

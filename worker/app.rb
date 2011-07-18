@@ -8,7 +8,7 @@ end
 get "/worlds/create" do
   result = `#{BIN}/start-local-world #{params[:id]}`
   if $?.exitstatus != 0
-    result
+    raise result
   else
     redirect "/"
   end
