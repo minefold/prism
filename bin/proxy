@@ -228,7 +228,7 @@ module Client
   
   def deduct_minutes amount
     EM.defer do
-      puts "deducting 1 credit"
+      info "deducting 1 credit"
       user = DB['users'].find_and_modify({ 
                     query: {"_id"  => @user_objectid},
                     update:{"$inc" => {"credits"=>-amount }}
