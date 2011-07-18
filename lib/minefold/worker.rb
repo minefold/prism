@@ -56,8 +56,10 @@ class Worker
       if server.state == 'running'
         uptime_message = server.ssh("uptime").first.stdout
         result = uptime_message.split(/up |,/)[1]  # These are backticks,upper left key on my keyboard
+
         # puts uptime_message
         # puts result
+
         hours, minutes = 0, 0
         if result =~ /(\d+) min/
           minutes = $1.to_i
@@ -113,9 +115,9 @@ class Worker
   
   private
   
-  def get url, options={}
+  def get path, options={}
     self.class.base_uri url
-    self.class.get url, options
+    self.class.get path, options
   end
   
   def uri
