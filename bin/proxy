@@ -301,9 +301,15 @@ EventMachine.run do
   # listen for http connections
   EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
 
-  find_idle_workers = proc { Workers.running.select{|w| w.worlds.count == 0 && (w.uptime_minutes! % 60) > 55 } }
+  find_idle_workers = proc { 
+    running_workers = Workers.running
+    running_workers.each do |w|
+      puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes!} worlds:#{w.worlds.count}"
+    end
+    running_workers.select{|w| w.worlds.count == 0 && (w.uptime_minutes! % 60) > 55 } 
+  }
   
-  idle_killer = EventMachine::PeriodicTimer.new(5 * 60) do 
+  idle_killer = EventMachine::PeriodicTimer.new(4 * 60) do 
     # shutdown idle workers
     
     EM.defer(find_idle_workers, proc { |workers|
