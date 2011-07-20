@@ -23,6 +23,7 @@ SUPERVISED_WORLDS = {} # world is running, starting or stopping (ie. connect for
 module Client
   def post_init
     @f_connection_established = EM::DefaultDeferrable.new
+    @client_connected = true
   end
   
   def info message
@@ -40,6 +41,8 @@ module Client
   
   
   def get_world_running
+    return unless @client_connected
+    
     # scenarios:
     #  World is running > connect
     #  World is starting > retry later
@@ -78,6 +81,8 @@ module Client
           error "Workers.existing", e
         end
       }, proc {|workers| 
+        return unless @client_connected
+        
         if workers
           idle_worker = workers.find {|w| w.server.state == 'running' && w.worlds.count == 0 } 
           if idle_worker
@@ -107,6 +112,8 @@ module Client
   end
   
   def proxy_client
+    return unless @client_connected
+    
     host = @supervised_world.worker.public_ip_address
     port = @supervised_world.world.port
     @server = EventMachine.connect(host, port, Server) do |server|
@@ -119,7 +126,7 @@ module Client
     @credit_muncher = EventMachine::PeriodicTimer.new(60) do
       deduct_minutes 1
     end
-    puts "starting credit muncher:#{@credit_muncher}"
+    info "starting credit muncher:#{@credit_muncher}"
     
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id] << @username unless CONNECTED_PLAYERS[@world_id].include? @username
@@ -190,12 +197,14 @@ module Client
   end
 
   def deduct_minutes amount
+    return unless @client_connected
+    
     EM.defer do
-      info "deducting 1 credit"
       user = DB['users'].find_and_modify({ 
                     query: {"_id"  => @user_objectid},
                     update:{"$inc" => {"credits"=>-amount }}
                   })
+      info "deducting 1 credit. #{user['credits']} remaining."
 
       if user['credits'] <= amount
         EM.next_tick do
@@ -215,19 +224,22 @@ module Client
   # end
   
   def unbind
+    @client_connected = false
+    
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id].delete @username
     info "client disconnected. #{CONNECTED_PLAYERS[@world_id].length} player(s) in world"
     
     @keepalive.cancel if @keepalive
     @wait_for_world.cancel if @wait_for_world
-    puts "stopping credit muncher:#{@credit_muncher}"
+    info "stopping credit muncher:#{@credit_muncher}"
     @credit_muncher.cancel if @credit_muncher
     
     if @world_id && @supervised_world && CONNECTED_PLAYERS[@world_id].length == 0
       info "Stopping world:#{@world_id}"
       stop_world @supervised_world, @world_id
     end
+    
   end
   
   # async methods
@@ -269,6 +281,8 @@ module Client
   end
   
   def start_world worker
+    return unless @client_connected
+    
     @supervised_world.worker = worker
     BUSY_WORKERS[worker.instance_id] = worker
     
