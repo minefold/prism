@@ -310,6 +310,7 @@ module Client
   end
   
   def stop_world supervised_world, world_id
+    SUPERVISED_WORLDS[world_id].stopping!
     EM.defer(proc { 
         begin
           supervised_world.worker.stop_world world_id
