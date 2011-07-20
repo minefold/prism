@@ -14,6 +14,7 @@ require 'logger'
 Thread.abort_on_exception = true
 STDOUT.sync = true
 
+puts "Connecting to Mongo"
 DB = MinefoldDb.connection
 
 CONNECTED_PLAYERS = {}
@@ -121,7 +122,6 @@ module Client
       info "proxied to #{host}:#{port}"
     end
     @keepalive.cancel if @keepalive
-    @wait_for_world.cancel if @wait_for_world
     
     @credit_muncher = EventMachine::PeriodicTimer.new(60) do
       deduct_minutes 1
@@ -167,17 +167,11 @@ module Client
       @user_objectid, @world_id = @user['_id'], @user['world_id'].to_s
       
       info "connected. #{@user['credits']} credits remaining"
-      
-      @supervised_world ||= SUPERVISED_WORLDS[@world_id]
-      
-      if @supervised_world && @supervised_world.running?
-        proxy_client
-      else
-        @keepalive = EventMachine::PeriodicTimer.new(5) do
-          send_data [0].pack('C')
-        end
-        get_world_running
+
+      @keepalive = EventMachine::PeriodicTimer.new(5) do
+        send_data [0].pack('C')
       end
+      EM.next_tick { get_world_running }
     end
     
     # TODO: We need to check their auth details when they send it over the
@@ -231,7 +225,6 @@ module Client
     info "client disconnected. #{CONNECTED_PLAYERS[@world_id].length} player(s) in world"
     
     @keepalive.cancel if @keepalive
-    @wait_for_world.cancel if @wait_for_world
     info "stopping credit muncher:#{@credit_muncher}"
     @credit_muncher.cancel if @credit_muncher
     
