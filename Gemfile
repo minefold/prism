@@ -4,11 +4,11 @@ gem 'god'
 gem 'file-tail', :require => 'file/tail'
 gem 'fog', '>= 0.9.0'
 gem 'httparty'
+gem 'mongo'
+gem 'bson_ext'
 
 group :proxy do
   gem 'eventmachine'
-  gem 'mongo'
-  gem 'bson_ext'
   gem 'eventmachine_httpserver', :require => 'evma_httpserver'
   gem 'resque'
 end
@@ -27,12 +27,8 @@ end
 group :chatty do
   gem 'eventmachine'
   gem 'eventmachine-tail', '~> 0.6.1'
-  gem 'mongo'
-  gem 'bson_ext'
 end
 
 group :cli do
-  gem 'mongo'
-  gem 'bson_ext'
   gem 'hirb'
 end

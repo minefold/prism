@@ -28,25 +28,28 @@ def start config_file, world_id
 end
 
 def server_properties world_id, port
-  {
+  col = MinefoldDb.connection['worlds']
+
+  options = col.find_one({'_id' => BSON::ObjectId(world_id)})['options']
+
+  options.merge({
     "allow-flight"     => false,
     "allow-nether"     => true,
     "hellworld"        => false,
     "level-name"       => world_id,
     "level-seed"       => '',
     "max-players"      => 255,
-    "motd"             => "Welcome to minefold.com!",
+    "motd"             => "Welcome to Minefold!",
     "online-mode"      => true,
-    "pvp"              => true,
+    # "pvp"              => true,
     "server-ip"        => "0.0.0.0",
     "server-port"      => port,
     "spawn-animals"    => true,
-    "spawn-monsters"   => false,
+    # "spawn-monsters"   => false,
     "spawn-protection" => true,
     "view-distance"    => 10,
     "white-list"       => false
-
-  }.map {|values| values.join('=')}.join("\n")
+  }).map {|values| values.join('=')}.join("\n")
 end
 
 puts "Starting world #{world_id}"
