@@ -360,9 +360,9 @@ EventMachine.run do
   find_idle_workers = proc { 
     running_workers = Workers.running
     running_workers.each do |w|
-      puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes!} worlds:#{w.worlds.count}"
+      puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count}"
     end
-    idle_workers = running_workers.select{|w| w.worlds.count == 0 && (w.uptime_minutes! % 60) > 55 } 
+    idle_workers = running_workers.select{|w| w.worlds.count == 0 && (w.uptime_minutes % 60) > 55 } 
     puts "Found #{idle_workers.count} idle workers"
     idle_workers
   }
