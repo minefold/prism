@@ -327,12 +327,13 @@ module Client
     SUPERVISED_WORLDS[world_id].stopping!
     EM.defer(proc { 
         begin
-          supervised_world.worker.stop_world world_id
+          world = supervised_world.worker.stop_world world_id
+          info "world stopped"
+          world
         rescue => e
           error "stop world", e
         end
       }, proc {
-        info "world stopped"
         SUPERVISED_WORLDS.delete world_id
     })
   end
@@ -384,7 +385,9 @@ EventMachine.run do
   find_idle_workers = proc { 
     running_workers = Workers.running
     running_workers.each do |w|
-      puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count}"
+      world_ids = w.worlds.map(&id)
+      player_count = world_ids.inject(0) {|count, world_id| count + CONNECTED_PLAYERS[world_id].count }
+      puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count} players:#{player_count}"
     end
     idle_workers = running_workers.select{|w| w.worlds.count == 0 && (w.uptime_minutes % 60) > 55 } 
     puts "Found #{idle_workers.count} idle workers"
@@ -398,8 +401,12 @@ EventMachine.run do
         workers.each do |w|
           BUSY_WORKERS[w.instance_id] = w
           EM.defer(proc{
-              puts "Stopping idle worker:#{w.instance_id} uptime:#{w.uptime_minutes}"
-              w.stop!
+              begin
+                puts "Stopping idle worker:#{w.instance_id} uptime:#{w.uptime_minutes}"
+                w.stop!
+              rescue => e
+                puts "Error stopping idle worker\n#{e.message}\n#{e.backtrace}"
+              end
             }, proc {
               BUSY_WORKERS.delete w.instance_id
           })
