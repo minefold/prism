@@ -282,6 +282,7 @@ module Client
         if world
           @supervised_world.world = world
           BUSY_WORKERS.delete worker.instance_id
+          SUPERVISED_WORLDS[@world_id].running!
         
           proxy_client
         else
