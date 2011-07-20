@@ -17,17 +17,8 @@ STDOUT.sync = true
 DB = MinefoldDb.connection
 
 CONNECTED_PLAYERS = {}
-SUPERVISED_WORKERS = {}
-SUPERVISED_WORLDS = {}
-
-def worker_in_use? sworker
-  SUPERVISED_WORLDS.values.any? {|sworld| sworld.supervised_worker == sworker  }
-end
-
-def unused_workers
-  SUPERVISED_WORKERS.values.select{|sworker| sworker.running? }.
-                            reject{|sworker| worker_in_use? sworker }
-end
+BUSY_WORKERS = {}  # worker is either starting, stopping or starting a new world (ie. busy, don't use it)
+SUPERVISED_WORLDS = {} # world is running, starting or stopping (ie. connect for it or wait)
 
 module Client
   def post_init
@@ -41,6 +32,12 @@ module Client
   def warn message
     puts "WARNING: #{message}"
   end
+  
+  def error message, e
+    puts "ERROR: " + [message, e.message, e.backtrace].join("\n")
+    nil
+  end
+  
   
   def get_world_running
     # scenarios:
@@ -56,80 +53,55 @@ module Client
     
     #  Start world on instance failed > stop instance then retry
     
-    @supervised_world ||= SUPERVISED_WORLDS[@world_id]
+    @supervised_world = SUPERVISED_WORLDS[@world_id]
     
     if @supervised_world
       if @supervised_world.running?
         proxy_client
-      elsif @supervised_world.state == :stopped && @supervised_world.running_worker?
-        # we need to start the world on this worker
-        instance_id = @supervised_world.supervised_worker.worker.instance_id
-        
-        @supervised_world.state = :starting
-        info "starting world on #{instance_id}"
-        start_world_proc = proc { 
-          begin
-            @supervised_world.supervised_worker.worker.start_world @world_id 
-          rescue => e
-            warn "Start world error: #{e.message}\n#{e.backtrace.join("\n")}"
-            nil
-          end
-        }
-        EM.defer(start_world_proc, proc { |world|
-          if world
-            @supervised_world.world = world
-            @supervised_world.state = :running
-            proxy_client
-          else
-            # world couldn't be started so stop this worker and we'll try again
-            info "start world failed on #{instance_id}. Stopping instance"
-            stop_current_world
-            get_world_running
-          end
-        })
       else
-        # either the world or the worker is still starting up
-        info "another player is starting world. Waiting..."
-        @wait_for_world ||= EventMachine::PeriodicTimer.new(5) { get_world_running }
+        # world is stopping or starting, so we'll wait
+        EM.add_timer(5) { 
+          info "waiting for world:#{@supervised_world}"
+          get_world_running
+        }
       end
     else
-      # no world claimed, we need to claim one so nobody else tries to start this world
-      @supervised_world = SUPERVISED_WORLDS[@world_id] = SupervisedWorld.new(:stopped)
-      # now get the world started
-      if supervised_worker = unused_workers.first
-        # There is a running worker that isn't being used so lets use it
-        info "using running worker #{supervised_worker.worker.instance_id} to start world"
-        @supervised_world.supervised_worker = supervised_worker
-        EM.next_tick { get_world_running }
-      elsif supervised_worker = SUPERVISED_WORKERS.values.find {|sw| sw.stopped? }
-        # There is a stopped worker, we'll use that
-        @supervised_world.supervised_worker = supervised_worker
-        # set it's state to starting so nobody else tries to use it
-        supervised_worker.state = :starting
-        
-        info "starting stopped worker #{supervised_worker.worker.instance_id}"
-        EM.defer(proc { supervised_worker.worker.start! }, proc { 
-          supervised_worker.state = :running
-          info "started stopped worker #{supervised_worker.worker.instance_id}"
-          EM.next_tick { get_world_running }
-        })
-      else
-        # no worker available so we'll create a new one
-        info "creating new worker"
-        EM.defer(proc { Workers.create }, proc { |worker| 
-          @supervised_world.supervised_worker = SUPERVISED_WORKERS[worker.instance_id] =
-            SupervisedWorker.new(:running, worker)
-          info "created new worker #{worker.instance_id}"
-          EM.next_tick { get_world_running }
-        })
-      end
+      # no world starting, running, or stopping. We should start one
+      @supervised_world = SUPERVISED_WORLDS[@world_id] = SupervisedWorld.new(:starting)
+      
+      # query ec2 for workers
+      EM.defer(proc { 
+        begin
+          # find workers that we haven't marked as busy and sort by who has the most available time
+          Workers.existing.reject{|w| BUSY_WORKERS.has_key? w.instance_id }.sort_by {|w| (w.uptime_minutes % 60) }
+        rescue => e
+          error "Workers.existing", e
+        end
+      }, proc {|workers| 
+        if workers
+          idle_worker = workers.find {|w| w.server.state == 'running' && w.worlds.count == 0 } 
+          if idle_worker
+            # there is an idle worker available to us
+            info "using idle worker #{idle_worker.instance_id} to start world"
+            start_world idle_worker
+          else
+            stopped_worker = workers.find{|w| w.server.state == 'stopped' }
+            if stopped_worker
+              # theres a stopped worker we can start and use
+              info "starting stopped worker #{stopped_worker.instance_id}"
+              start_worker_and_world stopped_worker
+            end
+          end
+        else
+          info "creating new worker"
+          create_worker_and_start_world
+        end
+      })
     end
-    
-    
   end
   
   def proxy_client
-    host = @supervised_world.supervised_worker.worker.public_ip_address
+    host = @supervised_world.worker.public_ip_address
     port = @supervised_world.world.port
     @server = EventMachine.connect(host, port, Server) do |server|
       server.plexer = self
@@ -211,21 +183,6 @@ module Client
     @f_connection_established.callback { send_data data}
   end
 
-  def stop_current_world
-    return unless @supervised_world && @supervised_world.supervised_worker
-    
-    sworker = @supervised_world.supervised_worker
-    if @supervised_world.state != :stopping && sworker && sworker.worker
-      info "stopping world"
-      @supervised_world.state = :stopping
-      EM.defer(proc { sworker.worker.stop_world @world_id}, proc {
-        info "world stopped"
-        @supervised_world.state = :stopped
-      })
-      
-    end
-  end
-  
   def deduct_minutes amount
     EM.defer do
       info "deducting 1 credit"
@@ -261,10 +218,112 @@ module Client
     puts "stopping credit muncher:#{@credit_muncher}"
     @credit_muncher.cancel if @credit_muncher
     
-    if CONNECTED_PLAYERS[@world_id].length == 0
-      stop_current_world
+    if @world_id && @supervised_world && CONNECTED_PLAYERS[@world_id].length == 0
+      info "Stopping world:#{@world_id}"
+      stop_world @supervised_world, @world_id
     end
   end
+  
+  # async methods
+  def create_worker_and_start_world
+    EM.defer(proc { 
+        begin
+          Workers.create 
+        rescue => e
+          error "create worker", e
+        end
+      }, proc { |worker| 
+        if worker
+          EM.next_tick { start_world worker }
+        else
+          error "Fatal. Closing connection"
+          close_connection
+        end
+    })
+  end
+  
+  def start_worker_and_world worker
+    BUSY_WORKERS[worker.instance_id] = worker
+    
+    EM.defer(proc { 
+        begin
+          worker.start!
+        rescue => e
+          error "worker start", e
+        end 
+      }, proc { |worker|
+        if worker
+          info "started stopped worker #{worker.instance_id}"
+          EM.next_tick { start_world worker }
+        else
+          terminate_bad_worker_and_retry worker
+        end
+    })
+  end
+  
+  def start_world worker
+    @supervised_world.worker = worker
+    BUSY_WORKERS[worker.instance_id] = worker
+    
+    info "starting world:#{@world_id} on #{worker.instance_id}"
+    EM.defer(proc { 
+        begin
+          worker.start_world @world_id 
+        rescue => e
+          error "start world", e
+        end
+      }, proc {|world|
+        if world
+          @supervised_world.world = world
+          BUSY_WORKERS.delete worker.instance_id
+        
+          proxy_client
+        else
+          # couldn't start world
+          # assume worker is bad then terminate
+          terminate_bad_worker_and_retry worker
+        end
+    })
+  end
+  
+  def terminate_bad_worker_and_retry worker
+    EM.defer(proc { 
+        begin
+          worker.terminate!
+        rescue => e
+          error "worker terminate", e
+        end
+      }, proc { BUSY_WORKERS.delete worker.instance_id })
+    
+    # clean up and try again
+    @supervised_world.worker = nil
+    EM.next_tick { get_world_running }
+  end
+  
+  def stop_world supervised_world, world_id
+    EM.defer(proc { 
+        begin
+          supervised_world.worker.stop_world world_id
+        rescue => e
+          error "stop world", e
+        end
+      }, proc {
+        info "world stopped"
+        SUPERVISED_WORLDS.delete world_id
+    })
+  end
+  
+  # synchronous methods
+  def find_idle_workers
+    running_workers = Workers.running
+    running_workers.each do |w|
+      debug "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count}"
+    end
+    # only return workers that are unsupervised and have no worlds (ie. not starting or stopping)
+    idle_workers = running_workers.select{|w| w.worlds.count == 0 }.reject{|w| BUSY_WORKERS.has_key? w.instance_id } 
+    idle_workers.sort_by { |w| (w.uptime_minutes % 60) }
+  end
+  
 end
 
 module Server
@@ -287,11 +346,8 @@ EventMachine.run do
   puts 'collecting initial state'
   
   Workers.existing.each do |worker|
-    supervised_worker = SUPERVISED_WORKERS[worker.instance_id] = SupervisedWorker.new(worker.server.state.to_sym, worker)
-
     worker.worlds.each do |world| 
-      # TODO: figure out the state of this world
-      SUPERVISED_WORLDS[world.id] = SupervisedWorld.new :running, supervised_worker, world
+      SUPERVISED_WORLDS[world.id] = SupervisedWorld.new :running, worker, world
     end
   end
   
@@ -316,11 +372,13 @@ EventMachine.run do
     
     EM.defer(find_idle_workers, proc { |workers|
         workers.each do |w|
-          SUPERVISED_WORKERS.delete w.instance_id
-          EM.defer do
-            puts "Stopping idle worker:#{w.instance_id} uptime:#{w.uptime_minutes}"
-            w.stop!
-          end
+          BUSY_WORKERS[w.instance_id] = w
+          EM.defer(proc{
+              puts "Stopping idle worker:#{w.instance_id} uptime:#{w.uptime_minutes}"
+              w.stop!
+            }, proc {
+              BUSY_WORKERS.delete w.instance_id
+          })
         end
     })
   end

@@ -29,6 +29,7 @@ class Worker
       wait_for_ssh
       prepare_for_minefold
     end
+    self
   end
   
   def stop!
@@ -43,7 +44,7 @@ class Worker
     return [] unless public_ip_address
     
     begin
-      server_info = JSON.parse get("/", timeout:60).body
+      server_info = JSON.parse get("/", timeout:20).body
       Worlds.new self, server_info.map {|h| World.new self, h["id"], h["port"]}
     rescue => e
       puts e.inspect
@@ -51,32 +52,12 @@ class Worker
     end
   end
   
-  def uptime_minutes!
-    @uptime_minutes = begin
-      if server.state == 'running'
-        uptime_message = server.ssh("uptime").first.stdout
-        result = uptime_message.split(/up |,/)[1]  # These are backticks,upper left key on my keyboard
-
-        # puts uptime_message
-        # puts result
-
-        hours, minutes = 0, 0
-        if result =~ /(\d+) min/
-          minutes = $1.to_i
-        else
-          hours, minutes = result.split(':').map{|r| r.to_i }
-        end
-        hours * 60 + minutes
-      end
-    end
-  end
-  
   def uptime_minutes
-    @uptime_minutes ||= uptime_minutes!
+    ((Time.now - server.created_at) / 60).floor
   end
   
   def start_world world_id
-    get("/worlds/create?id=#{world_id}", timeout:3 * 60)
+    get("/worlds/create?id=#{world_id}", timeout:90)
 
     server_info = JSON.parse get("/worlds/#{world_id}").body
     World.new self, server_info["id"], server_info["port"]

@@ -1,3 +1,5 @@
+require 'erb'
+
 class ProxyInfoHandler  < EventMachine::Connection
   include EventMachine::HttpServer
  
