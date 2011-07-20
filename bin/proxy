@@ -259,6 +259,7 @@ module Client
         end 
       }, proc { |worker|
         if worker
+          BUSY_WORKERS.delete worker.instance_id
           info "started stopped worker #{worker.instance_id}"
           EM.next_tick { start_world worker }
         else
