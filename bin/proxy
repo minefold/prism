@@ -90,11 +90,17 @@ module Client
               # theres a stopped worker we can start and use
               info "starting stopped worker #{stopped_worker.instance_id}"
               start_worker_and_world stopped_worker
+            else
+              # no workers, lets create one
+              info "creating new worker"
+              create_worker_and_start_world
             end
           end
         else
-          info "creating new worker"
-          create_worker_and_start_world
+          # error getting workers, give up?
+          SUPERVISED_WORLDS.delete @world_id
+          warn "Fatal. can't contact workers"
+          close_connection
         end
       })
     end
@@ -279,6 +285,7 @@ module Client
         
           proxy_client
         else
+          SUPERVISED_WORLDS.delete @world_id
           # couldn't start world
           # assume worker is bad then terminate
           terminate_bad_worker_and_retry worker
