@@ -58,14 +58,14 @@ class Worker
   end
   
   def start_world world_id
-    post("/worlds?id=#{world_id}", timeout:90)
+    get("/worlds/create?id=#{world_id}", timeout:90)
 
     server_info = JSON.parse get("/worlds/#{world_id}").body
     World.new self, server_info["id"], server_info["port"]
   end
   
   def stop_world world_id
-    post "/worlds/#{world_id}/destroy"
+    get "/worlds/#{world_id}/destroy"
   end
   
   def prepare_for_minefold
@@ -102,11 +102,6 @@ class Worker
   def get path, options={}
     self.class.base_uri url
     self.class.get path, options
-  end
-
-  def post path, options={}
-    self.class.base_uri url
-    self.class.post path, options
   end
   
   def uri
