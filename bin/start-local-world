@@ -13,18 +13,10 @@ world_id = ARGV.shift
 
 exit 0 if LocalWorlds.running.any? {|w| w[:id] == world_id }
 
-def god_running?
-  `sudo bundle exec god status`
-  $?.exitstatus == 0
-end
-
 def start config_file, world_id
-  if god_running?
-    `sudo bundle exec god load #{config_file}`
-    `sudo bundle exec god start #{world_id}`
-  else
-    `sudo bundle exec god -c #{config_file}`
-  end
+  `sudo bundle exec god`
+  `sudo bundle exec god load #{config_file}`
+  `sudo bundle exec god start #{world_id}`
 end
 
 def server_properties world_id, port
@@ -94,6 +86,9 @@ File.open(god_path, 'w') {|file| file.puts template.result(binding) }
 # clear server log
 server_log = File.join(world_path, "server.log")
 File.open(server_log, "w") {|file| file.print }
+
+# create empty input file
+`echo "" > '#{world_path}/world.stdin'`
 
 start god_path, world_id
 

@@ -1,6 +1,6 @@
 source :rubygems
 
-gem 'god'
+gem 'god', :git => "https://github.com/snappycode/god"
 gem 'file-tail', :require => 'file/tail'
 gem 'fog', '>= 0.9.0'
 gem 'httparty'

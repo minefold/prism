@@ -380,7 +380,7 @@ EventMachine.run do
     running_workers.each do |w|
       world_ids = w.worlds.map(&:id)
       player_count = world_ids.inject(0) {|count, world_id| count + CONNECTED_PLAYERS[world_id].count }
-      puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count} players:#{player_count}"
+      puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{world_ids.count} players:#{player_count}"
     end
     idle_workers = running_workers.select{|w| w.worlds.count == 0 && (w.uptime_minutes % 60) > 55 } 
     puts "Found #{idle_workers.count} idle workers"

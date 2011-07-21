@@ -8,6 +8,8 @@ God.watch do |w|
   w.dir = "<%= WORLDS %>/<%= world_id %>"
   w.start = "java -Xmx1024M -Xms1024M -jar server.jar nogui"
   w.start_grace = 10.seconds
+  
+  w.stdin_cmd = "tail -fn0 '#{w.dir}/world.stdin'"
   w.log_cmd = '/usr/bin/logger -t "<%= world_id %>:server"'
   
   w.behavior(:clean_pid_file)
