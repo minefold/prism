@@ -378,7 +378,7 @@ EventMachine.run do
   find_idle_workers = proc { 
     running_workers = Workers.running
     running_workers.each do |w|
-      world_ids = w.worlds.map(&id)
+      world_ids = w.worlds.map(&:id)
       player_count = world_ids.inject(0) {|count, world_id| count + CONNECTED_PLAYERS[world_id].count }
       puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{world_ids.count} players:#{player_count}"
     end
