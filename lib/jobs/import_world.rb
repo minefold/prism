@@ -65,8 +65,8 @@ module Job
           
           world_path = find_world_path
           
-          FileUtils.mkdir_p "#{import_path}/#{world_id}"
-          FileUtils.cp_r "#{world_path}/.", "#{import_path}/#{world_id}"
+          FileUtils.mkdir_p "#{import_path}/#{world_id}/#{world_id}"
+          FileUtils.cp_r "#{world_path}/.", "#{import_path}/#{world_id}/#{world_id}"
         
           Dir.chdir import_path do
             archive_filename = "#{world_id}.tar.gz"

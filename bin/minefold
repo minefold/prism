@@ -16,6 +16,7 @@ def usage
       proxy tail-log
   
       world:[world_id]
+      world:[world_id] download
   
       workers
       
