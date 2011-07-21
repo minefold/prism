@@ -7,13 +7,15 @@ class WorldCommand
   end
   
   def show
-    puts Hirb::Helpers::AutoTable.render(world.reject{|k,v| k == "chat_messages" })
-    
-    chat_messages = world['chat_messages'].map do |msg|
-      "#{msg['timestamp']} <#{msg['username']}> #{msg['message']}"
-    end
-    puts Hirb::Helpers::AutoTable.render(chat_messages)
+    puts Hirb::Helpers::AutoTable.render(world)
   end
+  
+  def download
+    world_filename = "#{world_id}.tar.gz"
+    remote_file = storage.directories.get('minefold.worlds').files.get(world_filename)
+    File.open(world_filename, 'w') {|local_file| local_file.write(remote_file.body)}
+  end
+  
   
   private
   
@@ -28,5 +30,14 @@ class WorldCommand
   def columns
     @columns ||= %w[_id slug name chat_messages]
   end
+  
+  def storage
+    @storage ||= Fog::Storage.new({
+      :provider                 => 'AWS',
+      :aws_secret_access_key    => EC2_SECRET_KEY,
+      :aws_access_key_id        => EC2_ACCESS_KEY
+    })
+  end
+  
 end
 

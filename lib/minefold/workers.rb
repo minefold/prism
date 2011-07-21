@@ -39,4 +39,8 @@ class Workers
     worker
   end
   
+  def self.get instance_id
+    Worker.new compute_cloud.servers.get(instance_id)
+  end
+  
 end
