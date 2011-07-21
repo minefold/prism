@@ -33,7 +33,7 @@ module Client
   def post_init
     @f_connection_established = EM::DefaultDeferrable.new
   end
-  
+
   def info message
     puts "[#{@username||''}@#{@world_id||''}] #{message}"
   end
@@ -41,7 +41,21 @@ module Client
   def warn message
     puts "WARNING: #{message}"
   end
-  
+
+  def post_world_activity(activity)
+    info "inserting #{activity} wall_item"
+
+    DB['wall_items'].insert(
+      '_type' => 'Activity',
+      'wall_type' => 'World',
+      'wall_id' => BSON::ObjectId(@world_id),
+      'user_id' => BSON::ObjectId(@user_objectid),
+      'activity' => activity,
+      'created_at' => Time.now.utc,
+      'updated_at' => Time.now.utc
+    )
+  end
+
   def get_world_running
     # scenarios:
     #  World is running > connect
@@ -49,27 +63,27 @@ module Client
     #  World is stopping (backing up) > retry later
     #  World is stopped, worker is starting > retry later
     #  World is stopped, worker is running > start world then connect
-    
+
     #  World not claimed, running worker with no world available > start world then connect
     #  World not claimed, stopped worker available > start worker then retry
     #  World not claimed, no worker available > create new worker then connect
-    
+
     #  Start world on instance failed > stop instance then retry
-    
+
     @supervised_world ||= SUPERVISED_WORLDS[@world_id]
-    
+
     if @supervised_world
       if @supervised_world.running?
         proxy_client
       elsif @supervised_world.state == :stopped && @supervised_world.running_worker?
         # we need to start the world on this worker
         instance_id = @supervised_world.supervised_worker.worker.instance_id
-        
+
         @supervised_world.state = :starting
         info "starting world on #{instance_id}"
-        start_world_proc = proc { 
+        start_world_proc = proc {
           begin
-            @supervised_world.supervised_worker.worker.start_world @world_id 
+            @supervised_world.supervised_worker.worker.start_world @world_id
           rescue => e
             warn "Start world error: #{e.message}\n#{e.backtrace.join("\n")}"
             nil
@@ -106,9 +120,9 @@ module Client
         @supervised_world.supervised_worker = supervised_worker
         # set it's state to starting so nobody else tries to use it
         supervised_worker.state = :starting
-        
+
         info "starting stopped worker #{supervised_worker.worker.instance_id}"
-        EM.defer(proc { supervised_worker.worker.start! }, proc { 
+        EM.defer(proc { supervised_worker.worker.start! }, proc {
           supervised_worker.state = :running
           info "started stopped worker #{supervised_worker.worker.instance_id}"
           EM.next_tick { get_world_running }
@@ -116,7 +130,7 @@ module Client
       else
         # no worker available so we'll create a new one
         info "creating new worker"
-        EM.defer(proc { Workers.create }, proc { |worker| 
+        EM.defer(proc { Workers.create }, proc { |worker|
           @supervised_world.supervised_worker = SUPERVISED_WORKERS[worker.instance_id] =
             SupervisedWorker.new(:running, worker)
           info "created new worker #{worker.instance_id}"
@@ -124,10 +138,10 @@ module Client
         })
       end
     end
-    
-    
+
+
   end
-  
+
   def proxy_client
     host = @supervised_world.supervised_worker.worker.public_ip_address
     port = @supervised_world.world.port
@@ -137,23 +151,25 @@ module Client
     end
     @keepalive.cancel if @keepalive
     @wait_for_world.cancel if @wait_for_world
-    
+
     @credit_muncher = EventMachine::PeriodicTimer.new(60) do
       deduct_minutes 1
     end
     puts "starting credit muncher:#{@credit_muncher}"
-    
+
+    post_world_activity 'connected'
+
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id] << @username unless CONNECTED_PLAYERS[@world_id].include? @username
     info "#{CONNECTED_PLAYERS[@world_id].length} player(s)"
-    
+
     @f_connection_established.succeed
   end
 
   def receive_data data
     raw = data.unpack('CN*')
     if raw[0] == 0x02
-      
+
       # 1 byte for type and 2 bytes for the string length
       raw_offset = 1 + 2
 
@@ -173,18 +189,18 @@ module Client
         info "unauthorised player"
         return close_connection
       end
-      
+
       unless @user['credits'] > 0
         info "no credit remaining"
         return close_connection
       end
-      
+
       @user_objectid, @world_id = @user['_id'], @user['world_id'].to_s
-      
+
       info "connected. #{@user['credits']} credits remaining"
-      
+
       @supervised_world ||= SUPERVISED_WORLDS[@world_id]
-      
+
       if @supervised_world && @supervised_world.running?
         proxy_client
       else
@@ -194,7 +210,7 @@ module Client
         get_world_running
       end
     end
-    
+
     # TODO: We need to check their auth details when they send it over the
     # wire somebody might be spoofing a username to get free access
     @f_connection_established.callback do
@@ -213,7 +229,7 @@ module Client
 
   def stop_current_world
     return unless @supervised_world && @supervised_world.supervised_worker
-    
+
     sworker = @supervised_world.supervised_worker
     if @supervised_world.state != :stopping && sworker && sworker.worker
       info "stopping world"
@@ -222,14 +238,14 @@ module Client
         info "world stopped"
         @supervised_world.state = :stopped
       })
-      
+
     end
   end
-  
+
   def deduct_minutes amount
     EM.defer do
       info "deducting 1 credit"
-      user = DB['users'].find_and_modify({ 
+      user = DB['users'].find_and_modify({
                     query: {"_id"  => @user_objectid},
                     update:{"$inc" => {"credits"=>-amount }}
                   })
@@ -242,25 +258,27 @@ module Client
       end
     end
   end
-  
+
   # sometimes crashes the client...
   # def send_chat_message message
-  #   
+  #
   #   data = [0x03].pack('C')
   #   data << [message.size, message.encode('UTF-16BE')].pack("na*")
   #   send_data data
   # end
-  
+
   def unbind
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id].delete @username
     info "client disconnected. #{CONNECTED_PLAYERS[@world_id].length} player(s) in world"
-    
+
+    post_world_activity 'disconnected'
+
     @keepalive.cancel if @keepalive
     @wait_for_world.cancel if @wait_for_world
     puts "stopping credit muncher:#{@credit_muncher}"
     @credit_muncher.cancel if @credit_muncher
-    
+
     if CONNECTED_PLAYERS[@world_id].length == 0
       stop_current_world
     end
@@ -285,35 +303,35 @@ end
 EventMachine.epoll
 EventMachine.run do
   puts 'collecting initial state'
-  
+
   Workers.existing.each do |worker|
     supervised_worker = SUPERVISED_WORKERS[worker.instance_id] = SupervisedWorker.new(worker.server.state.to_sym, worker)
 
-    worker.worlds.each do |world| 
+    worker.worlds.each do |world|
       # TODO: figure out the state of this world
       SUPERVISED_WORLDS[world.id] = SupervisedWorld.new :running, supervised_worker, world
     end
   end
-  
+
   # listen for minecraft connections
   EventMachine.start_server('0.0.0.0', 25565, Client)
-  
+
   # listen for http connections
   EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
 
-  find_idle_workers = proc { 
+  find_idle_workers = proc {
     running_workers = Workers.running
     running_workers.each do |w|
       puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes!} worlds:#{w.worlds.count}"
     end
-    idle_workers = running_workers.select{|w| w.worlds.count == 0 && (w.uptime_minutes! % 60) > 55 } 
+    idle_workers = running_workers.select{|w| w.worlds.count == 0 && (w.uptime_minutes! % 60) > 55 }
     puts "Found #{idle_workers.count} idle workers"
     idle_workers
   }
-  
-  idle_killer = EventMachine::PeriodicTimer.new(4 * 60) do 
+
+  idle_killer = EventMachine::PeriodicTimer.new(4 * 60) do
     # shutdown idle workers
-    
+
     EM.defer(find_idle_workers, proc { |workers|
         workers.each do |w|
           SUPERVISED_WORKERS.delete w.instance_id
