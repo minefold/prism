@@ -5,9 +5,10 @@ get "/" do
 end
 
 # TODO: make this stuff restful
-get "/worlds/create" do
+post "/worlds" do
   result = `#{BIN}/start-local-world #{params[:id]}`
   if $?.exitstatus != 0
+    puts result
     raise result
   else
     redirect "/"
@@ -19,9 +20,14 @@ get "/worlds/:id" do
   LocalWorlds.running.find{|w| w[:id] == params[:id] }.to_json
 end
 
-get "/worlds/:id/destroy" do
+post "/worlds/:id/destroy" do
   content_type :json
-  `#{BIN}/stop-local-world #{params[:id]}`
-  redirect "/"
+  result = `#{BIN}/stop-local-world #{params[:id]}`
+  if $?.exitstatus != 0
+    puts result
+    raise result
+  else
+    redirect "/"
+  end
 end
 

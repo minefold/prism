@@ -1,23 +1,23 @@
-#!/usr/bin/env ruby
-require 'bundler/setup'
-Bundler.require :default
-
-$:.unshift File.join File.dirname(__FILE__), '../lib'
-require 'minefold'
-
-abort "Usage: start-vm world_id" unless ARGV.length == 1
-world_id = ARGV.shift
-
-if worker = Workers.stopped.first
-  puts "Starting stopped worker #{worker.instance_id}"
-  worker.start!
-elsif worker = Workers.running.find {|w| w.worlds.empty? }
-  puts "Using running worker with no worlds"
-else
-  puts "Creating new worker"
-  worker = Workers.create
-end
-
-puts "Starting world #{world_id}"
-puts `curl -L #{worker.url}/worlds/create?id=#{world_id}`
-
+# #!/usr/bin/env ruby
+# require 'bundler/setup'
+# Bundler.require :default
+# 
+# $:.unshift File.join File.dirname(__FILE__), '../lib'
+# require 'minefold'
+# 
+# abort "Usage: start-vm world_id" unless ARGV.length == 1
+# world_id = ARGV.shift
+# 
+# if worker = Workers.stopped.first
+#   puts "Starting stopped worker #{worker.instance_id}"
+#   worker.start!
+# elsif worker = Workers.running.find {|w| w.worlds.empty? }
+#   puts "Using running worker with no worlds"
+# else
+#   puts "Creating new worker"
+#   worker = Workers.create
+# end
+# 
+# puts "Starting world #{world_id}"
+# puts `curl -L #{worker.url}/worlds/create?id=#{world_id}`
+# 
