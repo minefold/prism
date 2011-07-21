@@ -8,6 +8,7 @@ end
 get "/worlds/create" do
   result = `#{BIN}/start-local-world #{params[:id]}`
   if $?.exitstatus != 0
+    puts result
     raise result
   else
     redirect "/"
@@ -21,7 +22,12 @@ end
 
 get "/worlds/:id/destroy" do
   content_type :json
-  `#{BIN}/stop-local-world #{params[:id]}`
-  redirect "/"
+  result = `#{BIN}/stop-local-world #{params[:id]}`
+  if $?.exitstatus != 0
+    puts result
+    raise result
+  else
+    redirect "/"
+  end
 end
 
