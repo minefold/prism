@@ -61,12 +61,10 @@ module Job
 
           puts "Extracting..."
           extract_archive filename
+          FileUtils.rm_f filename
+          
           world_path = find_world_path
-          raise InvalidWorld unless world_path
-
-          puts "Found world data"
-          FileUtils.rm "#{world_path}/server.jar" if File.exists? "#{world_path}/server.jar"
-        
+          
           FileUtils.mkdir_p "#{import_path}/#{world_id}"
           FileUtils.cp_r "#{world_path}/.", "#{import_path}/#{world_id}"
         
@@ -87,7 +85,6 @@ module Job
           end
           
           update_world_status world_id, ''
-          remote_file.destroy
         end
       rescue InvalidArchive
         update_world_status world_id, 'invalid_archive'
@@ -107,11 +104,11 @@ module Job
   
     def self.find_world_path
       puts Dir["**/*"].join("\n")
-      region_path = Dir["**/*"].find{|dir| dir =~ /([^\/]+)\/region\/r\.0\.0\.mcr/ }
-      if region_path
-        world_name = $1
-        world_path = File.expand_path(region_path).gsub "/#{world_name}/region/r.0.0.mcr", ""
-      end
+      region_path = Dir["**/*"].find{|dir| dir =~ /region\/r\.0\.0\.mcr/ }
+      raise InvalidWorld unless region_path
+      puts "Found region data"
+      
+      File.expand_path(region_path.gsub("region/r.0.0.mcr", ""))
     end
     
     def self.update_world_status world_id, status

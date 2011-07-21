@@ -25,6 +25,7 @@ class Worker
   def start!
     if server.state == 'stopped'
       server.start
+      puts "waiting for VM ready"
       server.wait_for { ready? }
       wait_for_ssh
       prepare_for_minefold

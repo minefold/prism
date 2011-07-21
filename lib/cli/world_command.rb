@@ -7,12 +7,7 @@ class WorldCommand
   end
   
   def show
-    puts Hirb::Helpers::AutoTable.render(world.reject{|k,v| k == "chat_messages" })
-    
-    chat_messages = world['chat_messages'].map do |msg|
-      "#{msg['timestamp']} <#{msg['username']}> #{msg['message']}"
-    end
-    puts Hirb::Helpers::AutoTable.render(chat_messages)
+    puts Hirb::Helpers::AutoTable.render(world)
   end
   
   private
