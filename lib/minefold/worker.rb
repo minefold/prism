@@ -108,7 +108,8 @@ class Worker
   
   def wait_for_ssh
     puts "Waiting for ssh access"
-    Timeout::timeout(60) do
+    # we need to wait for the server to do all its bootup stuff
+    Timeout::timeout(180) do
       begin
         Timeout::timeout(8) do
           server.ssh "pwd"
