@@ -74,8 +74,8 @@ class Worker
       "sudo rm -f /home/ubuntu/.god/pids/*",
       "cd ~/minefold",
       "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
-      "sudo bundle install --without proxy development test cli",
-      "sudo bundle exec god",
+      "bundle install --without proxy development test cli",
+      "sudo god",
       "sudo god load ~/minefold/worker/config/worker.god",
       "sudo god start worker-app",
     ]
