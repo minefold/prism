@@ -1,5 +1,7 @@
 root = File.expand_path '../', File.dirname(__FILE__)
 
+God.pid_file_directory = "#{PIDS}"
+
 God.watch do |w|
   w.name = "worker-app"
   w.interval = 5.seconds # default
