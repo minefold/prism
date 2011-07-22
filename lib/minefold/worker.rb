@@ -58,7 +58,8 @@ class Worker
   end
   
   def start_world world_id
-    get("/worlds/create?id=#{world_id}", timeout:90)
+    response = get("/worlds/create?id=#{world_id}", timeout:90)
+    puts response.body unless response.code == "200"
 
     server_info = JSON.parse get("/worlds/#{world_id}").body
     World.new self, server_info["id"], server_info["port"]
