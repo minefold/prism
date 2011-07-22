@@ -5,7 +5,7 @@ WORLDS = "#{ROOT}/worlds"
 LOG_PATH = "#{ROOT}/log"
 
 JAR = "#{WORLDS}/server.jar"
-PIDS = "#{ENV['HOME']}/.god/pids"
+PIDS = "#{ROOT}/tmp/pids"
 
 # TODO: put these somewhere more secure
 EC2_SECRET_KEY="4VI8OqUBN6LSDP6cAWXUo0FM1L/uURRGIGyQCxvq"

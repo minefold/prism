@@ -1,6 +1,4 @@
 
-God.pid_file_directory = "#{ENV['HOME']}/.god/pids"
-
 God.watch do |w|
   w.group = "<%= world_id %>"
   w.name = "minecraft-<%= world_id %>"
