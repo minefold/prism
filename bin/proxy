@@ -311,11 +311,11 @@ module Client
     EM.defer(proc { 
         begin
           info "terminating bad worker"
-          worker.terminate!
+          worker.terminate! if worker
         rescue => e
           error "worker terminate", e
         end
-      }, proc { BUSY_WORKERS.delete worker.instance_id })
+      }, proc { BUSY_WORKERS.delete worker.instance_id if worker })
     
     # clean up and try again
     
