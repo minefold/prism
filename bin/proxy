@@ -82,31 +82,34 @@ module Client
           error "Workers.existing", e
         end
       }, proc {|workers| 
-        return unless @client_connected
-        
-        if workers
-          idle_worker = workers.find {|w| w.server.state == 'running' && w.worlds.count == 0 } 
-          if idle_worker
-            # there is an idle worker available to us
-            info "using idle worker #{idle_worker.instance_id} to start world"
-            start_world idle_worker
-          else
-            stopped_worker = workers.find{|w| w.server.state == 'stopped' }
-            if stopped_worker
-              # theres a stopped worker we can start and use
-              info "starting stopped worker #{stopped_worker.instance_id}"
-              start_worker_and_world stopped_worker
+        if @client_connected
+          if workers
+            idle_worker = workers.find {|w| w.server.state == 'running' && w.worlds.count == 0 } 
+            if idle_worker
+              # there is an idle worker available to us
+              info "using idle worker #{idle_worker.instance_id} to start world"
+              start_world idle_worker
             else
-              # no workers, lets create one
-              info "creating new worker"
-              create_worker_and_start_world
+              stopped_worker = workers.find{|w| w.server.state == 'stopped' }
+              if stopped_worker
+                # theres a stopped worker we can start and use
+                info "starting stopped worker #{stopped_worker.instance_id}"
+                start_worker_and_world stopped_worker
+              else
+                # no workers, lets create one
+                info "creating new worker"
+                create_worker_and_start_world
+              end
             end
+          else
+            # error getting workers, give up?
+            SUPERVISED_WORLDS.delete @world_id
+            warn "Fatal. can't contact workers"
+            close_connection
           end
         else
-          # error getting workers, give up?
           SUPERVISED_WORLDS.delete @world_id
-          warn "Fatal. can't contact workers"
-          close_connection
+          info "Player disconnected. Won't start world"
         end
       })
     end
@@ -228,9 +231,9 @@ module Client
     info "stopping credit muncher:#{@credit_muncher}"
     @credit_muncher.cancel if @credit_muncher
     
-    if @world_id && @supervised_world && CONNECTED_PLAYERS[@world_id].length == 0
+    if @world_id && SUPERVISED_WORLDS[@world_id] && CONNECTED_PLAYERS[@world_id].length == 0
       info "Stopping world:#{@world_id}"
-      stop_world @supervised_world, @world_id
+      stop_world SUPERVISED_WORLDS[@world_id], @world_id
     end
     
   end
