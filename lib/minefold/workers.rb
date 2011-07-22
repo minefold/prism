@@ -25,14 +25,16 @@ class Workers
     existing.select {|w| w.server.state == 'stopped' }
   end
 
-  def self.create
-    worker = Worker.new compute_cloud.servers.bootstrap(
+  def self.create options = {}
+    options = {
       :private_key_path => SSH_PRIVATE_KEY_PATH,
       :username => 'ubuntu',
       :image_id => 'ami-4f5b9f26',
       :groups => %W{default proxy},
       :flavor_id => 'm1.large'
-    )
+    }.merge(options)
+    
+    worker = Worker.new compute_cloud.servers.bootstrap(options)
     compute_cloud.create_tags worker.instance_id, "Name" => "worker"
     
     worker.prepare_for_minefold
