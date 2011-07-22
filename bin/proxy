@@ -90,16 +90,16 @@ module Client
               info "using idle worker #{idle_worker.instance_id} to start world"
               start_world idle_worker
             else
-              stopped_worker = workers.find{|w| w.server.state == 'stopped' }
-              if stopped_worker
-                # theres a stopped worker we can start and use
-                info "starting stopped worker #{stopped_worker.instance_id}"
-                start_worker_and_world stopped_worker
-              else
+              # stopped_worker = workers.find{|w| w.server.state == 'stopped' }
+              # if stopped_worker
+              #   # theres a stopped worker we can start and use
+              #   info "starting stopped worker #{stopped_worker.instance_id}"
+              #   start_worker_and_world stopped_worker
+              # else
                 # no workers, lets create one
                 info "creating new worker"
                 create_worker_and_start_world
-              end
+              # end
             end
           else
             # error getting workers, give up?
@@ -401,8 +401,8 @@ EventMachine.run do
           BUSY_WORKERS[w.instance_id] = w
           EM.defer(proc{
               begin
-                puts "Stopping idle worker:#{w.instance_id} uptime:#{w.uptime_minutes}"
-                w.stop!
+                puts "Terminating idle worker:#{w.instance_id} uptime:#{w.uptime_minutes}"
+                w.terminate!
               rescue => e
                 puts "Error stopping idle worker\n#{e.message}\n#{e.backtrace}"
               end

@@ -111,7 +111,10 @@ class Worker
     # we need to wait for the server to do all its bootup stuff
     Timeout::timeout(180) do
       begin
-        Timeout::timeout(8) { server.ssh "pwd" }
+        Timeout::timeout(8) do 
+          puts "checking ssh..."
+          server.ssh "pwd"
+        end
       rescue Errno::ECONNREFUSED, Net::SSH::AuthenticationFailed, Timeout::Error
         sleep 5
         retry
