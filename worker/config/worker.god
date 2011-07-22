@@ -4,7 +4,7 @@ God.pid_file_directory = "#{ENV['HOME']}/.god/pids"
 God.watch do |w|
   w.name = "worker-app"
   w.interval = 5.seconds # default
-  w.start = "thin start -p 3000"
+  w.start = "bundle exec thin start -p 3000"
   w.log_cmd = "/usr/bin/logger -t '#{w.name}'"
   w.dir = root
   

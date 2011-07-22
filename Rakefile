@@ -18,10 +18,16 @@ task "resque:setup" do
   require 'minefold'
   require 'jobs'
   require 'fog'
+  require 'parallel'
 
   if ENV["REDISTOGO_URL"]
     uri = URI.parse(ENV["REDISTOGO_URL"])
     Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
   end
+end
+
+task "map_world" do
+  require 'jobs'
+  Resque.enqueue(Job::MapWorld, ENV['WORLD_ID'])
 end
 

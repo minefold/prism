@@ -7,7 +7,7 @@ gem 'httparty'
 gem 'mongo'
 gem 'bson_ext'
 gem 'looksee'
-
+gem 'parallel'
 
 group :proxy do
   gem 'eventmachine'
