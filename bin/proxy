@@ -35,8 +35,10 @@ module Client
     puts "WARNING: #{message}"
   end
   
-  def error message, e
-    puts "ERROR: " + [message, e.message, e.backtrace].join("\n")
+  def error message, e = nil
+    error_message = ""
+    error_message = [e.inspect, e.backtrace].join("\n")] if e
+    puts "ERROR: #{message}" + error_message
     nil
   end
   
