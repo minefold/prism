@@ -37,7 +37,7 @@ module Client
   
   def error message, e = nil
     error_message = ""
-    error_message = [e.inspect, e.backtrace].join("\n")] if e
+    error_message = [e.inspect, e.backtrace].join("\n") if e
     puts "ERROR: #{message}" + error_message
     nil
   end
