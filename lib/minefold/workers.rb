@@ -29,7 +29,7 @@ class Workers
     options = {
       :private_key_path => SSH_PRIVATE_KEY_PATH,
       :username => 'ubuntu',
-      :image_id => 'ami-4f5b9f26',
+      :image_id => 'ami-afea2dc6',
       :groups => %W{default proxy},
       :flavor_id => 'm1.large'
     }.merge(options)
