@@ -1,6 +1,6 @@
 root = File.expand_path '../', File.dirname(__FILE__)
 
-God.pid_file_directory = "#{PIDS}"
+God.pid_file_directory = "#{root}/tmp/pids"
 
 God.watch do |w|
   w.name = "worker-app"

@@ -1,5 +1,5 @@
 
-God.pid_file_directory = "#{PIDS}"
+God.pid_file_directory = "<%= PIDS %>"
 
 God.watch do |w|
   w.group = "<%= world_id %>"
