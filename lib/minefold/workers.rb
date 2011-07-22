@@ -31,7 +31,7 @@ class Workers
       :username => 'ubuntu',
       :image_id => 'ami-afea2dc6',
       :groups => %W{default proxy},
-      :flavor_id => 'm1.large'
+      :flavor_id => 't1.micro'
     }.merge(options)
     
     worker = Worker.new compute_cloud.servers.bootstrap(options)
