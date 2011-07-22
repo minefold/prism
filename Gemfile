@@ -6,6 +6,8 @@ gem 'fog', '>= 0.9.0'
 gem 'httparty'
 gem 'mongo'
 gem 'bson_ext'
+gem 'looksee'
+
 
 group :proxy do
   gem 'eventmachine'

@@ -31,9 +31,9 @@ class Workers
       :username => 'ubuntu',
       :image_id => 'ami-4f5b9f26',
       :groups => %W{default proxy},
-      :flavor_id => 'm1.large',
-      :tags => {"Name" => "worker"}
+      :flavor_id => 'm1.large'
     )
+    compute_cloud.create_tags worker.instance_id, "Name" => "worker"
     
     worker.prepare_for_minefold
     worker

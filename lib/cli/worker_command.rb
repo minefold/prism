@@ -6,12 +6,11 @@ class WorkerCommand
   end
   
   def show
-    w = worker
-    if w
+    if w = worker
       puts Hirb::Helpers::AutoTable.render({
         instance_id:w.instance_id, 
         public_ip_address:w.public_ip_address,
-        worlds:w.worlds.map{|world| world_id }
+        worlds:w.worlds.map{|world| world.world_id }
       })
     end
   end
