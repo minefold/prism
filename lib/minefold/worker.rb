@@ -72,7 +72,6 @@ class Worker
   def prepare_for_minefold
     puts "Preparing worker:#{instance_id} for minefold"
     commands = [
-      "sudo rm -f /home/ubuntu/.god/pids/*",
       "cd ~/minefold",
       "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
       "bundle install --without proxy development test cli",
@@ -112,13 +111,9 @@ class Worker
     # we need to wait for the server to do all its bootup stuff
     Timeout::timeout(180) do
       begin
-        Timeout::timeout(8) do
-          server.ssh "pwd"
-        end
-      rescue Errno::ECONNREFUSED
-        sleep 2
-        retry
-      rescue Net::SSH::AuthenticationFailed, Timeout::Error
+        Timeout::timeout(8) { server.ssh "pwd" }
+      rescue Errno::ECONNREFUSED, Net::SSH::AuthenticationFailed, Timeout::Error
+        sleep 5
         retry
       end
     end
