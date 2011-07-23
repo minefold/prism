@@ -9,7 +9,7 @@ GEM
     crack (0.1.8)
     daemons (1.1.4)
     diff-lcs (1.1.2)
-    eventmachine (0.12.10)
+    eventmachine (1.0.0.beta.3)
     eventmachine-tail (0.6.1)
       eventmachine
     eventmachine_httpserver (0.2.1)
@@ -89,7 +89,7 @@ PLATFORMS
 DEPENDENCIES
   ZenTest (~> 4.4.2)
   bson_ext
-  eventmachine
+  eventmachine (= 1.0.0.beta.3)
   eventmachine-tail (~> 0.6.1)
   eventmachine_httpserver
   file-tail

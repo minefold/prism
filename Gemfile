@@ -8,9 +8,9 @@ gem 'mongo'
 gem 'bson_ext'
 gem 'looksee'
 gem 'parallel'
+gem 'eventmachine', '1.0.0.beta.3'
 
 group :proxy do
-  gem 'eventmachine'
   gem 'eventmachine_httpserver', :require => 'evma_httpserver'
   gem 'resque'
 end
@@ -27,7 +27,6 @@ group :test do
 end
 
 group :chatty do
-  gem 'eventmachine'
   gem 'eventmachine-tail', '~> 0.6.1'
 end
 

@@ -113,7 +113,8 @@ class Worker
           puts "checking ssh..."
           server.ssh "pwd"
         end
-      rescue Errno::ECONNREFUSED, Net::SSH::AuthenticationFailed, Timeout::Error
+      rescue Errno::ECONNREFUSED, Net::SSH::AuthenticationFailed, Timeout::Error => e
+        p e.inspect
         sleep 5
         retry
       end
