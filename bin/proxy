@@ -27,7 +27,7 @@ module Client
   def post_init
     @f_connection_established = EM::DefaultDeferrable.new
     @client_connected = true
-    @min_heap_size, @max_heap_size = 512, 512
+    @min_heap_size, @max_heap_size = 512, 4096
     @instance_type = WORKER_INSTANCE_TYPE
   end
   
