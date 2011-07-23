@@ -62,7 +62,7 @@ class Worker
   end
   
   def start_world world_id, min_heap_size, max_heap_size
-    response = get("/worlds/create?id=#{world_id}&min_heap_size=#{min_heap_size}&max_heap_size=#{max_heap_size}", timeout:90)
+    response = get("/worlds/create?id=#{world_id}&min_heap_size=#{min_heap_size}&max_heap_size=#{max_heap_size}", timeout:4 * 60)
     puts response.body unless response.code == "200"
 
     server_info = JSON.parse get("/worlds/#{world_id}").body
