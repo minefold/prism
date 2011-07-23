@@ -53,6 +53,16 @@ class Worker
     end
   end
   
+  def world world_id
+    begin
+      server_info = JSON.parse get("/worlds/#{world_id}").body
+      World.new self, server_info["id"], server_info["port"]
+    rescue => e
+      puts "#{e.inspect}\n#{e.backtrace}"
+      nil
+    end
+  end
+  
   def responding?
     get("/", timeout:10).body rescue false
   end
@@ -65,8 +75,7 @@ class Worker
     response = get("/worlds/create?id=#{world_id}&min_heap_size=#{min_heap_size}&max_heap_size=#{max_heap_size}", timeout:4 * 60)
     puts response.body unless response.code == "200"
 
-    server_info = JSON.parse get("/worlds/#{world_id}").body
-    World.new self, server_info["id"], server_info["port"]
+    world world_id
   end
   
   def stop_world world_id

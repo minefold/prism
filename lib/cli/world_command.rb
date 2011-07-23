@@ -16,6 +16,14 @@ class WorldCommand
     File.open(world_filename, 'w') {|local_file| local_file.write(remote_file.body)}
   end
   
+  def stop
+    worker = Workers.running.find {|worker| worker.worlds.any?{|world| world.id == world_id } }
+    if worker
+      puts "Stopping #{worker.instance_id} > #{world_id}"
+      worker.stop_world world_id
+    end
+  end
+  
   
   private
   
