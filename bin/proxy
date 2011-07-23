@@ -66,7 +66,7 @@ module Client
     
     if supervised_world
       if supervised_world.running?
-        if supervised_world.worker.responding? && supervised_world.worker.world @world_id
+        if supervised_world.worker.responding? && supervised_world.worker.world(@world_id)
           proxy_client supervised_world.worker, supervised_world.world
         else
           # we thought world was running but bzzzzzzt! it's gone.
