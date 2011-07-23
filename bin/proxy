@@ -21,10 +21,14 @@ CONNECTED_PLAYERS = {}
 BUSY_WORKERS = {}  # worker is either starting, stopping or starting a new world (ie. busy, don't use it)
 SUPERVISED_WORLDS = {} # world is running, starting or stopping (ie. connect for it or wait)
 
+WORKER_INSTANCE_TYPE = ENV['WORKER_INSTANCE_TYPE'] || "t1.large"
+
 module Client
   def post_init
     @f_connection_established = EM::DefaultDeferrable.new
     @client_connected = true
+    @min_heap_size, @max_heap_size = 512, 512
+    @instance_type = WORKER_INSTANCE_TYPE
   end
   
   def info message
@@ -58,22 +62,21 @@ module Client
     #  World not claimed, no worker available > create new worker then connect
     
     #  Start world on instance failed > stop instance then retry
+    supervised_world = SUPERVISED_WORLDS[@world_id]
     
-    @supervised_world = SUPERVISED_WORLDS[@world_id]
-    
-    if @supervised_world
-      if @supervised_world.running?
-        proxy_client
+    if supervised_world
+      if supervised_world.running?
+        proxy_client supervised_world.worker, supervised_world.world
       else
         # world is stopping or starting, so we'll wait
         EM.add_timer(5) { 
-          info "waiting for world:#{@supervised_world}"
+          info "waiting for world:#{supervised_world}"
           get_world_running
         }
       end
     else
       # no world starting, running, or stopping. We should start one
-      @supervised_world = SUPERVISED_WORLDS[@world_id] = SupervisedWorld.new(:starting)
+      supervised_world = SUPERVISED_WORLDS[@world_id] = SupervisedWorld.new(:starting)
       
       # query ec2 for workers
       EM.defer(proc { 
@@ -86,7 +89,7 @@ module Client
       }, proc {|workers| 
         if @client_connected
           if workers
-            idle_worker = workers.find {|w| w.server.state == 'running' && w.worlds.count == 0 } 
+            idle_worker = workers.find {|w| w.server.state == 'running' && w.responding? && w.worlds.count == 0 } 
             if idle_worker
               # there is an idle worker available to us
               info "using idle worker #{idle_worker.instance_id} to start world"
@@ -117,11 +120,11 @@ module Client
     end
   end
   
-  def proxy_client
+  def proxy_client worker, world
     return unless @client_connected
     
-    host = @supervised_world.worker.public_ip_address
-    port = @supervised_world.world.port
+    host, port = worker.public_ip_address, world.port
+
     @server = EventMachine.connect(host, port, Server) do |server|
       server.plexer = self
       info "proxied to #{host}:#{port}"
@@ -234,8 +237,10 @@ module Client
     @credit_muncher.cancel if @credit_muncher
     
     if @world_id && SUPERVISED_WORLDS[@world_id] && CONNECTED_PLAYERS[@world_id].length == 0
-      info "Stopping world:#{@world_id}"
-      stop_world SUPERVISED_WORLDS[@world_id], @world_id
+      if SUPERVISED_WORLDS[@world_id].running?
+        info "Stopping world:#{@world_id}"
+        stop_world SUPERVISED_WORLDS[@world_id], @world_id
+      end
     end
     
   end
@@ -244,7 +249,7 @@ module Client
   def create_worker_and_start_world
     EM.defer(proc { 
         begin
-          Workers.create 
+          Workers.create flavor_id:@instance_type
         rescue => e
           error "create worker", e
         end
@@ -252,14 +257,16 @@ module Client
         if worker
           EM.next_tick { start_world worker }
         else
-          error "Fatal. Closing connection"
-          close_connection
+          # create worker failed, mark as bad, we'll try again
+          SUPERVISED_WORLDS.delete @world_id
+          BUSY_WORKERS[worker.instance_id] = :not_responding
+          EM.next_tick { get_world_running }
         end
     })
   end
   
   def start_worker_and_world worker
-    BUSY_WORKERS[worker.instance_id] = worker
+    BUSY_WORKERS[worker.instance_id] = :starting
     
     EM.defer(proc { 
         begin
@@ -275,54 +282,57 @@ module Client
         else
           # worker start failed, never started the world so forget about it
           SUPERVISED_WORLDS.delete @world_id
-          terminate_bad_worker_and_retry worker
+          BUSY_WORKERS[worker.instance_id] = :not_responding
+          EM.next_tick { get_world_running }
         end
     })
   end
   
   def start_world worker
-    return unless @client_connected
+    unless @client_connected
+      # don't start world, client is gone
+      SUPERVISED_WORLDS.delete @world_id
+      return
+    end
     
-    @supervised_world.worker = worker
-    BUSY_WORKERS[worker.instance_id] = worker
+    SUPERVISED_WORLDS[@world_id].worker = worker
+    BUSY_WORKERS[worker.instance_id] = :starting_world
     
     info "starting world:#{@world_id} on #{worker.instance_id}"
     EM.defer(proc { 
         begin
-          worker.start_world @world_id 
+          worker.start_world @world_id, @min_heap_size, @max_heap_size
         rescue => e
           error "start world", e
         end
       }, proc {|world|
         if world
-          @supervised_world.world = world
           BUSY_WORKERS.delete worker.instance_id
+          SUPERVISED_WORLDS[@world_id].world = world
           SUPERVISED_WORLDS[@world_id].running!
-        
-          proxy_client
         else
+          # couldn't start world, mark worker as bad
           SUPERVISED_WORLDS.delete @world_id
-          # couldn't start world
-          # assume worker is bad then terminate
-          terminate_bad_worker_and_retry worker
+          BUSY_WORKERS[worker.instance_id] = :not_responding
         end
+        EM.next_tick { get_world_running }
     })
   end
   
-  def terminate_bad_worker_and_retry worker
-    EM.defer(proc { 
-        begin
-          info "terminating bad worker"
-          worker.terminate! if worker
-        rescue => e
-          error "worker terminate", e
-        end
-      }, proc { BUSY_WORKERS.delete worker.instance_id if worker })
-    
-    # clean up and try again
-    
-    EM.next_tick { get_world_running }
-  end
+  # def terminate_bad_worker_and_retry worker
+  #   EM.defer(proc { 
+  #       begin
+  #         info "terminating bad worker"
+  #         worker.terminate! if worker
+  #       rescue => e
+  #         error "worker terminate", e
+  #       end
+  #     }, proc { BUSY_WORKERS.delete worker.instance_id if worker })
+  #   
+  #   # clean up and try again
+  #   
+  #   EM.next_tick { get_world_running }
+  # end
   
   def stop_world supervised_world, world_id
     SUPERVISED_WORLDS[world_id].stopping!
@@ -371,9 +381,16 @@ EventMachine.epoll
 EventMachine.run do
   puts 'collecting initial state'
   
-  Workers.existing.each do |worker|
-    worker.worlds.each do |world| 
-      SUPERVISED_WORLDS[world.id] = SupervisedWorld.new :running, worker, world
+  Workers.running.each do |worker|
+    if worker.responding?
+      worlds = worker.worlds
+      worlds.each do |world| 
+        SUPERVISED_WORLDS[world.id] = SupervisedWorld.new :running, worker, world
+      end
+      puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} worlds:#{worlds.count}"
+    else
+      puts "worker:#{worker.instance_id} not responding"
+      BUSY_WORKERS[worker.instance_id] = :not_responding
     end
   end
   
@@ -385,10 +402,15 @@ EventMachine.run do
 
   find_idle_workers = proc { 
     running_workers = Workers.running
-    running_workers.each do |w|
-      world_ids = w.worlds.map(&:id)
-      player_count = world_ids.inject(0) {|count, world_id| count + CONNECTED_PLAYERS[world_id].count }
-      puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count} players:#{player_count}"
+    running_workers.reject {|w| BUSY_WORKERS[w.instance_id] }.each do |w|
+      if w.responding?
+        world_ids = w.worlds.map(&:id)
+        player_count = world_ids.inject(0) {|count, world_id| count + CONNECTED_PLAYERS[world_id].count }
+        puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count} players:#{player_count}"
+      else
+        puts "worker:#{w.instance_id} not responding"
+        BUSY_WORKERS[w.instance_id] = :not_responding
+      end
     end
     idle_workers = running_workers.select{|w| w.worlds.count == 0 && (w.uptime_minutes % 60) > 55 } 
     puts "Found #{idle_workers.count} idle workers"
@@ -400,7 +422,7 @@ EventMachine.run do
     
     EM.defer(find_idle_workers, proc { |workers|
         workers.each do |w|
-          BUSY_WORKERS[w.instance_id] = w
+          BUSY_WORKERS[w.instance_id] = :stopping
           EM.defer(proc{
               begin
                 puts "Terminating idle worker:#{w.instance_id} uptime:#{w.uptime_minutes}"
@@ -414,6 +436,37 @@ EventMachine.run do
         end
     })
   end
+  
+  bad_worker_detective = EventMachine::PeriodicTimer.new(20) do 
+    recover_bad_workers = proc {
+      recovered_workers = []
+      BUSY_WORKERS.select {|instance_id, state| state == :not_responding }.each do |instance_id, state|
+        begin
+          BUSY_WORKERS[instance_id] = :diagnosing
+          puts "Diagnosing worker:#{instance_id}"
+          worker = Workers.get instance_id
+          worker.wait_for_ssh timeout:20
+          worker.prepare_for_minefold
+          # if all that worked, we're up and running!
+          recovered_workers << instance_id
+        rescue => e
+          # no dice!
+          puts "ERROR: #{[e.inspect, e.backtrace].join("\n")}"
+          BUSY_WORKERS[instance_id] = :not_responding
+        end
+      end
+      recovered_workers
+    }
+    make_workers_available = proc {|worker_ids|
+        worker_ids.each{|id| 
+          puts "worker:#{id} back on duty"
+          BUSY_WORKERS.delete id 
+        }
+      }
+    
+    EM.defer(recover_bad_workers, make_workers_available)
+  end
+  
 
   # Graceful shutdown
   %w(INT TERM).each do |sig|
@@ -424,5 +477,5 @@ EventMachine.run do
     end
   end
 
-  puts 'listening on 0.0.0.0:25565'
+  puts "listening on 0.0.0.0:25565. Creating #{WORKER_INSTANCE_TYPE} workers"
 end

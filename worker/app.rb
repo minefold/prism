@@ -1,12 +1,16 @@
 
 get "/" do
+  "hello!"
+end
+
+get "/worlds" do
   content_type :json
   LocalWorlds.running.to_json
 end
 
 # TODO: make this stuff restful
 get "/worlds/create" do
-  result = `#{BIN}/start-local-world #{params[:id]}`
+  result = `#{BIN}/start-local-world #{params[:id]} #{params[:min_heap_size]} #{params[:max_heap_size]}`
   if $?.exitstatus != 0
     puts result
     raise result

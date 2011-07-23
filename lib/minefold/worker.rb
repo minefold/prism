@@ -45,7 +45,7 @@ class Worker
     return [] unless public_ip_address
     
     begin
-      server_info = JSON.parse get("/", timeout:20).body
+      server_info = JSON.parse get("/worlds", timeout:20).body
       Worlds.new self, server_info.map {|h| World.new self, h["id"], h["port"]}
     rescue => e
       puts e.inspect
@@ -53,12 +53,16 @@ class Worker
     end
   end
   
+  def responding?
+    get("/", timeout:10).body rescue false
+  end
+  
   def uptime_minutes
     ((Time.now - server.created_at) / 60).floor
   end
   
-  def start_world world_id
-    response = get("/worlds/create?id=#{world_id}", timeout:90)
+  def start_world world_id, min_heap_size, max_heap_size
+    response = get("/worlds/create?id=#{world_id}&min_heap_size=#{min_heap_size}&max_heap_size=#{max_heap_size}", timeout:90)
     puts response.body unless response.code == "200"
 
     server_info = JSON.parse get("/worlds/#{world_id}").body
@@ -72,14 +76,17 @@ class Worker
   def prepare_for_minefold
     puts "Preparing worker:#{instance_id} for minefold"
     commands = [
-      "cd ~/minefold",
-      "GIT_SSH=~/deploy-ssh-wrapper git pull origin master",
-      "bundle install --without proxy development test cli",
-      "sudo god -c ~/minefold/worker/config/worker.god"
+      "cd ~/minefold && GIT_SSH=~/deploy-ssh-wrapper git pull origin master --no-progress",
+      "cd ~/minefold && bundle install --without proxy development test cli",
+      "sudo god status && sudo god stop worker-app && sudo god quit", # quit god if its running
+      "sudo god status && sudo god restart worker-app || sudo god -c ~/minefold/worker/config/worker.god"
     ]
 
-    results = server.ssh commands.join(" && ")
-    log results if results.any? {|r| r.status != 0 }
+    commands.each do |cmd|
+      log cmd
+      results = server.ssh cmd
+      log results #if results.any? {|r| r.status != 0 }
+    end
 
     log "Waiting for worker to respond"
     Timeout::timeout(20) do
@@ -95,21 +102,12 @@ class Worker
     
   end
   
-  private
-  
-  def get path, options={}
-    self.class.base_uri url
-    self.class.get path, options
-  end
-  
-  def uri
-    @uri ||= URI.parse url
-  end
-  
-  def wait_for_ssh
+  def wait_for_ssh options={}
     puts "Waiting for ssh access"
+    timeout = options[:timeout] || 180
+    
     # we need to wait for the server to do all its bootup stuff
-    Timeout::timeout(180) do
+    Timeout::timeout(timeout) do
       begin
         Timeout::timeout(8) do 
           puts "checking ssh..."
@@ -120,6 +118,17 @@ class Worker
         retry
       end
     end
+  end
+  
+  private
+  
+  def get path, options={}
+    self.class.base_uri url
+    self.class.get path, options
+  end
+  
+  def uri
+    @uri ||= URI.parse url
   end
   
   def log message

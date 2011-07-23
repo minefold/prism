@@ -8,8 +8,10 @@ $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'erb'
 
-abort "Usage: start-local-world id" unless ARGV.length == 1
+abort "Usage: start-local-world id [min_heap] [max_heap]" unless ARGV.length > 0
 world_id = ARGV.shift
+min_heap_size = ARGV.shift || "1024"
+max_heap_size = ARGV.shift || "1024"
 
 exit 0 if LocalWorlds.running.any? {|w| w[:id] == world_id }
 
@@ -99,7 +101,7 @@ start god_path, world_id
 
 puts "Waiting for server start..."
 begin
-  Timeout::timeout(180) do
+  Timeout::timeout(4 * 60) do
     File::Tail::Logfile.open(server_log) do |log|
       log.max_interval = 0.1
       log.interval = 0.1

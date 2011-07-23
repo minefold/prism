@@ -6,7 +6,7 @@ God.watch do |w|
   w.name = "minecraft-<%= world_id %>"
   w.interval = 3.seconds
   w.dir = "<%= WORLDS %>/<%= world_id %>"
-  w.start = "java -Xmx1024M -Xms1024M -jar server.jar nogui"
+  w.start = "java -Xmx<%= max_heap_size %>M -Xms<%= initial_heap_size %>M -jar server.jar nogui"
   w.start_grace = 10.seconds
   w.log_cmd = '/usr/bin/logger -t "<%= world_id %>:server"'
   
