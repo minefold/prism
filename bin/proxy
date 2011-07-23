@@ -257,9 +257,8 @@ module Client
         if worker
           EM.next_tick { start_world worker }
         else
-          # create worker failed, mark as bad, we'll try again
+          # create worker failed, we don't have its instance id, we'll try again
           SUPERVISED_WORLDS.delete @world_id
-          BUSY_WORKERS[worker.instance_id] = :not_responding
           EM.next_tick { get_world_running }
         end
     })
