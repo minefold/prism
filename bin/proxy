@@ -70,6 +70,7 @@ module Client
           proxy_client supervised_world.worker, supervised_world.world
         else
           # we thought world was running but bzzzzzzt! it's gone.
+          puts "world is not running"
           SUPERVISED_WORLDS.delete @world_id
           EM.next_tick { get_world_running }
         end
