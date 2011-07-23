@@ -211,9 +211,9 @@ module Client
     EM.defer do
       user = DB['users'].find_and_modify({ 
                     query: {"_id"  => @user_objectid},
-                    update:{"$inc" => {"credits"=>-amount }}
+                    update:{"$inc" => {"credits" => -amount, "minutes_played" => amount }}
                   })
-      info "deducting 1 credit. #{user['credits']} remaining."
+      info "deducting 1 credit. #{user['credits']} remaining. Played:#{user['minutes_played']} minutes"
 
       if user['credits'] <= amount
         EM.next_tick do
