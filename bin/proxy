@@ -436,7 +436,7 @@ EventMachine.run do
     })
   end
   
-  bad_worker_detective = EventMachine::PeriodicTimer.new(20) do 
+  worker_doctor = EventMachine::PeriodicTimer.new(20) do 
     recover_bad_workers = proc {
       recovered_workers = []
       BUSY_WORKERS.select {|instance_id, state| state == :not_responding }.each do |instance_id, state|
