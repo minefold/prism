@@ -318,21 +318,6 @@ module Client
     })
   end
   
-  # def terminate_bad_worker_and_retry worker
-  #   EM.defer(proc { 
-  #       begin
-  #         info "terminating bad worker"
-  #         worker.terminate! if worker
-  #       rescue => e
-  #         error "worker terminate", e
-  #       end
-  #     }, proc { BUSY_WORKERS.delete worker.instance_id if worker })
-  #   
-  #   # clean up and try again
-  #   
-  #   EM.next_tick { get_world_running }
-  # end
-  
   def stop_world supervised_world, world_id
     SUPERVISED_WORLDS[world_id].stopping!
     EM.defer(proc { 
@@ -425,7 +410,7 @@ EventMachine.run do
           EM.defer(proc{
               begin
                 puts "Terminating idle worker:#{w.instance_id} uptime:#{w.uptime_minutes}"
-                w.terminate!
+                w.stop!
               rescue => e
                 puts "Error stopping idle worker\n#{e.message}\n#{e.backtrace}"
               end
