@@ -35,6 +35,7 @@ class Workers
     }.merge(options)
     
     worker = Worker.new compute_cloud.servers.bootstrap(options)
+    
     compute_cloud.create_tags worker.instance_id, "Name" => "worker"
     
     worker.prepare_for_minefold

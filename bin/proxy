@@ -437,11 +437,13 @@ EventMachine.run do
   end
   
   worker_doctor = EventMachine::PeriodicTimer.new(20) do 
+    workers_to_diagnose = BUSY_WORKERS.select {|instance_id, state| state == :not_responding }
+    workers_to_diagnose.each {|instance_id, state| BUSY_WORKERS[instance_id] = :diagnosing }
+
     recover_bad_workers = proc {
       recovered_workers = []
-      BUSY_WORKERS.select {|instance_id, state| state == :not_responding }.each do |instance_id, state|
+      workers_to_diagnose.each do |instance_id, state|
         begin
-          BUSY_WORKERS[instance_id] = :diagnosing
           puts "Diagnosing worker:#{instance_id}"
           worker = Workers.get instance_id
           worker.wait_for_ssh timeout:20
