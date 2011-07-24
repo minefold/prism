@@ -367,6 +367,9 @@ module Server
 
   # TODO: Unbind method. If the server on our end goes down, create a shit
   #       storm.
+  def unbind
+    puts "Disconnection from server. Crashed or op stopped?"
+  end
 
 end
 
@@ -398,7 +401,7 @@ EventMachine.run do
     running_workers.reject {|w| BUSY_WORKERS[w.instance_id] }.each do |w|
       if w.responding?
         world_ids = w.worlds.map(&:id)
-        player_count = world_ids.inject(0) {|count, world_id| count + CONNECTED_PLAYERS[world_id].count }
+        player_count = world_ids.inject(0) {|count, world_id| count + (CONNECTED_PLAYERS[world_id]||[]).count }
         puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count} players:#{player_count}"
       else
         puts "worker:#{w.instance_id} not responding"
