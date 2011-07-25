@@ -24,6 +24,7 @@ end
 group :test do
   gem 'rspec', '~> 2.6.0'
   gem "ZenTest", "~> 4.4.2"
+  gem "virtualbox"
 end
 
 group :chatty do
