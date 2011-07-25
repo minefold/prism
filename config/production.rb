@@ -14,3 +14,5 @@ MONGOHQ_URL="mongodb://heroku:os304dfe5d3tbkn3r1ko8j@staff.mongohq.com:10002/app
 REDISTOGO_URL="redis://redistogo:9b5f916f86dd29f26ca4af54c3f8f768@catfish.redistogo.com:9527/"
 
 SSH_PRIVATE_KEY_PATH="#{ROOT}/.ssh/minefold.pem"
+
+Fold.workers = :cloud

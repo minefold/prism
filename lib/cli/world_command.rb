@@ -17,7 +17,7 @@ class WorldCommand
   end
   
   def stop
-    worker = Workers.running.find {|worker| worker.worlds.any?{|world| world.id == world_id } }
+    worker = Worker.running.find {|worker| worker.worlds.any?{|world| world.id == world_id } }
     if worker
       puts "Stopping #{worker.instance_id} > #{world_id}"
       worker.stop_world world_id

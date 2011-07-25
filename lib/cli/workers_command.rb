@@ -2,7 +2,7 @@
 class WorkersCommand
   def show
     
-    info = Workers.running.map do |w|
+    info = Worker.running.map do |w|
       worlds = w.worlds || []
       uptime_minutes = w.uptime_minutes
       {

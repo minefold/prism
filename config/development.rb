@@ -9,3 +9,5 @@ PIDS = "#{ROOT}/tmp/pids"
 
 MONGOHQ_URL='mongodb://localhost'
 REDISTOGO_URL="redis://localhost/"
+
+Fold.workers = :local

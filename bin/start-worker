@@ -8,14 +8,14 @@ require 'minefold'
 abort "Usage: start-vm world_id" unless ARGV.length == 1
 world_id = ARGV.shift
 
-if worker = Workers.stopped.first
+if worker = Worker.stopped.first
   puts "Starting stopped worker #{worker.instance_id}"
   worker.start!
-elsif worker = Workers.running.find {|w| w.worlds.empty? }
+elsif worker = Worker.running.find {|w| w.worlds.empty? }
   puts "Using running worker with no worlds"
 else
   puts "Creating new worker"
-  worker = Workers.create
+  worker = Worker.create
 end
 
 puts "Starting world #{world_id}"

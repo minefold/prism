@@ -88,9 +88,9 @@ module Client
       EM.defer(proc { 
         begin
           # find workers that we haven't marked as busy and sort by who has the most available time
-          Workers.existing.reject{|w| BUSY_WORKERS.has_key? w.instance_id }.sort_by {|w| (w.uptime_minutes % 60) }
+          Worker.all.reject{|w| BUSY_WORKERS.has_key? w.instance_id }.sort_by {|w| (w.uptime_minutes % 60) }
         rescue => e
-          error "Workers.existing", e
+          error "Worker.all", e
         end
       }, proc {|workers| 
         if @client_connected
@@ -259,7 +259,7 @@ module Client
   def create_worker_and_start_world
     EM.defer(proc { 
         begin
-          Workers.create flavor_id:@instance_type
+          Worker.create flavor_id:@instance_type
         rescue => e
           error "create worker", e
         end
@@ -345,7 +345,7 @@ module Client
   
   # synchronous methods
   def find_idle_workers
-    running_workers = Workers.running
+    running_workers = Worker.running
     running_workers.each do |w|
       debug "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count}"
     end
@@ -378,7 +378,7 @@ EventMachine.epoll
 EventMachine.run do
   puts 'collecting initial state'
   
-  Workers.running.each do |worker|
+  Worker.running.each do |worker|
     if worker.responding?
       worlds = worker.worlds
       worlds.each do |world| 
@@ -398,7 +398,7 @@ EventMachine.run do
   EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
   
   find_idle_workers = proc { 
-    running_workers = Workers.running
+    running_workers = Worker.running
     running_workers.reject {|w| BUSY_WORKERS[w.instance_id] }.each do |w|
       if w.responding?
         world_ids = w.worlds.map(&:id)
@@ -443,7 +443,7 @@ EventMachine.run do
       workers_to_diagnose.each do |instance_id, state|
         begin
           puts "Diagnosing worker:#{instance_id}"
-          worker = Workers.get instance_id
+          worker = Worker.find instance_id
           worker.wait_for_ssh timeout:20
           worker.prepare_for_minefold
           # if all that worked, we're up and running!
