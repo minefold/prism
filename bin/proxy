@@ -44,7 +44,7 @@ end
 
 module ProxyAsyncMethods
   def stop_world world_id
-    return unless SUPERVISED_WORLDS[world_id].running?
+    return unless SUPERVISED_WORLDS[world_id] && SUPERVISED_WORLDS[world_id].running?
     
     SUPERVISED_WORLDS[world_id].stopping!
     worker = SUPERVISED_WORLDS[world_id].worker
