@@ -278,6 +278,8 @@ module Client
   def start_worker_and_world worker
     BUSY_WORKERS[worker.instance_id] = :starting
     
+    instance_id = worker.instance_id
+    
     EM.defer(proc { 
         begin
           worker.start!
@@ -286,13 +288,13 @@ module Client
         end 
       }, proc { |worker|
         if worker
-          BUSY_WORKERS.delete worker.instance_id
-          info "started stopped worker #{worker.instance_id}"
+          BUSY_WORKERS.delete instance_id
+          info "started stopped worker #{instance_id}"
           EM.next_tick { start_world worker }
         else
           # worker start failed, never started the world so forget about it
           SUPERVISED_WORLDS.delete @world_id
-          BUSY_WORKERS[worker.instance_id] = :not_responding
+          BUSY_WORKERS[instance_id] = :not_responding
           EM.next_tick { get_world_running }
         end
     })
