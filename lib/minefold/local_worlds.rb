@@ -34,6 +34,7 @@ class LocalWorlds
 
   def self.next_available_port
     running_world_with_highest_port = running.sort_by{|w| w[:port].to_i }.last
+    p running_world_with_highest_port
     if running_world_with_highest_port
       running_world_with_highest_port[:port].to_i + 1
     else
