@@ -405,6 +405,7 @@ EventMachine.run do
   sweep_workers = proc { 
     worker_info = Workers.running.map do |w|
       info = {
+        worker:w,
         instance_id:w.instance_id, 
         uptime_minutes:w.uptime_minutes, 
         responding:w.responding?, 
@@ -432,13 +433,14 @@ EventMachine.run do
     end
   }
   
-  def stop_idle_worker instance_id
-    return if BUSY_WORKERS[instance_id] && BUSY_WORKERS[instance_id] == :stopping
+  def stop_idle_worker worker
+    return if BUSY_WORKERS[worker.instance_id] && BUSY_WORKERS[worker.instance_id] == :stopping
     
-    BUSY_WORKERS[instance_id] = :stopping
+    BUSY_WORKERS[worker.instance_id] = :stopping
+    instance_id = worker.instance_id
     EM.defer(proc{
         begin
-          w.stop!
+          worker.stop!
         rescue => e
           puts "Error stopping idle worker\n#{e.message}\n#{e.backtrace}"
         end
@@ -484,7 +486,7 @@ EventMachine.run do
         
         if w[:uptime_minutes] % 60 > 55
           puts "Terminating idle worker:#{w[:instance_id]} uptime:#{w[:uptime_minutes]}"
-          stop_idle_worker w[:instance_id]
+          stop_idle_worker w[:worker]
         elsif status == :not_responding || !w[:responding]
           puts "Diagnosing worker:#{w[:instance_id]}"
           fix_unresponsive_worker w[:instance_id]
