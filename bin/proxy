@@ -296,6 +296,7 @@ module Client
         if worker
           EM.next_tick { start_world worker }
         else
+          error "no worker"
           # create worker failed, we don't have its instance id, we'll try again
           SUPERVISED_WORLDS.delete @world_id
           EM.next_tick { get_world_running }
@@ -341,10 +342,12 @@ module Client
         end
       }, proc {|world|
         if world
+          info "world started"
           BUSY_WORKERS.delete worker.instance_id
           SUPERVISED_WORLDS[@world_id].world = world
           SUPERVISED_WORLDS[@world_id].running!
         else
+          error "world didn't start"
           # couldn't start world, mark worker as bad
           SUPERVISED_WORLDS.delete @world_id
           BUSY_WORKERS[worker.instance_id] = :not_responding
@@ -402,7 +405,7 @@ EventMachine.run do
   EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
   
   sweep_workers = proc { 
-    worker_info = Workers.running.map do |w|
+    worker_info = Worker.running.map do |w|
       info = {
         worker:w,
         instance_id:w.instance_id, 
@@ -454,7 +457,7 @@ EventMachine.run do
     BUSY_WORKERS[instance_id] = :diagnosing
     EM.defer(proc {
       begin
-        worker = Workers.get instance_id
+        worker = Worker.find instance_id
         worker.wait_for_ssh timeout:20
         worker.prepare_for_minefold
         # if all that worked, we're up and running!

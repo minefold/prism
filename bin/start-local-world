@@ -15,17 +15,29 @@ max_heap_size = ARGV.shift || "1024"
 
 exit 0 if LocalWorlds.running.any? {|w| w[:id] == world_id }
 
+def sudo_cmd
+  ENV['rvm_version'] ? 'rvmsudo' : 'sudo'
+end
+
+def sudo cmd
+  `#{sudo_cmd} #{cmd}`
+end
+
+def god cmd
+  sudo "god #{cmd}"
+end
+
 def god_running?
-  `sudo bundle exec god status`
+  god "status"
   $?.exitstatus == 0
 end
 
 def start config_file, world_id
   if god_running?
-    `sudo bundle exec god load #{config_file}`
-    `sudo bundle exec god start #{world_id}`
-  else
-    `sudo bundle exec god -c #{config_file}`
+    god "load #{config_file}"
+    god "start #{world_id}"
+  else   
+    god "-c #{config_file}"
   end
 end
 
@@ -74,7 +86,7 @@ if archived_world
     tar.write archived_world.body
   end
   Dir.chdir WORLDS do
-    `tar -xzf '#{archive}'`
+    TarGz.new.extract archive
   end
 else
   puts "New world"
@@ -97,6 +109,7 @@ File.open(god_path, 'w') {|file| file.puts template.result(binding) }
 server_log = File.join(world_path, "server.log")
 File.open(server_log, "w") {|file| file.print }
 
+puts "starting server on port #{port}"
 start god_path, world_id
 
 puts "Waiting for server start..."

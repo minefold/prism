@@ -2,7 +2,7 @@ source :rubygems
 
 gem 'god'
 gem 'file-tail', :require => 'file/tail'
-gem 'fog', '>= 0.9.0'
+gem 'fog', git:'https://github.com/snappycode/fog'
 gem 'httparty'
 gem 'mongo'
 gem 'bson_ext'

@@ -11,3 +11,8 @@ MONGOHQ_URL='mongodb://localhost'
 REDISTOGO_URL="redis://localhost/"
 
 Fold.workers = :local
+Storage.provider = Fog::Storage.new({
+  :provider      => :local,
+  :local_root    => "#{ROOT}/tmp/local_storage"
+})
+

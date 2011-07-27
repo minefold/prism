@@ -16,3 +16,8 @@ REDISTOGO_URL="redis://redistogo:9b5f916f86dd29f26ca4af54c3f8f768@catfish.redist
 SSH_PRIVATE_KEY_PATH="#{ROOT}/.ssh/minefold.pem"
 
 Fold.workers = :cloud
+Storage.provider = Fog::Storage.new({
+  :provider                 => :aws,
+  :aws_secret_access_key    => EC2_SECRET_KEY,
+  :aws_access_key_id        => EC2_ACCESS_KEY
+})
