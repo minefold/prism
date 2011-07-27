@@ -476,7 +476,7 @@ EventMachine.run do
         
         if w[:uptime_minutes] % 60 > 55
           puts "Terminating idle worker:#{w[:instance_id]} uptime:#{w[:uptime_minutes]}"
-          stop_idle_worker
+          stop_idle_worker w[:instance_id]
         elsif !w[:responding]
           puts "Diagnosing worker:#{w[:instance_id]}"
           fix_unresponsive_worker w[:instance_id]
