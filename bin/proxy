@@ -391,7 +391,7 @@ EventMachine.run do
       end
       puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} worlds:#{worlds.count}"
     else
-      puts "worker:#{worker.instance_id} not responding"
+      puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} <not responding>"
       BUSY_WORKERS[worker.instance_id] = :not_responding
     end
   end
@@ -403,9 +403,13 @@ EventMachine.run do
   EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
   
   sweep_workers = proc { 
-    running_workers = Workers.running
-    worker_info = running_workers.reject {|w| BUSY_WORKERS[w.instance_id] }.map do |w|
-      info = {instance_id:w.instance_id, uptime_minutes:w.uptime_minutes, responding:w.responding?, world_info:{}}
+    worker_info = Workers.running.map do |w|
+      info = {
+        instance_id:w.instance_id, 
+        uptime_minutes:w.uptime_minutes, 
+        responding:w.responding?, 
+        busy:BUSY_WORKERS[w.instance_id] || "",
+        world_info:{}}
 
       world_count = 0
       worker_player_count = 0
@@ -419,7 +423,7 @@ EventMachine.run do
         info[:world_info] = world_info
       end
       
-      puts "worker:#{info[:instance_id]} uptime_minutes:#{info[:uptime_minutes]} worlds:#{world_count} players:#{worker_player_count}"
+      puts "worker:#{info[:instance_id]} uptime_minutes:#{info[:uptime_minutes]} worlds:#{world_count} players:#{worker_player_count} busy:#{info[:busy]}"
       info[:world_info].each do |world_info|
         puts "worker:#{info[:instance_id]} world:#{world_info[:id]} players:#{world_info[:player_count]}"
       end
@@ -429,7 +433,7 @@ EventMachine.run do
   }
   
   def stop_idle_worker instance_id
-    return if BUSY_WORKERS.has_key? instance_id
+    return if BUSY_WORKERS[instance_id] && BUSY_WORKERS[instance_id] == :stopping
     
     BUSY_WORKERS[instance_id] = :stopping
     EM.defer(proc{
@@ -444,6 +448,8 @@ EventMachine.run do
   end  
   
   def fix_unresponsive_worker instance_id
+    return if BUSY_WORKERS[instance_id] && BUSY_WORKERS[instance_id] == :stopping
+    
     BUSY_WORKERS[instance_id] = :diagnosing
     EM.defer(proc {
       begin
@@ -474,10 +480,12 @@ EventMachine.run do
       worker_info.each do |w|
         empty_worlds = w[:world_info].select {|world_info| world_info[:player_count] == 0 }
         
+        status = BUSY_WORKERS[w[:instance_id]]
+        
         if w[:uptime_minutes] % 60 > 55
           puts "Terminating idle worker:#{w[:instance_id]} uptime:#{w[:uptime_minutes]}"
           stop_idle_worker w[:instance_id]
-        elsif !w[:responding]
+        elsif status == :not_responding || !w[:responding]
           puts "Diagnosing worker:#{w[:instance_id]}"
           fix_unresponsive_worker w[:instance_id]
         elsif empty_worlds.size > 0
