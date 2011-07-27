@@ -25,18 +25,11 @@ MAX_WORLDS_PER_WORKER = 2
 
 WORKER_INSTANCE_TYPE = ENV['WORKER_INSTANCE_TYPE'] || "m1.large"
 
-module Client
-  def post_init
-    @f_connection_established = EM::DefaultDeferrable.new
-    @client_connected = true
-    @min_heap_size, @max_heap_size = 512, 4096
-    @instance_type = WORKER_INSTANCE_TYPE
+module ProxyLogging
+  def info message
+    puts message
   end
   
-  def info message
-    puts "[#{@username||''}@#{@world_id||''}] #{message}"
-  end
-
   def warn message
     puts "WARNING: #{message}"
   end
@@ -47,8 +40,44 @@ module Client
     puts "ERROR: #{message}" + error_message
     nil
   end
+end
+
+module ProxyAsyncMethods
+  def stop_world world_id
+    return unless SUPERVISED_WORLDS[world_id].running?
+    
+    SUPERVISED_WORLDS[world_id].stopping!
+    worker = SUPERVISED_WORLDS[world_id].worker
+    
+    EM.defer(proc { 
+        begin
+          world = worker.stop_world world_id
+          info "world stopped"
+          world
+        rescue => e
+          error "stop world", e
+        end
+      }, proc {
+        SUPERVISED_WORLDS.delete world_id
+    })
+  end
+end
+
+module Client
+  include ProxyLogging
+  include ProxyAsyncMethods
   
+  def post_init
+    @f_connection_established = EM::DefaultDeferrable.new
+    @client_connected = true
+    @min_heap_size, @max_heap_size = 512, 4096
+    @instance_type = WORKER_INSTANCE_TYPE
+  end
   
+  def info message
+    puts "[#{@username||''}@#{@world_id||''}] #{message}"
+  end
+    
   def get_world_running
     return unless @client_connected
     
@@ -248,7 +277,7 @@ module Client
     if @world_id && SUPERVISED_WORLDS[@world_id] && CONNECTED_PLAYERS[@world_id].length == 0
       if SUPERVISED_WORLDS[@world_id].running?
         info "Stopping world:#{@world_id}"
-        stop_world SUPERVISED_WORLDS[@world_id], @world_id
+        stop_world @world_id
       else
         puts "World not started, nothing to stop"
       end
@@ -331,35 +360,11 @@ module Client
     })
   end
   
-  def stop_world supervised_world, world_id
-    SUPERVISED_WORLDS[world_id].stopping!
-    EM.defer(proc { 
-        begin
-          world = supervised_world.worker.stop_world world_id
-          info "world stopped"
-          world
-        rescue => e
-          error "stop world", e
-        end
-      }, proc {
-        SUPERVISED_WORLDS.delete world_id
-    })
-  end
-  
-  # synchronous methods
-  def find_idle_workers
-    running_workers = Workers.running
-    running_workers.each do |w|
-      debug "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count}"
-    end
-    # only return workers that are unsupervised and have no worlds (ie. not starting or stopping)
-    idle_workers = running_workers.select{|w| w.worlds.count == 0 }.reject{|w| BUSY_WORKERS.has_key? w.instance_id } 
-    idle_workers.sort_by { |w| (w.uptime_minutes % 60) }
-  end
-  
 end
 
 module Server
+  include ProxyLogging
+  
   attr_accessor :plexer
   def receive_data data
     plexer.send data
@@ -372,13 +377,16 @@ module Server
   # TODO: Unbind method. If the server on our end goes down, create a shit
   #       storm.
   def unbind
-    puts "Disconnection from server. Crashed or op stopped?"
+    puts "Disconnection from server"
   end
 
 end
 
 EventMachine.epoll
 EventMachine.run do
+  include ProxyLogging
+  include ProxyAsyncMethods
+  
   puts 'collecting initial state'
   
   Workers.running.each do |worker|
@@ -400,80 +408,97 @@ EventMachine.run do
   # listen for http connections
   EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
   
-  find_idle_workers = proc { 
+  sweep_workers = proc { 
     running_workers = Workers.running
-    running_workers.reject {|w| BUSY_WORKERS[w.instance_id] }.each do |w|
+    worker_info = running_workers.reject {|w| BUSY_WORKERS[w.instance_id] }.map do |w|
+      info = {instance_id:w.instance_id, uptime_minutes:w.uptime_minutes, responding:w.responding?, world_info:{}}
+
+      world_count = 0
+      worker_player_count = 0
+      
       if w.responding?
-        world_ids = w.worlds.map(&:id)
-        player_count = world_ids.inject(0) {|count, world_id| count + (CONNECTED_PLAYERS[world_id]||[]).count }
-        puts "worker:#{w.instance_id} uptime_minutes:#{w.uptime_minutes} worlds:#{w.worlds.count} players:#{player_count}"
-      else
-        puts "worker:#{w.instance_id} not responding"
-        BUSY_WORKERS[w.instance_id] = :not_responding
+        world_info = w.worlds.map{|w| {id: w.id, player_count: (CONNECTED_PLAYERS[w.id]||[]).size } }
+        
+        world_count = world_info.size
+        worker_player_count = world_info.inject(0) {|count, world_info| count + world_info[:player_count] }
+        
+        info[:world_info] = world_info
       end
+      
+      puts "worker:#{info[:instance_id]} uptime_minutes:#{info[:uptime_minutes]} worlds:#{world_count} players:#{worker_player_count}"
+      info[:world_info].each do |world_info|
+        puts "worker:#{info[:instance_id]} world:#{world_info[:id]} players:#{world_info[:player_count]}"
+      end
+      
+      info
     end
-    idle_workers = running_workers.select{|w| w.worlds.count == 0 && (w.uptime_minutes % 60) > 55 } 
-    puts "Found #{idle_workers.count} idle workers"
-    idle_workers
   }
   
-  idle_killer = EventMachine::PeriodicTimer.new(4 * 60) do 
-    # shutdown idle workers
+  def stop_idle_worker instance_id
+    return if BUSY_WORKERS.has_key? instance_id
     
-    EM.defer(find_idle_workers, proc { |workers|
-        workers.each do |w|
-          BUSY_WORKERS[w.instance_id] = :stopping
-          EM.defer(proc{
-              begin
-                puts "Terminating idle worker:#{w.instance_id} uptime:#{w.uptime_minutes}"
-                w.stop!
-              rescue => e
-                puts "Error stopping idle worker\n#{e.message}\n#{e.backtrace}"
-              end
-            }, proc {
-              BUSY_WORKERS.delete w.instance_id
-          })
+    BUSY_WORKERS[instance_id] = :stopping
+    EM.defer(proc{
+        begin
+          w.stop!
+        rescue => e
+          puts "Error stopping idle worker\n#{e.message}\n#{e.backtrace}"
         end
+      }, proc {
+        BUSY_WORKERS.delete instance_id
+    })
+  end  
+  
+  def fix_unresponsive_worker instance_id
+    BUSY_WORKERS[instance_id] = :diagnosing
+    EM.defer(proc {
+      begin
+        worker = Workers.get instance_id
+        worker.wait_for_ssh timeout:20
+        worker.prepare_for_minefold
+        # if all that worked, we're up and running!
+        true
+      rescue => e
+        # no dice!
+        puts "ERROR: #{[e.inspect, e.backtrace].join("\n")}"
+        false
+      end
+    }, proc { |recovered|
+      if recovered
+        puts "worker:#{instance_id} back on duty"
+        BUSY_WORKERS.delete instance_id 
+      else
+        puts "couldn't fix worker:#{instance_id}"
+        BUSY_WORKERS[instance_id] = :not_responding
+      end
     })
   end
   
-  worker_doctor = EventMachine::PeriodicTimer.new(20) do 
-    workers_to_diagnose = BUSY_WORKERS.select {|instance_id, state| state == :not_responding }
-    workers_to_diagnose.each {|instance_id, state| BUSY_WORKERS[instance_id] = :diagnosing }
-
-    recover_bad_workers = proc {
-      recovered_workers = []
-      workers_to_diagnose.each do |instance_id, state|
-        begin
-          puts "Diagnosing worker:#{instance_id}"
-          worker = Workers.get instance_id
-          worker.wait_for_ssh timeout:20
-          worker.prepare_for_minefold
-          # if all that worked, we're up and running!
-          recovered_workers << instance_id
-        rescue => e
-          # no dice!
-          puts "ERROR: #{[e.inspect, e.backtrace].join("\n")}"
-          BUSY_WORKERS[instance_id] = :not_responding
+  the_doctor = EventMachine::PeriodicTimer.new(3 * 60) do 
+    puts "Starting worker sweep"
+    EM.defer(sweep_workers, proc { |worker_info|
+      worker_info.each do |w|
+        empty_worlds = w[:world_info].select {|world_info| world_info[:player_count] == 0 }
+        
+        if w[:uptime_minutes] % 60 > 55
+          puts "Terminating idle worker:#{w[:instance_id]} uptime:#{w[:uptime_minutes]}"
+          stop_idle_worker
+        elsif !w[:responding]
+          puts "Diagnosing worker:#{w[:instance_id]}"
+          fix_unresponsive_worker w[:instance_id]
+        elsif empty_worlds.size > 0
+          empty_worlds.each do |world_info| 
+            puts "Stopping empty world"
+            stop_empty_world world_info[:id]
+          end
         end
       end
-      recovered_workers
-    }
-    make_workers_available = proc {|worker_ids|
-        worker_ids.each{|id| 
-          puts "worker:#{id} back on duty"
-          BUSY_WORKERS.delete id 
-        }
-      }
-    
-    EM.defer(recover_bad_workers, make_workers_available)
+    })
   end
   
-
   # Graceful shutdown
   %w(INT TERM).each do |sig|
     Signal.trap(sig) do
-      idle_killer.cancel
       EventMachine.stop
       puts 'terminated'
     end
