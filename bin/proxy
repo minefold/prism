@@ -330,12 +330,6 @@ module Client
   end
   
   def start_world worker
-    unless @client_connected
-      # don't start world, client is gone
-      SUPERVISED_WORLDS.delete @world_id
-      return
-    end
-    
     SUPERVISED_WORLDS[@world_id].worker = worker
     BUSY_WORKERS[worker.instance_id] = :starting_world
     
