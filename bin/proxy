@@ -489,7 +489,7 @@ EventMachine.run do
         elsif empty_worlds.size > 0
           empty_worlds.each do |world_info| 
             puts "Stopping empty world"
-            stop_empty_world world_info[:id]
+            stop_world world_info[:id]
           end
         end
       end
