@@ -113,8 +113,8 @@ module Worker
         "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER",
         "cd ~ && #{git} clone --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}",
         "cd ~/minefold && sudo bundle install --without proxy development test cli",
-        "#{god} status && #{god} stop worker-app && #{god} quit", # quit god if its running
-        "#{god} -c ~/minefold/worker/config/worker.god"
+        "cd ~/minefold && #{god} status && #{god} stop worker-app && #{god} quit", # quit god if its running
+        "cd ~/minefold && #{god} -c ~/minefold/worker/config/worker.god"
       ]
     
       commands.each do |cmd|
@@ -137,8 +137,8 @@ module Worker
             end
           end
         rescue Timeout::Error
-          log server.ssh("cd ~ && #{git} pull origin #{Fold.worker_git_branch}")
-          log server.ssh("#{god} restart worker-app")
+          log server.ssh("cd ~/minefold && #{git} pull origin #{Fold.worker_git_branch}")
+          log server.ssh("cd ~/minefold && #{god} restart worker-app")
           retry
         end
       end
