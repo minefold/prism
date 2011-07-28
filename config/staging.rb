@@ -10,8 +10,8 @@ PIDS = "#{ROOT}/tmp/pids"
 # TODO: put these somewhere more secure
 EC2_SECRET_KEY="4VI8OqUBN6LSDP6cAWXUo0FM1L/uURRGIGyQCxvq"
 EC2_ACCESS_KEY="AKIAJPN5IJVEBB2QE35A"
-MONGOHQ_URL="mongodb://heroku:b40c32f8f5707512d7b68b80d35fd260@staff.mongohq.com:10023/app631445"
-REDISTOGO_URL="redis://redistogo:95b8515d29d7bf5258606a0764215c3c@catfish.redistogo.com:9622/"
+MONGOHQ_URL="mongodb://heroku:5fb18d7c862247982989d24305e3725c@staff.mongohq.com:10022/app650848"
+REDISTOGO_URL="redis://redistogo:a41865a64de42e31b2022186ad94bd38@angler.redistogo.com:9095/"
 
 SSH_PRIVATE_KEY_PATH="#{ROOT}/.ssh/minefold.pem"
 

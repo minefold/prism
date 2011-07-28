@@ -9,11 +9,11 @@ module Worker
     
     def self.all
       compute_cloud.servers.
-                select {|s| tags.all? {|k,v| s[k] == v} }.
+                select {|s| tags.all? {|k,v| s.tags[k] == v} }.
                    map {|s| Cloud.new s }
     end
     
-    def tags
+    def self.tags
       {"Name" => "worker"}.merge(Fold.worker_tags || {})
     end
 
