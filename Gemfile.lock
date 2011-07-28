@@ -41,6 +41,7 @@ GEM
     formatador (0.2.0)
     god (0.11.0)
     hirb (0.4.5)
+    hiredis (0.3.1)
     httparty (0.7.8)
       crack (= 0.1.8)
     json (1.5.3)
@@ -119,11 +120,13 @@ DEPENDENCIES
   fog!
   god
   hirb
+  hiredis (~> 0.3.1)
   httparty
   looksee
   mongo
   parallel
   pusher
+  redis (~> 2.2.0)
   resque
   rspec (~> 2.6.0)
   sinatra

@@ -64,9 +64,19 @@ module ProxyAsyncMethods
   end
 end
 
+module RedisMethods
+  def redis
+    @redis ||= begin
+      uri = URI.parse(REDISTOGO_URL)
+      Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
+    end
+  end
+end
+
 module Client
   include ProxyLogging
   include ProxyAsyncMethods
+  include RedisMethods
   
   def post_init
     @f_connection_established = EM::DefaultDeferrable.new
@@ -180,6 +190,8 @@ module Client
     info "#{CONNECTED_PLAYERS[@world_id].length} player(s)"
     
     @f_connection_established.succeed
+    
+    redis.sadd "players:connected", @username
   end
   
   def receive_data data
@@ -270,6 +282,7 @@ module Client
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id].delete @username
     info "client disconnected. #{CONNECTED_PLAYERS[@world_id].length} player(s) in world"
+    redis.srem "players:connected", @username
     
     @keepalive.cancel if @keepalive
     info "stopping credit muncher:#{@credit_muncher}"
@@ -384,6 +397,9 @@ EventMachine.epoll
 EventMachine.run do
   include ProxyLogging
   include ProxyAsyncMethods
+  include RedisMethods
+  
+  redis.del "players:connected"
   
   puts 'collecting initial state'
   Worker.running.each do |worker|
