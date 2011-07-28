@@ -24,7 +24,7 @@ def sudo cmd
 end
 
 def god cmd
-  sudo "god #{cmd}"
+  sudo "bundle exec god #{cmd}"
 end
 
 def god_running?

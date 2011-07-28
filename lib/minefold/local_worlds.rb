@@ -61,8 +61,8 @@ class LocalWorld
     FileUtils.touch world_archive
 
     # tar gz world
-    puts "Archiving"
     Dir.chdir "#{ROOT}/worlds" do
+      puts "Archiving #{ROOT}/worlds/#{id} to #{world_archive}"
       result = TarGz.new.archive id, world_archive, exclude:'server.jar'
       puts result unless $?.exitstatus == 0
     end

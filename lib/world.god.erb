@@ -1,16 +1,20 @@
 
 God.pid_file_directory = "<%= PIDS %>"
 
+worlds_path = '<%= WORLDS %>'
+world_path = "#{worlds_path}/<%= world_id %>"
+
 God.watch do |w|
   w.uid = '<%= Fold.worker_user %>'
   
   w.group = "<%= world_id %>"
   w.name = "minecraft-<%= world_id %>"
   w.interval = 3.seconds
-  w.dir = "<%= WORLDS %>/<%= world_id %>"
+  w.dir = world_path
   w.start = "java -Xmx<%= max_heap_size %>M -Xms<%= min_heap_size %>M -jar server.jar nogui"
   w.start_grace = 10.seconds
   w.log_cmd = '/usr/bin/logger -t "<%= world_id %>:server"'
+  # w.stdin_cmd = "tail -n0 #{world_path}/world.stdin"
   
   w.behavior(:clean_pid_file)
 

@@ -34,11 +34,11 @@ class TarGz
     end
     
     def archive path, output_file, options = {}
-      run_command "tar -czf #{option_string(options)} '#{output_file}' '#{path}'"
+      run_command "tar #{option_string(options)} -czf '#{output_file}' '#{path}'"
     end
     
     def extract archive_file, options = {}
-      run_command "tar -xzf #{option_string(options)} '#{archive_file}'"
+      run_command "tar #{option_string(options)} -xzf '#{archive_file}'"
     end
   end
   
