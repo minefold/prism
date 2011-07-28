@@ -36,7 +36,7 @@ class Workers
     
     worker = Worker.new compute_cloud.servers.bootstrap(options)
     
-    compute_cloud.create_tags worker.instance_id, "Name" => "worker"
+    compute_cloud.create_tags worker.instance_id, "Name" => "worker", "environment" => "production"
     
     worker.prepare_for_minefold
     worker
