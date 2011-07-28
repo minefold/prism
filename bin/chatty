@@ -41,7 +41,7 @@ EM.run do
 
   world_objectid = BSON::ObjectId(world_id)
 
-  puts "online tailing:#{server_log}"
+  puts "[#{Fold.env}] online tailing:#{server_log}"
   EventMachine::file_tail server_log do |filetail, l|
     line = LogLine.new l
     if line.chat_user
