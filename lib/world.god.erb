@@ -26,7 +26,7 @@ God.watch do |w|
   
   w.group = "<%= world_id %>"
   w.name = "chatty-<%= world_id %>"
-  w.env = { 'MONGOHQ_URL' => '<%= MONGOHQ_URL %>', 'FOLD_ENV' => '<%= Fold.env %>'}
+  w.env = { 'FOLD_ENV' => '<%= Fold.env %>'}
   w.interval = 3.seconds
   w.start = "bundle exec <%= BIN %>/chatty <%= world_id %>"
   w.dir = "<%= ROOT %>"
