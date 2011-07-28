@@ -9,7 +9,7 @@ module Worker
     
     def self.all
       compute_cloud.servers.
-                select {|s| tags.all? {|k,v| s.tags[k] == v} }.
+                select {|s| tags.all? {|k,v| s.tags[k.to_s] == v.to_s} }.
                    map {|s| Cloud.new s }
     end
     
@@ -26,7 +26,7 @@ module Worker
         :flavor_id => 'm1.large'
       }.merge(options)
 
-      worker = Worker.new compute_cloud.servers.bootstrap(options)
+      worker = Cloud.new compute_cloud.servers.bootstrap(options)
       compute_cloud.create_tags worker.instance_id, tags
 
       worker.prepare_for_minefold
