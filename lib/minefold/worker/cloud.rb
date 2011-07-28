@@ -9,8 +9,12 @@ module Worker
     
     def self.all
       compute_cloud.servers.
-                select {|s| s.tags["Name"] != "Proxy" }.
+                select {|s| tags.all? {|k,v| s[k] == v} }.
                    map {|s| Cloud.new s }
+    end
+    
+    def tags
+      {"Name" => "worker"}.merge(Fold.worker_tags || {})
     end
 
     def self.create options = {}
@@ -23,8 +27,7 @@ module Worker
       }.merge(options)
 
       worker = Worker.new compute_cloud.servers.bootstrap(options)
-
-      compute_cloud.create_tags worker.instance_id, "Name" => "worker"
+      compute_cloud.create_tags worker.instance_id, tags
 
       worker.prepare_for_minefold
       worker
@@ -143,7 +146,6 @@ module Worker
             server.ssh "pwd"
           end
         rescue Errno::ECONNREFUSED, Net::SSH::AuthenticationFailed, Timeout::Error => e
-          p e.inspect
           sleep 5
           retry
         end
