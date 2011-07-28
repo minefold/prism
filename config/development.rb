@@ -9,6 +9,7 @@ PIDS = "#{ROOT}/tmp/pids"
 
 MONGOHQ_URL='mongodb://localhost'
 REDISTOGO_URL="redis://localhost/"
+PUSHER_URL="http://d6ddfd6bf3e166ae0ce6:aa7e63965d17d964678c@api.pusherapp.com/apps/7185"
 
 Fold.workers = :local
 Storage.provider = Fog::Storage.new({

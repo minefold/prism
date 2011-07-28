@@ -29,6 +29,8 @@ end
 
 group :chatty do
   gem 'eventmachine-tail', '~> 0.6.1'
+  gem 'em-http-request'
+  gem 'pusher'
 end
 
 group :cli do
