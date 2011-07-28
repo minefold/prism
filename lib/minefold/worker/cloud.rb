@@ -21,7 +21,7 @@ module Worker
       options = {
         :private_key_path => SSH_PRIVATE_KEY_PATH,
         :username => 'ubuntu',
-        :image_id => 'ami-afea2dc6',
+        :image_id => 'ami-87a462ee',
         :groups => %W{default proxy},
         :flavor_id => 'm1.large'
       }.merge(options)
@@ -108,8 +108,8 @@ module Worker
     def prepare_for_minefold
       puts "Preparing worker:#{instance_id} for minefold"
       commands = [
-        "echo #{Fold.env} > ~/minefold/FOLD_ENV && echo #{Fold.worker_user} > ~/minefold/FOLD_WORKER_USER",
-        "cd ~/minefold && GIT_SSH=~/deploy-ssh-wrapper git fetch && git checkout #{Fold.worker_git_branch} && GIT_SSH=~/deploy-ssh-wrapper git pull origin #{Fold.worker_git_branch}",
+        "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER",
+        "cd ~ && GIT_SSH=~/deploy-ssh-wrapper git clone --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}",
         "cd ~/minefold && bundle install --without proxy development test cli",
         "sudo god status && sudo god stop worker-app && sudo god quit", # quit god if its running
         "sudo god -c ~/minefold/worker/config/worker.god"
