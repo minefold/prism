@@ -20,8 +20,8 @@ task "resque:setup" do
   require 'fog'
   require 'parallel'
 
-  if ENV["REDISTOGO_URL"]
-    uri = URI.parse(ENV["REDISTOGO_URL"])
+  if REDISTOGO_URL
+    uri = URI.parse(REDISTOGO_URL)
     Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
   end
 end
