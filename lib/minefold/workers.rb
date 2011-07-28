@@ -13,7 +13,7 @@ class Workers
   
   def self.existing
     compute_cloud.servers.
-      select {|s| s.tags["Name"] != "Proxy" && s.tags["environment"] != "staging" }.
+      select {|s| s.tags["Name"] != "worker" && s.tags["environment"] == "production" }.
       map{|s| Worker.new s }
   end
 
