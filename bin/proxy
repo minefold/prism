@@ -428,6 +428,8 @@ EventMachine.run do
       end
       
       puts "worker:#{info[:instance_id]} uptime_minutes:#{info[:uptime_minutes]} worlds:#{world_count} players:#{worker_player_count} busy:#{info[:busy]}"
+      info[:world_count] = world_count
+      info[:player_count] = worker_player_count
       info[:world_info].each do |world_info|
         puts "worker:#{info[:instance_id]} world:#{world_info[:id]} players:#{world_info[:player_count]}"
       end
@@ -441,14 +443,19 @@ EventMachine.run do
       empty_worlds = w[:world_info].select {|world_info| world_info[:player_count] == 0 }
       
       status = BUSY_WORKERS[w[:instance_id]]
+
+      not_busy = !status
+      idle = w[:world_count] == 0
+      close_to_end_of_hour = w[:uptime_minutes] % 60 > 55
+      needs_fixing = status == :not_responding || (not_busy && !w[:responding] && w[:uptime_minutes] > 5)
       
-      if w[:uptime_minutes] % 60 > 55
+      if idle && not_busy && close_to_end_of_hour
         puts "Terminating idle worker:#{w[:instance_id]} uptime:#{w[:uptime_minutes]}"
         stop_idle_worker w[:worker]
-      elsif status == :not_responding || !status && !w[:responding]
+      elsif needs_fixing
         puts "Diagnosing worker:#{w[:instance_id]}"
         fix_unresponsive_worker w[:instance_id]
-      elsif empty_worlds.size > 0 && !status
+      elsif empty_worlds.any? && not_busy
         empty_worlds.each do |world_info| 
           puts "Stopping empty world"
           stop_world world_info[:id]

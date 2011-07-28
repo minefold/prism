@@ -1,3 +1,0 @@
-#!/bin/sh
-export MONGOHQ_URL='mongodb://heroku:os304dfe5d3tbkn3r1ko8j@staff.mongohq.com:10002/app578527'
-# export MONGOHQ_URL='mongodb://localhost'
