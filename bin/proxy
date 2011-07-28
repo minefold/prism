@@ -64,19 +64,10 @@ module ProxyAsyncMethods
   end
 end
 
-module RedisMethods
-  def redis
-    @redis ||= begin
-      uri = URI.parse(REDISTOGO_URL)
-      Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
-    end
-  end
-end
-
 module Client
   include ProxyLogging
   include ProxyAsyncMethods
-  include RedisMethods
+  include Minefold::Redis
   
   def post_init
     @f_connection_established = EM::DefaultDeferrable.new
@@ -397,7 +388,7 @@ EventMachine.epoll
 EventMachine.run do
   include ProxyLogging
   include ProxyAsyncMethods
-  include RedisMethods
+  include Minefold::Redis
   
   redis.del "players:connected"
   

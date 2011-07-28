@@ -21,6 +21,7 @@ end
 $:.unshift File.join File.dirname(__FILE__), '../config'
 
 require 'minefold/minefold_db'
+require 'minefold/redis'
 require 'minefold/local_worlds'
 require 'minefold/storage'
 require 'minefold/worker'
