@@ -13,12 +13,6 @@ GIT
       nokogiri (~> 1.5.0)
       ruby-hmac
 
-GIT
-  remote: https://github.com/snappycode/god
-  revision: 95a7fc083d46c49f1a4189fad9a1e7c72343dee1
-  specs:
-    god (0.11.0)
-
 GEM
   remote: http://rubygems.org/
   specs:
@@ -45,6 +39,7 @@ GEM
     file-tail (1.0.6)
       spruz (~> 0.2)
     formatador (0.2.0)
+    god (0.11.0)
     hirb (0.4.5)
     httparty (0.7.8)
       crack (= 0.1.8)
@@ -122,7 +117,7 @@ DEPENDENCIES
   eventmachine_httpserver
   file-tail
   fog!
-  god!
+  god
   hirb
   httparty
   looksee
