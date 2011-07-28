@@ -386,7 +386,6 @@ EventMachine.run do
   include ProxyAsyncMethods
   
   puts 'collecting initial state'
-  
   Worker.running.each do |worker|
     if worker.responding?
       worlds = worker.worlds
@@ -437,6 +436,27 @@ EventMachine.run do
     end
   }
   
+  fix_swept_workers = proc { |worker_info|
+    worker_info.each do |w|
+      empty_worlds = w[:world_info].select {|world_info| world_info[:player_count] == 0 }
+      
+      status = BUSY_WORKERS[w[:instance_id]]
+      
+      if w[:uptime_minutes] % 60 > 55
+        puts "Terminating idle worker:#{w[:instance_id]} uptime:#{w[:uptime_minutes]}"
+        stop_idle_worker w[:worker]
+      elsif status == :not_responding || !w[:responding]
+        puts "Diagnosing worker:#{w[:instance_id]}"
+        fix_unresponsive_worker w[:instance_id]
+      elsif empty_worlds.size > 0
+        empty_worlds.each do |world_info| 
+          puts "Stopping empty world"
+          stop_world world_info[:id]
+        end
+      end
+    end
+  }
+  
   def stop_idle_worker worker
     return if BUSY_WORKERS[worker.instance_id] && BUSY_WORKERS[worker.instance_id] == :stopping
     
@@ -482,27 +502,11 @@ EventMachine.run do
   
   the_doctor = EventMachine::PeriodicTimer.new(3 * 60) do 
     puts "Starting worker sweep"
-    EM.defer(sweep_workers, proc { |worker_info|
-      worker_info.each do |w|
-        empty_worlds = w[:world_info].select {|world_info| world_info[:player_count] == 0 }
-        
-        status = BUSY_WORKERS[w[:instance_id]]
-        
-        if w[:uptime_minutes] % 60 > 55
-          puts "Terminating idle worker:#{w[:instance_id]} uptime:#{w[:uptime_minutes]}"
-          stop_idle_worker w[:worker]
-        elsif status == :not_responding || !w[:responding]
-          puts "Diagnosing worker:#{w[:instance_id]}"
-          fix_unresponsive_worker w[:instance_id]
-        elsif empty_worlds.size > 0
-          empty_worlds.each do |world_info| 
-            puts "Stopping empty world"
-            stop_world world_info[:id]
-          end
-        end
-      end
-    })
+    EM.defer(sweep_workers, fix_swept_workers)
   end
+
+  puts "Starting worker sweep"
+  EM.defer(sweep_workers, fix_swept_workers)
   
   # Graceful shutdown
   %w(INT TERM).each do |sig|

@@ -11,7 +11,7 @@ God.watch do |w|
   
   w.uid = 'ubuntu'
   
-  w.env = {'FOLD_ENV' => File.read('~/minefold/FOLD_ENV').strip }
+  w.env = {'FOLD_ENV' => File.read(File.expand_path('~/minefold/FOLD_ENV')).strip }
   
   w.behavior(:clean_pid_file)
   
