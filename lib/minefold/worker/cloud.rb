@@ -104,15 +104,17 @@ module Worker
     def stop_world world_id
       get "/worlds/#{world_id}/destroy"
     end
-
+    
     def prepare_for_minefold
       puts "Preparing worker:#{instance_id} for minefold"
+      git = "GIT_SSH=~/deploy-ssh-wrapper git"
+      god = "sudo bundle exec god"
       commands = [
         "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER",
-        "cd ~ && GIT_SSH=~/deploy-ssh-wrapper git clone --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}",
-        "cd ~/minefold && GIT_SSH=~/deploy-ssh-wrapper git pull origin #{Fold.worker_git_branch} && bundle install --without proxy development test cli",
-        "sudo god status && sudo god stop worker-app && sudo god quit", # quit god if its running
-        "sudo god -c ~/minefold/worker/config/worker.god"
+        "cd ~ && #{git} clone --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}",
+        "cd ~/minefold && sudo bundle install --without proxy development test cli",
+        "#{god} status && #{god} stop worker-app && #{god} quit", # quit god if its running
+        "#{god} -c ~/minefold/worker/config/worker.god"
       ]
     
       commands.each do |cmd|
@@ -122,19 +124,26 @@ module Worker
       end
     
       log "Waiting for worker to respond"
-      Timeout::timeout(20) do
+      Timeout::timeout(40) do
         begin
-          get("/", timeout:2).body
-        rescue Errno::ECONNREFUSED
-          sleep 1
-          retry
+          Timeout::timeout(20) do
+            begin
+              get("/", timeout:2).body
+            rescue Errno::ECONNREFUSED
+              sleep 1
+              retry
+            rescue Timeout::Error
+              retry
+            end
+          end
         rescue Timeout::Error
+          log server.ssh("cd ~ && #{git} pull origin #{Fold.worker_git_branch}")
+          log server.ssh("#{god} restart worker-app")
           retry
         end
       end
- 
     end
-
+    
     def wait_for_ssh options={}
       puts "Waiting for ssh access"
       timeout = options[:timeout] || 180
