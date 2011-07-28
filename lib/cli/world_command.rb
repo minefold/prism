@@ -12,7 +12,7 @@ class WorldCommand
   
   def download
     world_filename = "#{world_id}.tar.gz"
-    remote_file = storage.directories.get('minefold.worlds').files.get(world_filename)
+    remote_file = Storage.new.worlds.files.get(world_filename)
     File.open(world_filename, 'w') {|local_file| local_file.write(remote_file.body)}
   end
   

@@ -445,10 +445,10 @@ EventMachine.run do
       if w[:uptime_minutes] % 60 > 55
         puts "Terminating idle worker:#{w[:instance_id]} uptime:#{w[:uptime_minutes]}"
         stop_idle_worker w[:worker]
-      elsif status == :not_responding || !w[:responding]
+      elsif status == :not_responding || !status && !w[:responding]
         puts "Diagnosing worker:#{w[:instance_id]}"
         fix_unresponsive_worker w[:instance_id]
-      elsif empty_worlds.size > 0
+      elsif empty_worlds.size > 0 && !status
         empty_worlds.each do |world_info| 
           puts "Stopping empty world"
           stop_world world_info[:id]

@@ -25,7 +25,7 @@ module Job
       Dir.chdir base_path do
         puts "Downloading world archive:#{filename} => #{archive_file}"
         unless File.exists? archive_file 
-          remote_file = storage.directories.get('minefold.worlds').files.get filename
+          remote_file = Storage.new.worlds.files.get filename
           File.open(archive_file, 'w') {|local_file| local_file.write(remote_file.body)}
         end
       

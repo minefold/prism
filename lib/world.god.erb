@@ -2,7 +2,7 @@
 God.pid_file_directory = "<%= PIDS %>"
 
 God.watch do |w|
-  w.uid = 'ubuntu'
+  w.uid = '<%= Fold.worker_user %>'
   
   w.group = "<%= world_id %>"
   w.name = "minecraft-<%= world_id %>"
@@ -22,7 +22,7 @@ God.watch do |w|
 end
 
 God.watch do |w|
-  w.uid = 'ubuntu'
+  w.uid = '<%= Fold.worker_user %>'
   
   w.group = "<%= world_id %>"
   w.name = "chatty-<%= world_id %>"

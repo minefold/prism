@@ -13,6 +13,8 @@ PUSHER_URL="http://d6ddfd6bf3e166ae0ce6:aa7e63965d17d964678c@api.pusherapp.com/a
 
 Fold.workers = :local
 Fold.worker_git_branch = :dev
+Fold.worker_user = ENV['USER']
+
 Storage.provider = Fog::Storage.new({
   :provider      => :local,
   :local_root    => "#{ROOT}/tmp/local_storage"

@@ -24,7 +24,7 @@ module Job
         Dir.chdir extract_path do
           puts "Downloading #{filename} => #{File.expand_path(filename)}"
 
-          remote_file = storage.directories.get('minefold.import').files.get filename
+          remote_file = Storage.new.worlds_to_import.files.get filename
           File.open(filename, 'w') {|local_file| local_file.write(remote_file.body)}
 
           puts "Extracting..."
@@ -44,7 +44,7 @@ module Job
             TarGz.new.archive world_id, archive_path
             
             puts "Uploading #{archive_filename}"
-            directory = storage.directories.get('minefold.worlds')
+            directory = Storage.new.worlds
             directory.files.create(
               :key    => archive_filename,
               :body   => File.open(archive_path),
