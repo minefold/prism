@@ -108,6 +108,7 @@ module Worker
     def prepare_for_minefold
       puts "Preparing worker:#{instance_id} for minefold"
       commands = [
+        "echo #{Fold.env} > ~/minefold/FOLD_ENV",
         "cd ~/minefold && GIT_SSH=~/deploy-ssh-wrapper git pull origin master --no-progress",
         "cd ~/minefold && bundle install --without proxy development test cli",
         "sudo god status && sudo god stop worker-app && sudo god quit", # quit god if its running

@@ -9,6 +9,8 @@ God.watch do |w|
   w.log_cmd = "/usr/bin/logger -t '#{w.name}'"
   w.dir = root
   
+  w.env = {'FOLD_ENV' => File.read('~/minefold/FOLD_ENV').strip }
+  
   w.behavior(:clean_pid_file)
   
   # determine the state on startup

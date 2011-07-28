@@ -81,6 +81,8 @@ module Worker
     end
 
     def start_world world_id, min_heap_size, max_heap_size
+      `echo #{Fold.env} > ~/minefold/FOLD_ENV`
+      
       result = `#{BIN}/start-local-world #{world_id} #{min_heap_size} #{max_heap_size}`
       if $?.exitstatus != 0
         puts result
