@@ -30,6 +30,6 @@ class WorkerCommand
   private
   
   def worker
-    Workers.running.find {|w| w.instance_id == instance_id}
+    Worker.running.find {|w| w.instance_id == instance_id}
   end
 end

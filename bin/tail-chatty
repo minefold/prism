@@ -8,6 +8,6 @@ require 'minefold'
 abort "Usage: tail-chatty world_id" unless ARGV.length == 1
 world_id = ARGV.shift
 
-worker = Workers.running.find {|worker| worker.worlds.find{|world| world.id == world_id }}
+worker = Worker.running.find {|worker| worker.worlds.find{|world| world.id == world_id }}
 
 exec %Q{ssh -i #{ROOT}/.ssh/minefold.pem ubuntu@#{worker.public_ip_address} "tail -f ~/minefold/log/chatty-#{world_id}.log"} if worker

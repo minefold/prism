@@ -12,12 +12,12 @@ class WorldCommand
   
   def download
     world_filename = "#{world_id}.tar.gz"
-    remote_file = storage.directories.get('minefold.worlds').files.get(world_filename)
+    remote_file = Storage.new.worlds.files.get(world_filename)
     File.open(world_filename, 'w') {|local_file| local_file.write(remote_file.body)}
   end
   
   def stop
-    worker = Workers.running.find {|worker| worker.worlds.any?{|world| world.id == world_id } }
+    worker = Worker.running.find {|worker| worker.worlds.any?{|world| world.id == world_id } }
     if worker
       puts "Stopping #{worker.instance_id} > #{world_id}"
       worker.stop_world world_id

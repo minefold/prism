@@ -29,6 +29,8 @@ class LogLine
   end
 end
 
+Pusher.url = PUSHER_URL
+
 EM.epoll
 EM.run do
   connection = MinefoldDb.connection
@@ -60,6 +62,14 @@ EM.run do
         'updated_at' => line.timestamp
       )
       puts "[#{result}] #{line.timestamp} [#{line.chat_user}] #{line.chat_message}"
+      
+      Pusher["world:#{world_id}"].trigger_async "chat:create", {
+        user: {
+          username: line.chat_user
+        },
+        body: line.chat_message
+      }.to_json
+      
     end
   end
 end

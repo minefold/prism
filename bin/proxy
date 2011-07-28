@@ -5,7 +5,6 @@ Bundler.require :default, :proxy
 require 'json'
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
-require 'environment'
 require 'minefold'
 require 'proxy_info_handler'
 require 'sauron'
@@ -16,6 +15,8 @@ STDOUT.sync = true
 
 puts "Connecting to Mongo"
 DB = MinefoldDb.connection
+
+# DB['users'].find(:username => @username)
 
 CONNECTED_PLAYERS = {}
 BUSY_WORKERS = {}  # worker is either starting, stopping or starting a new world (ie. busy, don't use it)
@@ -120,9 +121,9 @@ module Client
       EM.defer(proc { 
         begin
           # find workers that we haven't marked as busy and sort by who has the most available time
-          Workers.existing.reject{|w| BUSY_WORKERS.has_key? w.instance_id }.sort_by {|w| (w.uptime_minutes % 60) }
+          Worker.all.reject{|w| BUSY_WORKERS.has_key? w.instance_id }.sort_by {|w| (w.uptime_minutes % 60) }
         rescue => e
-          error "Workers.existing", e
+          error "Worker.all", e
         end
       }, proc {|workers| 
         if @client_connected
@@ -289,7 +290,7 @@ module Client
   def create_worker_and_start_world
     EM.defer(proc { 
         begin
-          Workers.create flavor_id:@instance_type
+          Worker.create flavor_id:@instance_type
         rescue => e
           error "create worker", e
         end
@@ -297,6 +298,7 @@ module Client
         if worker
           EM.next_tick { start_world worker }
         else
+          error "no worker"
           # create worker failed, we don't have its instance id, we'll try again
           SUPERVISED_WORLDS.delete @world_id
           EM.next_tick { get_world_running }
@@ -342,10 +344,12 @@ module Client
         end
       }, proc {|world|
         if world
+          info "world started"
           BUSY_WORKERS.delete worker.instance_id
           SUPERVISED_WORLDS[@world_id].world = world
           SUPERVISED_WORLDS[@world_id].running!
         else
+          error "world didn't start"
           # couldn't start world, mark worker as bad
           SUPERVISED_WORLDS.delete @world_id
           BUSY_WORKERS[worker.instance_id] = :not_responding
@@ -353,7 +357,7 @@ module Client
         EM.next_tick { get_world_running }
     })
   end
-  
+
 end
 
 module Server
@@ -382,8 +386,7 @@ EventMachine.run do
   include ProxyAsyncMethods
   
   puts 'collecting initial state'
-  
-  Workers.running.each do |worker|
+  Worker.running.each do |worker|
     if worker.responding?
       worlds = worker.worlds
       worlds.each do |world| 
@@ -403,7 +406,7 @@ EventMachine.run do
   EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
   
   sweep_workers = proc { 
-    worker_info = Workers.running.map do |w|
+    worker_info = Worker.running.map do |w|
       info = {
         worker:w,
         instance_id:w.instance_id, 
@@ -433,6 +436,27 @@ EventMachine.run do
     end
   }
   
+  fix_swept_workers = proc { |worker_info|
+    worker_info.each do |w|
+      empty_worlds = w[:world_info].select {|world_info| world_info[:player_count] == 0 }
+      
+      status = BUSY_WORKERS[w[:instance_id]]
+      
+      if w[:uptime_minutes] % 60 > 55
+        puts "Terminating idle worker:#{w[:instance_id]} uptime:#{w[:uptime_minutes]}"
+        stop_idle_worker w[:worker]
+      elsif status == :not_responding || !status && !w[:responding]
+        puts "Diagnosing worker:#{w[:instance_id]}"
+        fix_unresponsive_worker w[:instance_id]
+      elsif empty_worlds.size > 0 && !status
+        empty_worlds.each do |world_info| 
+          puts "Stopping empty world"
+          stop_world world_info[:id]
+        end
+      end
+    end
+  }
+  
   def stop_idle_worker worker
     return if BUSY_WORKERS[worker.instance_id] && BUSY_WORKERS[worker.instance_id] == :stopping
     
@@ -455,7 +479,7 @@ EventMachine.run do
     BUSY_WORKERS[instance_id] = :diagnosing
     EM.defer(proc {
       begin
-        worker = Workers.get instance_id
+        worker = Worker.find instance_id
         worker.wait_for_ssh timeout:20
         worker.prepare_for_minefold
         # if all that worked, we're up and running!
@@ -478,27 +502,11 @@ EventMachine.run do
   
   the_doctor = EventMachine::PeriodicTimer.new(3 * 60) do 
     puts "Starting worker sweep"
-    EM.defer(sweep_workers, proc { |worker_info|
-      worker_info.each do |w|
-        empty_worlds = w[:world_info].select {|world_info| world_info[:player_count] == 0 }
-        
-        status = BUSY_WORKERS[w[:instance_id]]
-        
-        if w[:uptime_minutes] % 60 > 55
-          puts "Terminating idle worker:#{w[:instance_id]} uptime:#{w[:uptime_minutes]}"
-          stop_idle_worker w[:worker]
-        elsif status == :not_responding || !w[:responding]
-          puts "Diagnosing worker:#{w[:instance_id]}"
-          fix_unresponsive_worker w[:instance_id]
-        elsif empty_worlds.size > 0
-          empty_worlds.each do |world_info| 
-            puts "Stopping empty world"
-            stop_world world_info[:id]
-          end
-        end
-      end
-    })
+    EM.defer(sweep_workers, fix_swept_workers)
   end
+
+  puts "Starting worker sweep"
+  EM.defer(sweep_workers, fix_swept_workers)
   
   # Graceful shutdown
   %w(INT TERM).each do |sig|
@@ -508,5 +516,5 @@ EventMachine.run do
     end
   end
 
-  puts "listening on 0.0.0.0:25565. Creating #{WORKER_INSTANCE_TYPE} workers"
+  puts "#{ENV['FOLD_ENV']} mode. listening on 0.0.0.0:25565. Creating #{WORKER_INSTANCE_TYPE} workers"
 end

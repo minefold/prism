@@ -1,3 +1,6 @@
+require 'fileutils'
+require 'targz'
+
 class LocalWorlds
   def self.process_running? pid
     begin
@@ -34,11 +37,47 @@ class LocalWorlds
 
   def self.next_available_port
     running_world_with_highest_port = running.sort_by{|w| w[:port].to_i }.last
-    p running_world_with_highest_port
     if running_world_with_highest_port
       running_world_with_highest_port[:port].to_i + 1
     else
       4000
     end
   end
+end
+
+class LocalWorld
+  attr_reader :id
+  
+  def initialize id
+    @id = id
+  end
+  
+  def backup
+    FileUtils.mkdir_p "#{ROOT}/backups"
+
+    world_archive = "#{ROOT}/backups/#{id}.tar.gz"
+
+    # having this file present lets others know there is a backup in process
+    FileUtils.touch world_archive
+
+    # tar gz world
+    puts "Archiving"
+    Dir.chdir "#{ROOT}/worlds" do
+      result = TarGz.new.archive id, world_archive, exclude:'server.jar'
+      puts result unless $?.exitstatus == 0
+    end
+    raise "error archiving world" unless $?.exitstatus == 0
+
+    directory = Storage.new.worlds
+
+    puts "Uploading"
+    file = directory.files.create(
+      :key    => "#{id}.tar.gz",
+      :body   => File.open(world_archive),
+      :public => false
+    )
+
+    FileUtils.rm world_archive
+  end
+  
 end
