@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'bundler/setup'
-Bundler.require :default, :chatty, :proxy, :worker
+Bundler.require :default, :chatty, :proxy
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
