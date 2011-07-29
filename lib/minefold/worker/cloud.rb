@@ -109,7 +109,7 @@ module Worker
       puts "Preparing worker:#{instance_id} for minefold"
       commands = [
         "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER",
-        "cd ~ && GIT_SSH=~/deploy-ssh-wrapper git clone --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}",
+        "cd ~ && GIT_SSH=~/deploy-ssh-wrapper git clone -q --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}",
         "cd ~/minefold && bundle install --without proxy development test cli",
         "sudo god status && sudo god stop worker-app && sudo god quit", # quit god if its running
         "sudo god -c ~/minefold/worker/config/worker.god"
