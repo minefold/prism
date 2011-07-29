@@ -10,7 +10,7 @@ end
 
 # TODO: make this stuff restful
 get "/worlds/create" do
-  result = `#{BIN}/start-local-world #{params[:id]} #{params[:min_heap_size]} #{params[:max_heap_size]}`
+  result = ENV['FOLD_ENV']="#{Fold.env}"; `#{BIN}/start-local-world #{params[:id]} #{params[:min_heap_size]} #{params[:max_heap_size]}`
   if $?.exitstatus != 0
     puts result
     raise result
@@ -26,7 +26,7 @@ end
 
 get "/worlds/:id/destroy" do
   content_type :json
-  result = `#{BIN}/stop-local-world #{params[:id]}`
+  result = ENV['FOLD_ENV']="#{Fold.env}"; `#{BIN}/stop-local-world #{params[:id]}`
   if $?.exitstatus != 0
     puts result
     raise result
