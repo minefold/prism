@@ -53,7 +53,7 @@ def server_properties world_id, port
     "level-name"       => world_id,
     "level-seed"       => '',
     "max-players"      => 255,
-    "motd"             => "Welcome to Minefold!",
+    "motd"             => "\"§aWelcome to Minecraft!@§cHello.§e Build§d something§a fairly§b epic!\"",
     "online-mode"      => true,
     # "pvp"              => true,
     "server-ip"        => "0.0.0.0",

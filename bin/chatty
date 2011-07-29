@@ -6,6 +6,7 @@ Bundler.require :default, :chatty
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'time'
+require 'evented_redis'
 
 STDOUT.sync = true
 
@@ -23,7 +24,7 @@ class LogLine
     @level = $2
     @message = $3
 
-    message =~ /\<(\w+)\> (.*)/
+    message =~ /^\<(\w+)\> (.*)/
     @chat_user = $1
     @chat_message = $2
   end
@@ -33,6 +34,8 @@ Pusher.url = PUSHER_URL
 
 EM.epoll
 EM.run do
+  include Minefold::WorldInput
+
   connection = MinefoldDb.connection
 
   users_collection = connection['users']
@@ -40,6 +43,11 @@ EM.run do
   wall_items_collection = connection['wall_items']
 
   world_objectid = BSON::ObjectId(world_id)
+  
+  @sub = EventedRedis.connect
+  @sub.subscribe("world.#{world_id}.input") do |type, channel, message|
+    console_message world_id, "#{message}" if type == "message"
+  end
 
   puts "[#{Fold.env}] online tailing:#{server_log}"
   EventMachine::file_tail server_log do |filetail, l|

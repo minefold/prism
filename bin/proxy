@@ -68,7 +68,6 @@ module Client
   include ProxyLogging
   include ProxyAsyncMethods
   include Minefold::Redis
-  include Minefold::WorldInput
   
   def post_init
     @f_connection_established = EM::DefaultDeferrable.new
@@ -185,10 +184,10 @@ module Client
     
     redis.sadd "players:connected", @username
     
-    EM.add_timer(7) { 
-      send_player_message @world_id, @username, "Oh hi there #{@username}, welcome to minefold!" 
-      send_player_message @world_id, @username, "You've got #{@user['credits']} credits left" 
-    }
+    # EM.add_timer(7) { 
+    #   send_player_message @world_id, @username, "Oh hi there #{@username}, welcome to minefold!" 
+    #   send_player_message @world_id, @username, "You've got #{@user['credits']} credits left" 
+    # }
   end
   
   def receive_data data
