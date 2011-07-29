@@ -37,7 +37,7 @@ module Worker
       end
 
       def find instance_id
-        virtual_workers.find {|w| s.instance_id == instance_id }
+        virtual_workers.find {|w| w.instance_id == instance_id }
       end
       
       def virtual_workers
