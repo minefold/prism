@@ -8,34 +8,7 @@ require 'minefold'
 abort "Usage: stop-local-world id" unless ARGV.length == 1
 world_id = ARGV.shift
 
-def sudo_cmd
-  ENV['rvm_version'] ? 'rvmsudo' : 'sudo'
-end
+world = LocalWorld.running.find {|w| w.id == world_id }
 
-def sudo cmd
-  `#{sudo_cmd} #{cmd}`
-end
-
-def god cmd
-  sudo "bundle exec god #{cmd}"
-end
-
-# Stop world
-puts "stopping"
-world = LocalWorlds.running.find {|w| w[:id] == world_id }
-god "stop #{world_id}" if world
-
-puts "Waiting for world to stop"
-while LocalWorlds.running.any? {|w| w[:id] == world_id } do
-end
-puts "Done"
-
-exit 0 unless Dir.exists? "#{WORLDS}/#{world_id}"
-
-# backup world
-local_world = LocalWorld.new world_id
-local_world.backup
-
-# remove world
-puts "Removing"
-FileUtils.rm_rf "#{WORLDS}/#{world_id}"
+world.stop!
+world.backup!

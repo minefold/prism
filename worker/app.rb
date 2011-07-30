@@ -5,7 +5,7 @@ end
 
 get "/worlds" do
   content_type :json
-  LocalWorlds.running.to_json
+  LocalWorld.running.to_json
 end
 
 # TODO: make this stuff restful
@@ -21,7 +21,7 @@ end
 
 get "/worlds/:id" do
   content_type :json
-  LocalWorlds.running.find{|w| w[:id] == params[:id] }.to_json
+  LocalWorld.running.find{|w| w.id == params[:id] }.to_json
 end
 
 get "/worlds/:id/destroy" do

@@ -24,4 +24,8 @@ module GodHelpers
       god "-c #{config_file}"
     end
   end
+  
+  def god_stop task_name
+    god "stop #{task_name}"
+  end
 end

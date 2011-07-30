@@ -1,58 +1,34 @@
 require 'fileutils'
 require 'targz'
 
-class LocalWorlds
-  def self.process_running? pid
-    begin
-      Process.getpgid pid.to_i
-      true
-    rescue Errno::ESRCH
-      false
-    end
-  end
-
-  def self.present
-    Dir["#{PIDS}/minecraft-*.pid"].map do |pid_file|
-      pid = File.read(pid_file)
-      pid_file =~ /minecraft-(\w+)/
-      world_id = $1
-      properties_file = "#{WORLDS}/#{world_id}/server.properties"
-      server_properties = File.read properties_file if File.exists? properties_file
-      server_properties =~ /port\=(\d+)/
-      port = $1
-
-      {
-        pid_file: pid_file,
-        pid: pid,
-        id: world_id,
-        running: process_running?(pid),
-        port: port
-      }
-    end
-  end
-
-  def self.running
-    present.select {|w| w[:running] }
-  end
-
-  def self.next_available_port
-    running_world_with_highest_port = running.sort_by{|w| w[:port].to_i }.last
-    if running_world_with_highest_port
-      running_world_with_highest_port[:port].to_i + 1
-    else
-      4000
-    end
-  end
-end
-
 class LocalWorld
   class << self
     include GodHelpers
     
+    def present
+      Dir["#{PIDS}/minecraft-*.pid"].map do |pid_file|
+        pid_file =~ /minecraft-(\w+)/
+        world_id = $1
+
+        LocalWorld.new world_id
+      end
+    end
+
+    def running
+      present.select {|w| w.state == :running }
+    end
+
+    def next_available_port
+      running_world_with_highest_port = running.sort_by{|w| w.port }.last
+      if running_world_with_highest_port
+        running_world_with_highest_port.port + 1
+      else
+        4000
+      end
+    end
+    
     def server_properties world_id, port
       col = MinefoldDb.connection['worlds']
-
-      p "world_id:#{world_id}"
 
       options = col.find_one({'_id' => BSON::ObjectId(world_id)})['options']
 
@@ -73,8 +49,11 @@ class LocalWorld
       }).map {|values| values.join('=')}.join("\n")
     end
     
+    
+    
     def start world_id, min_heap_size = 512, max_heap_size = 2048
-      if LocalWorlds.running.any? {|w| w[:id] == world_id }
+      # TODO: this is inefficient
+      if running.any? {|w| w.id == world_id }
         puts "World already running"
         return
       end
@@ -110,10 +89,9 @@ class LocalWorld
       FileUtils.ln_s JAR, world_path unless File.exist? "#{world_path}/server.jar"
 
       # get a port number to use
-      port = LocalWorlds.next_available_port
+      port = LocalWorld.next_available_port
 
       # create server.properties
-      p "world_id:#{world_id}"
       File.open(properties_path, 'w') {|file| file.puts server_properties(world_id, port) }
 
       # create world.god
@@ -127,9 +105,10 @@ class LocalWorld
       puts "starting server on port #{port}"
       god_start god_config, world_id
 
+      world = LocalWorld.new world_id
       puts "Waiting for server init"
       Timeout::timeout(10) do
-        until LocalWorlds.running.any? {|lw| lw[:id] == world_id }
+        until world.state == :running
           sleep 1
         end
       end
@@ -149,13 +128,55 @@ class LocalWorld
     end
   end
   
+  include GodHelpers
+  
   attr_reader :id
   
   def initialize id
     @id = id
   end
   
-  def backup
+  def pid_file
+    "#{PIDS}/minecraft-#{id}.pid"
+  end
+  
+  def pid
+    File.read(pid_file) if File.exists? pid_file
+  end
+  
+  def state
+    if pid
+      begin
+        Process.getpgid pid.to_i
+        :running
+      rescue Errno::ESRCH
+        :stopped
+      end
+    else
+      :stopped
+    end
+  end
+  
+  def port
+    properties_file = "#{WORLDS}/#{id}/server.properties"
+    if File.exists? properties_file
+      server_properties = File.read properties_file 
+      server_properties =~ /port\=(\d+)/
+      ($1).to_i
+    end
+  end
+  
+  def stop!
+    puts "stopping #{id}"
+    god_stop id
+
+    puts "Waiting for world to stop"
+    while state == :running; end
+  end
+  
+  
+  def backup!
+    puts "Starting backup"
     FileUtils.mkdir_p "#{ROOT}/backups"
 
     world_archive = "#{ROOT}/backups/#{id}.tar.gz"
@@ -181,6 +202,20 @@ class LocalWorld
     )
 
     FileUtils.rm world_archive
+  end
+  
+  def to_hash
+    {
+      pid_file: pid_file,
+      pid: pid,
+      id: id,
+      running: state == :running,
+      port: port
+    }
+  end
+  
+  def to_json
+    to_hash.to_json
   end
   
 end

@@ -5,4 +5,4 @@ Bundler.require :default
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 
-puts LocalWorlds.running.map {|w| "name: #{w[:id]}  port: #{w[:port]}  pid:#{w[:pid]}" }
+puts LocalWorld.running.map {|w| "name: #{w.id}  port: #{w.port}  pid:#{w.pid}" }

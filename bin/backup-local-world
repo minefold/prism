@@ -8,4 +8,4 @@ require 'targz'
 
 world_id = ARGV.shift
 
-LocalWorld.new(world_id).backup
+LocalWorld.new(world_id).backup!

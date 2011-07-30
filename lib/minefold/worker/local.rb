@@ -43,7 +43,7 @@ module Worker
       def virtual_workers
         @@virtual_workers ||= begin
           worker = Local.new LocalVM.create
-          LocalWorlds.running.each{|local_world| worker.worlds << World.new(worker, local_world[:id], local_world[:port]) }
+          LocalWorld.running.each{|local_world| worker.worlds << World.new(worker, local_world.id, local_world.port) }
           [worker]
         end
       end
@@ -90,7 +90,7 @@ module Worker
         raise result
       end
       
-      local_world = LocalWorlds.running.find{|local_world| local_world[:id] == world_id}
+      local_world = LocalWorld.running.find{|local_world| local_world.id == world_id}
       w = World.new self, local_world[:id], local_world[:port]
       worlds << w
       w
