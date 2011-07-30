@@ -49,7 +49,12 @@ class LocalWorld
       }).map {|values| values.join('=')}.join("\n")
     end
     
-    
+    def find id
+      pid_file = "#{PIDS}/minecraft-#{id}.pid"
+      if File.exists? pid_file
+        World.new id
+      end
+    end
     
     def start world_id, min_heap_size = 512, max_heap_size = 2048
       # TODO: this is inefficient

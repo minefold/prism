@@ -1,3 +1,5 @@
+# set :show_exceptions, true
+# set :dump_errors, false
 
 get "/" do
   "hello!"
@@ -30,5 +32,13 @@ get "/worlds/:id/destroy" do
   world = find_world(params[:id]).to_json
   world.stop!
   world.to_json
+end
+
+error 404 do
+  "404 Not found"
+end
+
+error 500 do
+  "500 Error"
 end
 
