@@ -46,6 +46,109 @@ class LocalWorlds
 end
 
 class LocalWorld
+  class << self
+    include GodHelpers
+    
+    def server_properties world_id, port
+      col = MinefoldDb.connection['worlds']
+
+      p "world_id:#{world_id}"
+
+      options = col.find_one({'_id' => BSON::ObjectId(world_id)})['options']
+
+      options.merge({
+        "allow-flight"     => false,
+        "allow-nether"     => true,
+        "level-name"       => world_id,
+        "level-seed"       => '',
+        "max-players"      => 255,
+        "online-mode"      => true,
+        "pvp"              => true,
+        "server-ip"        => "0.0.0.0",
+        "server-port"      => port,
+        "spawn-animals"    => true,
+        "spawn-monsters"   => true,
+        "view-distance"    => 10,
+        "white-list"       => false
+      }).map {|values| values.join('=')}.join("\n")
+    end
+    
+    def start world_id, min_heap_size = 512, max_heap_size = 2048
+      if LocalWorlds.running.any? {|w| w[:id] == world_id }
+        puts "World already running"
+        return
+      end
+
+      `#{BIN}/download-server` unless File.exists? JAR
+
+      puts "Starting world #{world_id}"
+
+      world_path = "#{WORLDS}/#{world_id}"
+      properties_path = "#{world_path}/server.properties"
+      god_config = "#{world_path}/world.god"
+
+      # create world path if it aint there
+      FileUtils.mkdir_p world_path
+
+      # check s3 for world
+      archived_world = Storage.new.worlds.files.get("#{world_id}.tar.gz")
+      if archived_world
+        FileUtils.mkdir_p "#{ROOT}/backups"
+        archive = "#{ROOT}/backups/#{world_id}.tar.gz"
+        puts "Retrieved world"
+        File.open(archive, "w") do |tar|
+          tar.write archived_world.body
+        end
+        Dir.chdir WORLDS do
+          TarGz.new.extract archive
+        end
+      else
+        puts "New world"
+      end
+
+      # symlink server
+      FileUtils.ln_s JAR, world_path unless File.exist? "#{world_path}/server.jar"
+
+      # get a port number to use
+      port = LocalWorlds.next_available_port
+
+      # create server.properties
+      p "world_id:#{world_id}"
+      File.open(properties_path, 'w') {|file| file.puts server_properties(world_id, port) }
+
+      # create world.god
+      template = ERB.new File.read "#{LIB}/world.god.erb"
+      File.open(god_config, 'w') {|file| file.puts template.result(binding) }
+
+      # clear server log
+      server_log = File.join(world_path, "server.log")
+      File.open(server_log, "w") {|file| file.print }
+
+      puts "starting server on port #{port}"
+      god_start god_config, world_id
+
+      puts "Waiting for server init"
+      Timeout::timeout(10) do
+        until LocalWorlds.running.any? {|lw| lw[:id] == world_id }
+          sleep 1
+        end
+      end
+
+      puts "Waiting for server ready"
+      begin
+        Timeout::timeout(4 * 60) do
+          File::Tail::Logfile.open(server_log) do |log|
+            log.max_interval = 0.1
+            log.interval = 0.1
+
+            log.tail { |line| puts line; raise File::Tail::BreakException if line =~ /Done/ }
+          end
+        end
+      rescue File::Tail::BreakException
+      end
+    end
+  end
+  
   attr_reader :id
   
   def initialize id
