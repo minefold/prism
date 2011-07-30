@@ -91,7 +91,7 @@ module Worker
       end
       
       local_world = LocalWorld.running.find{|local_world| local_world.id == world_id}
-      w = World.new self, local_world[:id], local_world[:port]
+      w = World.new self, local_world.id, local_world.port
       worlds << w
       w
     end
