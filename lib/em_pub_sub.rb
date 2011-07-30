@@ -1,15 +1,22 @@
-class EventedRedis < EM::Connection
+class EMPubSub < EM::Connection
   def self.connect
-    host = (ENV['REDIS_HOST'] || 'localhost')
-    port = (ENV['REDIS_PORT'] || 6379).to_i
+    uri = URI.parse(REDISTOGO_URL)
+
+    host = uri.host || 'localhost'
+    port = (uri.port || 6379).to_i
+    
     EM.connect host, port, self
   end
 
   def post_init
+    uri = URI.parse(REDISTOGO_URL)
     @blocks = {}
+    call_command "auth", uri.password if uri.password
   end
   
   def subscribe(*channels, &blk)
+    puts "subscribe"
+    
     channels.each { |c| @blocks[c.to_s] = blk }
     call_command('subscribe', *channels)
   end
@@ -23,6 +30,8 @@ class EventedRedis < EM::Connection
   end
   
   def receive_data(data)
+    # puts "< #{data}"
+    
     buffer = StringIO.new(data)
     begin
       parts = read_response(buffer)
@@ -42,8 +51,10 @@ class EventedRedis < EM::Connection
     when '*'
       size = buffer.gets.to_i
       parts = size.times.map { read_object(buffer) }
+    when '+'
+      # puts "OK"
     else
-      raise "unsupported response type"
+      # puts "unsupported response type: #{type}"
     end
   end
   
@@ -70,6 +81,8 @@ class EventedRedis < EM::Connection
       command << a.to_s
       command << "\r\n"
     }
+    # puts "> #{command}"
+    
     send_data command
   end
 end

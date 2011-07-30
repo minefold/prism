@@ -33,6 +33,8 @@ group :chatty do
   gem 'eventmachine-tail', '~> 0.6.1'
   gem 'em-http-request'
   gem 'pusher'
+  gem "hiredis", "~> 0.3.1"
+  gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
 end
 
 group :cli do

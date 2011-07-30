@@ -6,11 +6,11 @@ Bundler.require :default, :chatty
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'time'
-require 'evented_redis'
+require 'em_pub_sub'
 
 STDOUT.sync = true
 
-abort "Usage: start-vm world_id" unless ARGV.length == 1
+abort "Usage: chatty world_id" unless ARGV.length == 1
 world_id = ARGV.shift
 server_log = "#{WORLDS}/#{world_id}/server.log"
 
@@ -44,12 +44,14 @@ EM.run do
 
   world_objectid = BSON::ObjectId(world_id)
   
-  @sub = EventedRedis.connect
-  @sub.subscribe("world.#{world_id}.input") do |type, channel, message|
+  input_channel = "world.#{world_id}.input"
+  
+  @sub = EMPubSub.connect
+  @sub.subscribe(input_channel) do |type, channel, message|
     console_message world_id, "#{message}" if type == "message"
   end
 
-  puts "[#{Fold.env}] online tailing:#{server_log}"
+  puts "[#{Fold.env}] online subscribed:#{input_channel} tailing:#{server_log}"
   EventMachine::file_tail server_log do |filetail, l|
     line = LogLine.new l
     if line.chat_user

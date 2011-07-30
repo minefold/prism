@@ -113,7 +113,7 @@ puts "starting server on port #{port}"
 start god_path, world_id
 
 puts "Waiting for server init"
-Timeout::timeout(5) do
+Timeout::timeout(10) do
   until LocalWorlds.running.any? {|lw| lw[:id] == world_id }
     sleep 1
   end
