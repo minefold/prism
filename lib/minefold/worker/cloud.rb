@@ -68,7 +68,7 @@ module Worker
       return [] unless public_ip_address
  
       begin
-        server_info = JSON.parse get("/worlds", timeout:20).body
+        server_info = JSON.paxrse get("/worlds", timeout:20).body
         Worlds.new self, server_info.map {|h| World.new self, h["id"], h["port"]}
       rescue => e
         puts e.inspect
