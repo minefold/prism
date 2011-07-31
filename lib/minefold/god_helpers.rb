@@ -8,7 +8,11 @@ module GodHelpers
   end
 
   def god cmd
-    sudo "bundle exec god #{cmd}"
+    if File.exists? "bin/god"
+      sudo "bin/god" 
+    else
+      sudo "bundle exec god #{cmd}"
+    end
   end
 
   def god_running?

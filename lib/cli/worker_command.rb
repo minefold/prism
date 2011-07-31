@@ -27,6 +27,10 @@ class WorkerCommand
     exec %Q{ssh -i #{ROOT}/.ssh/minefold.pem ubuntu@#{worker.public_ip_address}}
   end
   
+  def repair
+    worker.prepare_for_minefold
+  end
+  
   private
   
   def worker
