@@ -76,7 +76,8 @@ module Worker
       
       commands = [
         "#{ensure_god_isnt_running}; #{ensure_thin_isnt_running}; #{write_out_env_vars}",
-        "#{clone_repo} && #{bundle_install} && #{start_worker_app}"
+        "#{clone_repo} && #{bundle_install}; #{ensure_god_isnt_running}; #{ensure_thin_isnt_running}",
+        "#{start_worker_app}"
       ]
     
       commands.each do |cmd|

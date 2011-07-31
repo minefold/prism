@@ -17,7 +17,7 @@ module GodHelpers
 
   def god cmd
     if File.exists? "#{ROOT}/bin/god"
-      sudo "bin/god #{cmd}"
+      sudo "#{ROOT}/bin/god #{cmd}"
     else
       sudo "bundle exec god #{cmd}"
     end
