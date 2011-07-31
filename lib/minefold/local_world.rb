@@ -52,7 +52,7 @@ class LocalWorld
     def find id
       pid_file = "#{PIDS}/minecraft-#{id}.pid"
       if File.exists? pid_file
-        World.new id
+        LocalWorld.new id
       end
     end
     

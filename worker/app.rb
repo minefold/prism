@@ -1,5 +1,4 @@
-# set :show_exceptions, true
-# set :dump_errors, false
+set :show_exceptions, false
 
 get "/" do
   "hello!"
