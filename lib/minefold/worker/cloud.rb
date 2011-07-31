@@ -65,18 +65,18 @@ module Worker
 
     def prepare_for_minefold
       puts "Preparing worker:#{instance_id} for minefold"
-      god = "sudo bin/god"
+      god = "cd ~/minefold && sudo bin/god"
       
       ensure_god_isnt_running = "#{god} quit"
       ensure_thin_isnt_running = "ps -eF | grep 'thin' | awk '{print $2}' | sudo xargs kill -9"
       write_out_env_vars = "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER"
       clone_repo = "cd ~ && sudo rm -rf minefold && GIT_SSH=~/deploy-ssh-wrapper git clone -q --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}"
       bundle_install = "cd ~/minefold && bundle install --quiet --binstubs --without proxy development test cli"
-      start_god = "cd ~/minefold && #{god} -c ~/minefold/worker/config/worker.god"
+      start_worker_app = "#{god} -c ~/minefold/worker/config/worker.god && #{god} start worker-app"
       
       commands = [
         "#{ensure_god_isnt_running}; #{ensure_thin_isnt_running}; #{write_out_env_vars}",
-        "#{clone_repo} && #{bundle_install} && #{start_god}"
+        "#{clone_repo} && #{bundle_install} && #{start_worker_app}"
       ]
     
       commands.each do |cmd|
