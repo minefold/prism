@@ -6,7 +6,7 @@ end
 
 get "/worlds" do
   content_type :json
-  LocalWorld.running.to_json
+  LocalWorld.running.map(&:to_json)
 end
 
 # TODO: make this stuff restful
@@ -19,6 +19,7 @@ end
 def find_world id
   world = LocalWorld.find params[:id]
   raise Sinatra::NotFound unless world
+  world
 end
 
 get "/worlds/:id" do
@@ -28,7 +29,7 @@ end
 
 get "/worlds/:id/destroy" do
   content_type :json
-  world = find_world(params[:id]).to_json
+  world = find_world(params[:id])
   world.stop!
   world.to_json
 end

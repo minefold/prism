@@ -500,12 +500,9 @@ EventMachine.run do
     EM.defer(proc {
       begin
         worker = Worker.find instance_id
-        worker.wait_for_ssh timeout:20
         worker.prepare_for_minefold
-        # if all that worked, we're up and running!
         true
       rescue => e
-        # no dice!
         puts "ERROR: #{[e.inspect, e.backtrace].join("\n")}"
         false
       end

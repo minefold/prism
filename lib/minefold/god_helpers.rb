@@ -1,15 +1,23 @@
 module GodHelpers
+  
+  def rvm?
+    `rvm --version`
+    $?.exitstatus == 0
+  end
+  
   def sudo_cmd
-    ENV['rvm_version'] ? 'rvmsudo' : 'sudo'
+    rvm? ? 'rvmsudo' : 'sudo'
   end
 
   def sudo cmd
-    `#{sudo_cmd} #{cmd}`
+    full_cmd = "cd #{ROOT} && #{sudo_cmd} #{cmd}"
+    `#{full_cmd}`
+    p "#{$?.exitstatus}:#{full_cmd}"
   end
 
   def god cmd
-    if File.exists? "bin/god"
-      sudo "bin/god" 
+    if File.exists? "#{ROOT}/bin/god"
+      sudo "bin/god"
     else
       sudo "bundle exec god #{cmd}"
     end
@@ -20,10 +28,10 @@ module GodHelpers
     $?.exitstatus == 0
   end
 
-  def god_start config_file, world_id
+  def god_start config_file, task
     if god_running?
       god "load #{config_file}"
-      god "start #{world_id}"
+      god "start #{task}"
     else   
       god "-c #{config_file}"
     end

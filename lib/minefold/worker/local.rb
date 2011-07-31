@@ -1,6 +1,7 @@
 module Worker
   class LocalVM
-    attr_reader :id, :state, :created_at
+    attr_reader :id, :created_at
+    attr_accessor :state
     
     def self.next_index
       @@index ||= 0
@@ -33,6 +34,7 @@ module Worker
       def create options = {}
         worker = Local.new LocalVM.create
         virtual_workers << worker
+        worker.start!
         worker
       end
 
@@ -42,14 +44,18 @@ module Worker
       
       def virtual_workers
         @@virtual_workers ||= begin
-          worker = Local.new LocalVM.create
-          LocalWorld.running.each{|local_world| worker.worlds << World.new(worker, local_world.id, local_world.port) }
-          [worker]
+          response = HTTParty.get("http://0.0.0.0:3000") rescue nil
+          if response
+            [Local.new(LocalVM.create)]
+          else
+            []
+          end
         end
       end
       
     end
     
+    include GodHelpers
     attr_reader :server, :worlds
     
     def initialize server
@@ -58,51 +64,22 @@ module Worker
     end
     
     def start!
+      god_start "#{ROOT}/worker/config/worker.god", "worker-app"
+      wait_for_worker_ready
       server.state = 'running'
       self
     end
 
     def stop!
+      god_stop "worker-app"
       server.state = 'stopped'
       self
     end
 
     def terminate!
+      god_stop "worker-app"
       virtual_servers.delete server
       nil
     end
-
-    def world world_id
-      worlds.find{|w| w.id == world_id}
-    end
-
-    def responding?
-      true
-    end
-
-    def start_world world_id, min_heap_size, max_heap_size
-      `echo #{Fold.env} > ~/FOLD_ENV`
-      `echo #{Fold.worker_user} > ~/FOLD_WORKER_USER`
-      
-      result = `#{BIN}/start-local-world #{world_id} #{min_heap_size} #{max_heap_size}`
-      if $?.exitstatus != 0
-        puts result
-        raise result
-      end
-      
-      local_world = LocalWorld.running.find{|local_world| local_world.id == world_id}
-      w = World.new self, local_world.id, local_world.port
-      worlds << w
-      w
-    end
-
-    def stop_world world_id
-      result = `#{BIN}/stop-local-world #{world_id}`
-      if $?.exitstatus != 0
-        puts result
-        raise result
-      end
-    end
-    
   end
 end

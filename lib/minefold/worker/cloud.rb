@@ -37,7 +37,6 @@ module Worker
       Cloud.new compute_cloud.servers.get(instance_id)
     end
     
-    include HTTParty
     attr_reader :server
     
     def initialize server
@@ -64,47 +63,6 @@ module Worker
       server.destroy
     end
 
-    def worlds
-      return [] unless public_ip_address
- 
-      begin
-        server_info = JSON.parse get("/worlds", timeout:20).body
-        Worlds.new self, server_info.map {|h| World.new self, h["id"], h["port"]}
-      rescue => e
-        puts e.inspect
-        []
-      end
-    end
-
-    def world world_id
-      begin
-        server_info = JSON.parse get("/worlds/#{world_id}").body
-        World.new self, server_info["id"], server_info["port"]
-      rescue => e
-        puts "#{e.inspect}\n#{e.backtrace}"
-        nil
-      end
-    end
-
-    def responding?
-      get("/", timeout:10).body rescue false
-    end
-    
-    def url
-      "http://#{public_ip_address}:3000"
-    end
-
-    def start_world world_id, min_heap_size, max_heap_size
-      response = get("/worlds/create?id=#{world_id}&min_heap_size=#{min_heap_size}&max_heap_size=#{max_heap_size}", timeout:4 * 60)
-      puts response.body unless response.code == "200"
-   
-      world world_id
-    end
-
-    def stop_world world_id
-      get "/worlds/#{world_id}/destroy"
-    end
-
     def prepare_for_minefold
       puts "Preparing worker:#{instance_id} for minefold"
       god = "sudo bin/god"
@@ -127,18 +85,7 @@ module Worker
         log results #if results.any? {|r| r.status != 0 }
       end
     
-      log "Waiting for worker to respond"
-      Timeout::timeout(20) do
-        begin
-          get("/", timeout:2).body
-        rescue Errno::ECONNREFUSED
-          sleep 1
-          retry
-        rescue Timeout::Error
-          retry
-        end
-      end
- 
+      wait_for_worker_ready
     end
 
     def wait_for_ssh options={}
@@ -159,20 +106,6 @@ module Worker
       end
     end
 
-    private
-
-    def get path, options={}
-      self.class.base_uri url
-      self.class.get path, options
-    end
-
-    def uri
-      @uri ||= URI.parse url
-    end
-
-    def log message
-      puts "[#{instance_id}] #{message}"
-    end
   end
   
 end
