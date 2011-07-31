@@ -67,7 +67,7 @@ module Worker
       puts "Preparing worker:#{instance_id} for minefold"
       god = "cd ~/minefold && sudo bin/god"
       
-      ensure_god_isnt_running = "#{god} quit"
+      ensure_god_isnt_running = "ps -eF | grep 'god' | awk '{print $2}' | sudo xargs kill -9"
       ensure_thin_isnt_running = "ps -eF | grep 'thin' | awk '{print $2}' | sudo xargs kill -9"
       write_out_env_vars = "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER"
       clone_repo = "cd ~ && sudo rm -rf minefold && GIT_SSH=~/deploy-ssh-wrapper git clone -q --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}"
