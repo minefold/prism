@@ -6,7 +6,7 @@ end
 
 get "/worlds" do
   content_type :json
-  LocalWorld.running.map(&:to_json)
+  LocalWorld.running.map(&:to_hash).to_json
 end
 
 # TODO: make this stuff restful
