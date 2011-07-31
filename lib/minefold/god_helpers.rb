@@ -1,7 +1,7 @@
 module GodHelpers
   
   def rvm?
-    `rvm --version`
+    `rvm --version` rescue false
     $?.exitstatus == 0
   end
   
