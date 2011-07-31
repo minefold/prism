@@ -4,11 +4,12 @@ God.pid_file_directory = "<%= PIDS %>"
 worlds_path = '<%= WORLDS %>'
 world_path = "#{worlds_path}/<%= world_id %>"
 stdin_file = "#{world_path}/world.stdin"
+worker_user = '<%= Fold.worker_user %>'
 
-`touch #{stdin_file}`
+`touch #{stdin_file}; chown #{worker_user} #{stdin_file}`
 
 God.watch do |w|
-  w.uid = '<%= Fold.worker_user %>'
+  w.uid = worker_user
   
   w.group = "<%= world_id %>"
   w.name = "minecraft-<%= world_id %>"
@@ -29,7 +30,7 @@ God.watch do |w|
 end
 
 God.watch do |w|
-  w.uid = '<%= Fold.worker_user %>'
+  w.uid = worker_user
   
   w.group = "<%= world_id %>"
   w.name = "chatty-<%= world_id %>"

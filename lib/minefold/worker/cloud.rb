@@ -64,7 +64,7 @@ module Worker
     end
     
     def kill_process_command matcher
-      "sudo kill $(ps -eF | grep '#{matcher}' | awk '{print $2}')"
+      "sudo kill -9 $(ps -eF | grep '#{matcher}' | awk '{print $2}')"
     end
 
     def prepare_for_minefold
