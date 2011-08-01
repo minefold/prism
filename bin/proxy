@@ -6,7 +6,6 @@ require 'json'
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
-require 'proxy_info_handler'
 require 'sauron'
 require 'logger'
 
@@ -176,13 +175,16 @@ module Client
     end
     info "starting credit muncher:#{@credit_muncher}"
     
+    EM.defer { 
+      redis.sadd "world:#{@world_id}:connected_players", "#{@user_objectid}" 
+      redis.sadd "world:running", "#{@world_id}"
+    }
+    
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id] << @username unless CONNECTED_PLAYERS[@world_id].include? @username
     info "#{CONNECTED_PLAYERS[@world_id].length} player(s)"
     
     @f_connection_established.succeed
-    
-    redis.sadd "players:connected", @username
     
     # EM.add_timer(7) { 
     #   send_player_message @world_id, @username, "Oh hi there #{@username}, welcome to minefold!" 
@@ -275,10 +277,13 @@ module Client
   def unbind
     @client_connected = false
     
+    EM.defer { 
+      redis.srem "world:#{@world_id}:connected_players", "#{@user_objectid}"
+    }
+    
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id].delete @username
     info "client disconnected. #{CONNECTED_PLAYERS[@world_id].length} player(s) in world"
-    redis.srem "players:connected", @username
     
     @keepalive.cancel if @keepalive
     info "stopping credit muncher:#{@credit_muncher}"
@@ -394,8 +399,10 @@ EventMachine.run do
   include ProxyLogging
   include ProxyAsyncMethods
   include Minefold::Redis
+
+  redis.keys("world:*:connected_players").each {|key| redis.del key}
+  redis.del "world:running"
   
-  redis.del "players:connected"
   
   puts 'collecting initial state'
   Worker.running.each do |worker|
@@ -414,8 +421,8 @@ EventMachine.run do
   # listen for minecraft connections
   EventMachine.start_server('0.0.0.0', 25565, Client)
   
-  # listen for http connections
-  EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
+  # # listen for http connections
+  # EventMachine::start_server("0.0.0.0", 8081, ProxyInfoHandler)
   
   sweep_workers = proc { 
     worker_info = Worker.running.map do |w|

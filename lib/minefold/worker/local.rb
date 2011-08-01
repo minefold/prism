@@ -64,6 +64,8 @@ module Worker
     end
     
     def start!
+      `echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER`
+      
       god_start "#{ROOT}/worker/config/worker.god", "worker-app"
       wait_for_worker_ready
       server.state = 'running'

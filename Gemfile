@@ -11,7 +11,6 @@ gem 'parallel'
 gem 'eventmachine', '1.0.0.beta.3'
 
 group :proxy do
-  gem 'eventmachine_httpserver', :require => 'evma_httpserver'
   gem 'resque'
   gem "hiredis", "~> 0.3.1"
   gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
