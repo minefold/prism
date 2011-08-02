@@ -141,6 +141,18 @@ class LocalWorld
     @id = id
   end
   
+  def world_path
+    "#{WORLDS}/#{id}"
+  end
+  
+  def stdin
+    "#{world_path}/world.stdin"
+  end
+  
+  def server_log
+    "#{world_path}/server.log"
+  end
+  
   def pid_file
     "#{PIDS}/minecraft-#{id}.pid"
   end
@@ -207,6 +219,18 @@ class LocalWorld
     )
 
     FileUtils.rm world_archive
+  end
+  
+  def console_message message
+    File.open(stdin, "a") {|f| f.puts message }
+  end
+  
+  def disable_world_saving
+    console_message "save-off"
+  end
+
+  def enable_world_saving
+    console_message "save-on"
   end
   
   def to_hash

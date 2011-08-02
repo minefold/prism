@@ -12,7 +12,6 @@ STDOUT.sync = true
 
 abort "Usage: chatty world_id" unless ARGV.length == 1
 world_id = ARGV.shift
-server_log = "#{WORLDS}/#{world_id}/server.log"
 
 class LogLine
   attr_reader :line, :timestamp, :level, :message, :chat_user, :chat_message
@@ -34,7 +33,7 @@ Pusher.url = PUSHER_URL
 
 EM.epoll
 EM.run do
-  include Minefold::WorldInput
+  @local_world = LocalWorld.new world_id
 
   connection = MinefoldDb.connection
 
@@ -48,11 +47,11 @@ EM.run do
   
   @sub = EMPubSub.connect
   @sub.subscribe(input_channel) do |type, channel, message|
-    console_message world_id, "#{message}" if type == "message"
+    @local_world.console_message "#{message}" if type == "message"
   end
-
-  puts "[#{Fold.env}] online subscribed:#{input_channel} tailing:#{server_log}"
-  EventMachine::file_tail server_log do |filetail, l|
+  
+  puts "[#{Fold.env}] online subscribed:#{input_channel} tailing:#{@local_world.server_log}"
+  EventMachine::file_tail @local_world.server_log do |filetail, l|
     line = LogLine.new l
     if line.chat_user
       # TODO: WHAT IF THE USER DOESN'T EXIST?
@@ -81,5 +80,14 @@ EM.run do
       }.to_json
       
     end
+  end
+  
+  EM::PeriodicTimer.new(1 * 60) do
+    puts "starting backup:#{world_id}"
+    @local_world.disable_world_saving
+    EM.defer(proc { @local_world.backup! }, proc { 
+        @local_world.enable_world_saving
+        puts "backup completed:#{world_id}"
+      })
   end
 end
