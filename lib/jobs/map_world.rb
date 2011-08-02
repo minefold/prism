@@ -6,16 +6,13 @@ class MapError < StandardError; end
 module Job
   class MapWorld
     @queue = :worlds_to_map
-  
+    
     def self.storage
-      @storage ||= Fog::Storage.new({
-        :provider                 => 'AWS',
-        :aws_secret_access_key    => EC2_SECRET_KEY,
-        :aws_access_key_id        => EC2_ACCESS_KEY
-      })
+      Storage.new
     end
   
     def self.perform world_id
+      puts "starting map_world:#{world_id}"
       base_path = "#{Dir.tmpdir}/#{world_id}"
       filename = "#{world_id}.tar.gz"
       archive_file = "#{base_path}/#{filename}"
@@ -23,17 +20,17 @@ module Job
       FileUtils.mkdir_p base_path
       
       Dir.chdir base_path do
-        puts "Downloading world archive:#{filename} => #{archive_file}"
+        puts "downloading world archive:#{filename} => #{archive_file}"
         unless File.exists? archive_file 
-          remote_file = Storage.new.worlds.files.get filename
+          remote_file = storage.worlds.files.get filename
           File.open(archive_file, 'w') {|local_file| local_file.write(remote_file.body)}
         end
       
         puts "Downloading world tiles"
-        tiles_bucket = storage.directories.create(key:"minefold.production.world-tiles", public:false)
+        tiles_bucket = storage.world_tiles
         remote_tiles_files = tiles_bucket.files.all(:prefix => world_id)
         if remote_tiles_files.any?
-          Parallel.each(remote_tiles_files.reject{|f| f.key.end_with? "/" }, in_threads: 10) do |remote_tile_file|
+          Parallel.each(remote_tiles_files.reject{|f| f.key.end_with? "/" }, in_threads: 1) do |remote_tile_file|
             filename = remote_tile_file.key
             puts "#{filename}"
 
@@ -42,7 +39,7 @@ module Job
           end
         end
       
-        puts "Extracting #{archive_file}"
+        puts "extracting #{archive_file}"
         TarGz.new.extract archive_file
         
         world_data_path = "#{base_path}/#{world_id}/#{world_id}"
@@ -54,8 +51,8 @@ module Job
         result = `#{cmd}`
         raise MapError, result unless $?.success?
       
-        puts "Uploading tiles:#{tile_path}"
-        Parrallel.each(Dir["#{tile_path}/**/*"].reject{|f| File.directory? f }, in_threads:10) do |file|
+        puts "uploading tiles:#{tile_path}"
+        Parallel.each(Dir["#{tile_path}/**/*"].reject{|f| File.directory? f }, in_threads:1) do |file|
           remote_file = file.gsub "#{tile_path}/", ""
           remote_file = "#{world_id}/#{remote_file}"
           puts remote_file

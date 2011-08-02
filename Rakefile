@@ -13,12 +13,10 @@ require 'resque'
 require 'resque/tasks'
 
 task "resque:setup" do
-  require 'mongo'
-  require 'httparty'
+  require 'bundler/setup'
+  Bundler.require :default, :chatty
   require 'minefold'
   require 'jobs'
-  require 'fog'
-  require 'parallel'
 
   if REDISTOGO_URL
     uri = URI.parse(REDISTOGO_URL)

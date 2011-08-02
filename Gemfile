@@ -2,7 +2,7 @@ source :rubygems
 
 gem 'god', git:'https://github.com/snappycode/god'
 gem 'file-tail', :require => 'file/tail'
-gem 'fog', git:'https://github.com/snappycode/fog'
+gem 'fog', path:'~/code/temp/fog' #git:'https://github.com/snappycode/fog'
 gem 'httparty'
 gem 'mongo'
 gem 'bson_ext'
@@ -17,6 +17,7 @@ group :proxy do
 end
 
 group :worker do
+  gem 'resque'
   gem 'sinatra'
   gem 'sinatra-reloader', :require => 'sinatra/reloader'
   gem 'thin'
@@ -29,6 +30,7 @@ group :test do
 end
 
 group :chatty do
+  gem 'rake'
   gem 'eventmachine-tail', '~> 0.6.1'
   gem 'em-http-request'
   gem 'pusher'
