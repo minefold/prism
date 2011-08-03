@@ -12,8 +12,7 @@ module Job
     end
     
     def self.map_world world_data_path, tile_path
-      mapper = "#{ROOT}/vendor/overviewer/overviewer.py"
-      cmd = "#{mapper} --processes=1 --rendermodes=lighting #{world_data_path} #{tile_path}"
+      cmd = "#{MAPPER} --processes=1 --rendermodes=lighting #{world_data_path} #{tile_path}"
       puts "#{cmd}"
       
       result = `#{cmd}`
