@@ -1,5 +1,6 @@
 ROOT = File.expand_path '../../', File.dirname(__FILE__)
 
+fold_env = ENV['FOLD_ENV'] || 'development'
 God.pid_file_directory = "#{ROOT}/tmp/pids"
 
 God.watch do |w|
@@ -10,7 +11,7 @@ God.watch do |w|
   w.env = {'FOLD_ENV' => 'production'}
   
   w.start = "bundle exec #{ROOT}/bin/proxy"
-  w.log_cmd = '/usr/bin/logger -t proxy'
+  w.log_cmd = "/usr/bin/logger -t '[#{fold_env}|#{w.name}]"
   w.dir = ROOT
   
 

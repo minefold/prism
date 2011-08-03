@@ -38,7 +38,6 @@ module Job
         if remote_tiles_files
           remote_tiles_files.reject{|f| f.key.end_with? "/" }.each do |remote_tile_file|
             filename = remote_tile_file.key
-            puts "#{filename}"
 
             FileUtils.mkdir_p File.dirname(filename)
             File.open(filename, 'w') {|local_file| local_file.write(remote_tile_file.body)}
@@ -57,7 +56,6 @@ module Job
         Dir["#{tile_path}/**/*"].reject{|f| File.directory? f }.each do |file|
           remote_file = file.gsub "#{tile_path}/", ""
           remote_file = "#{world_id}/#{remote_file}"
-          print "."
           storage.world_tiles.files.create key:remote_file, body:File.open(file), public:true
         end
         
