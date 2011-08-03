@@ -17,7 +17,7 @@ God.watch do |w|
   w.dir = world_path
   w.start = "java -Xmx<%= max_heap_size %>M -Xms<%= min_heap_size %>M -jar server.jar nogui"
   w.start_grace = 10.seconds
-  w.log_cmd = '/usr/bin/logger -t "<%= world_id %>:server"'
+  w.log_cmd = '/usr/bin/logger -t "[<%= Fold.env %>|server] <%= world_id %>"'
   w.stdin_cmd = "tail -fn0 #{stdin_file}"
   
   w.behavior(:clean_pid_file)
@@ -38,7 +38,7 @@ God.watch do |w|
   w.interval = 3.seconds
   w.start = "bundle exec <%= BIN %>/chatty <%= world_id %>"
   w.dir = "<%= ROOT %>"
-  w.log_cmd = '/usr/bin/logger -t "<%= world_id %>:chatty"'
+  w.log_cmd = '/usr/bin/logger -t "[<%= Fold.env %>|chatty] <%= world_id %>"'
   w.start_grace = 1.seconds
   
   w.behavior(:clean_pid_file)
