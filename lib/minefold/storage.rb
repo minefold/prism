@@ -12,6 +12,6 @@ class Storage
   end
   
   def world_tiles
-    Storage.provider.directories.create :key => "minefold.#{Fold.env}.world-tiles", :public => false
+    Storage.provider.directories.create :key => "minefold.#{Fold.env}.world-tiles", :public => true
   end
 end  

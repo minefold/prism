@@ -26,7 +26,7 @@ task "resque:setup" do
   end
 end
 
-task "map_world" do
+task "map_world" => "resque:setup" do
   require 'jobs'
   Resque.enqueue(Job::MapWorld, ENV['WORLD_ID'])
 end

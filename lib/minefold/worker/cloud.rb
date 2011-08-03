@@ -21,7 +21,7 @@ module Worker
       options = {
         :private_key_path => SSH_PRIVATE_KEY_PATH,
         :username => 'ubuntu',
-        :image_id => 'ami-3330f65a',
+        :image_id => 'ami-373ff95e',
         :groups => %W{default proxy},
         :flavor_id => 'm1.large'
       }.merge(options)
@@ -76,7 +76,7 @@ module Worker
       ensure_thin_isnt_running = kill_process_command('[t]hin')
       write_out_env_vars = "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER"
       clone_repo = "cd ~ && sudo rm -rf minefold && sudo rm -rf ~/.bundler && GIT_SSH=~/deploy-ssh-wrapper git clone --recursive -q --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}"
-      bundle_install = "cd ~/minefold && bundle install --deployment --quiet --binstubs --without proxy development test cli"
+      bundle_install = "cd ~/minefold && bundle install --path ~/bundle --deployment --quiet --binstubs --without proxy:development:test"
       start_worker_app = "#{god} -c ~/minefold/worker/config/worker.god && #{god} start worker-app"
       
       commands = [
