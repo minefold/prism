@@ -15,6 +15,9 @@ MONGOHQ_URL="mongodb://heroku:15a8f355615361aeda458c6d887aada2@staff.mongohq.com
 REDISTOGO_URL="redis://redistogo:0128df27dcecc0dac569b231d5bd7ccb@angler.redistogo.com:9097/"
 PUSHER_URL="http://e7fc68c29773ff816794:8f58121bba8d8983f10b@api.pusherapp.com/apps/7187"
 
+uri = URI.parse(REDISTOGO_URL)
+Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
+
 SSH_PRIVATE_KEY_PATH="#{ROOT}/.ssh/minefold.pem"
 
 Fold.workers = :cloud

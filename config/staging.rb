@@ -16,6 +16,9 @@ REDISTOGO_URL="redis://redistogo:a41865a64de42e31b2022186ad94bd38@angler.redisto
 PUSHER_URL="http://d7a615c1e88b0696d3f1:665ba5c2f03785e75e84@api.pusherapp.com/apps/7184"
 MAPPER = "~/minecraft-overviewer/overviewer.py"
 
+uri = URI.parse(REDISTOGO_URL)
+Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
+
 SSH_PRIVATE_KEY_PATH="#{ROOT}/.ssh/minefold.pem"
 
 Fold.workers = :cloud

@@ -10,15 +10,14 @@ gem 'looksee'
 gem 'parallel'
 gem 'eventmachine', '1.0.0.beta.3'
 gem 'rake'
+gem 'resque'
 
 group :proxy do
-  gem 'resque'
   gem "hiredis", "~> 0.3.1"
   gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
 end
 
 group :worker do
-  gem 'resque'
   gem 'sinatra'
   gem 'sinatra-reloader', :require => 'sinatra/reloader'
   gem 'thin'
@@ -31,7 +30,6 @@ group :test do
 end
 
 group :chatty do
-  gem 'resque'
   gem 'eventmachine-tail', '~> 0.6.1'
   gem 'em-http-request'
   gem 'pusher'
