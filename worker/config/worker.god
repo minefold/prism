@@ -40,7 +40,9 @@ God.watch do |w|
 
   # start if process is not running
   w.transition(:up, :start) do |on|
-    on.condition(:process_exits)
+    on.condition(:process_running) do |c|
+      c.running = false
+    end
   end
   
   # restart if memory or cpu is too high
