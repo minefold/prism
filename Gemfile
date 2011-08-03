@@ -30,6 +30,7 @@ group :test do
 end
 
 group :chatty do
+  gem 'resque'
   gem 'rake'
   gem 'eventmachine-tail', '~> 0.6.1'
   gem 'em-http-request'

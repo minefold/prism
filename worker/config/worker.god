@@ -1,5 +1,4 @@
 root = File.expand_path '../', File.dirname(__FILE__)
-num_workers = 2
 uid = File.read(File.expand_path('~/FOLD_WORKER_USER')).strip
 fold_env = File.read(File.expand_path('~/FOLD_ENV')).strip
 
@@ -73,6 +72,7 @@ God.watch do |w|
   end
 end
 
+num_workers = 1
 num_workers.times do |num|
   God.watch do |w|
     w.name     = "resque-#{num}"
@@ -80,7 +80,7 @@ num_workers.times do |num|
     w.interval = 30.seconds
     w.dir      = root
     w.env      = {"QUEUE"=>"worlds_to_map", "FOLD_ENV"=>fold_env}
-    w.start    = "/usr/bin/rake resque:work"
+    w.start    = "bundle exec rake resque:work"
     w.log_cmd = "/usr/bin/logger -t '#{w.name}'"
 
     w.uid = uid

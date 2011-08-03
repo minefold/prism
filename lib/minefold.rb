@@ -28,4 +28,5 @@ require 'minefold/storage'
 require 'minefold/worker'
 require 'minefold/worlds'
 require 'minefold/world'
+require 'jobs'
 require "#{Fold.env}"

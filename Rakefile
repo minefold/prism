@@ -16,7 +16,6 @@ task "resque:setup" do
   require 'bundler/setup'
   Bundler.require :default, :chatty
   require 'minefold'
-  require 'jobs'
 
   if REDISTOGO_URL
     uri = URI.parse(REDISTOGO_URL)

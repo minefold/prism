@@ -34,7 +34,7 @@ Pusher.url = PUSHER_URL
 EM.epoll
 EM.run do
   @local_world = LocalWorld.new world_id
-
+  
   connection = MinefoldDb.connection
 
   users_collection = connection['users']
@@ -89,5 +89,9 @@ EM.run do
         @local_world.enable_world_saving
         puts "backup completed:#{world_id}"
       })
+  end  
+  
+  EM::PeriodicTimer.new(5 * 60) do
+    Resque.enqueue(Job::MapWorld, world_id)
   end
 end

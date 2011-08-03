@@ -10,6 +10,15 @@ module Job
     def self.storage
       Storage.new
     end
+    
+    def self.map_world world_data_path, tile_path
+      mapper = "#{ROOT}/vendor/overviewer/overviewer.py"
+      cmd = "#{mapper} --processes=1 --rendermodes=lighting #{world_data_path} #{tile_path}"
+      puts "#{cmd}"
+      
+      result = `#{cmd}`
+      raise MapError, result unless $?.success?
+    end
   
     def self.perform world_id
       puts "starting map_world:#{world_id}"
@@ -21,16 +30,15 @@ module Job
       
       Dir.chdir base_path do
         puts "downloading world archive:#{filename} => #{archive_file}"
-        unless File.exists? archive_file 
-          remote_file = storage.worlds.files.get filename
-          File.open(archive_file, 'w') {|local_file| local_file.write(remote_file.body)}
-        end
+        remote_file = storage.worlds.files.get filename
+        File.open(archive_file, 'w') {|local_file| local_file.write(remote_file.body)}
+        puts "world archive downloaded: #{File.new(archive_file).size / 1024 / 1024} Mb"
       
         puts "Downloading world tiles"
         tiles_bucket = storage.world_tiles
         remote_tiles_files = tiles_bucket.files.all(:prefix => world_id)
-        if remote_tiles_files.any?
-          Parallel.each(remote_tiles_files.reject{|f| f.key.end_with? "/" }, in_threads: 1) do |remote_tile_file|
+        if remote_tiles_files
+          remote_tiles_files.reject{|f| f.key.end_with? "/" }.each do |remote_tile_file|
             filename = remote_tile_file.key
             puts "#{filename}"
 
@@ -45,21 +53,17 @@ module Job
         world_data_path = "#{base_path}/#{world_id}/#{world_id}"
         tile_path = "#{base_path}/tiles"
 
-        cmd = "/Users/dave/code/Minecraft-Overviewer/overviewer.py --rendermodes=lighting #{world_data_path} #{tile_path}"
-        puts "#{cmd}"
-        
-        result = `#{cmd}`
-        raise MapError, result unless $?.success?
-      
+        map_world world_data_path, tile_path
+
         puts "uploading tiles:#{tile_path}"
-        Parallel.each(Dir["#{tile_path}/**/*"].reject{|f| File.directory? f }, in_threads:1) do |file|
+        Dir["#{tile_path}/**/*"].reject{|f| File.directory? f }.each do |file|
           remote_file = file.gsub "#{tile_path}/", ""
           remote_file = "#{world_id}/#{remote_file}"
-          puts remote_file
-          tiles_bucket.files.create key:remote_file, body:File.open(file), public:false
+          print "."
+          tiles_bucket.files.create key:remote_file, body:File.open(file), public:true
         end
         
-        puts "Done"
+        puts "mapping completed"
       end
     end
   end
