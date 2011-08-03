@@ -74,7 +74,7 @@ module Worker
       ensure_god_isnt_running = kill_process_command('[g]od -c')
       ensure_thin_isnt_running = kill_process_command('[t]hin')
       write_out_env_vars = "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER"
-      clone_repo = "cd ~ && sudo rm -rf minefold && sudo rm -rf ~/.bundler && GIT_SSH=~/deploy-ssh-wrapper git clone -q --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}"
+      clone_repo = "cd ~ && sudo rm -rf minefold && sudo rm -rf ~/.bundler && GIT_SSH=~/deploy-ssh-wrapper git clone --recursive -q --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}"
       bundle_install = "cd ~/minefold && bundle install --deployment --quiet --binstubs --without proxy development test cli"
       start_worker_app = "#{god} -c ~/minefold/worker/config/worker.god && #{god} start worker-app"
       

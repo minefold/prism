@@ -9,6 +9,7 @@ gem 'bson_ext'
 gem 'looksee'
 gem 'parallel'
 gem 'eventmachine', '1.0.0.beta.3'
+gem 'rake'
 
 group :proxy do
   gem 'resque'
@@ -31,7 +32,6 @@ end
 
 group :chatty do
   gem 'resque'
-  gem 'rake'
   gem 'eventmachine-tail', '~> 0.6.1'
   gem 'em-http-request'
   gem 'pusher'
