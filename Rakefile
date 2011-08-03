@@ -3,14 +3,14 @@ require 'rake/clean'
 
 CLEAN.add 'tmp'
 
-begin
-  require 'rspec/core/rake_task'
-  RSpec::Core::RakeTask.new do |t|
-    t.rspec_opts = ["-c", "-f progress", "-r ./spec/spec_helper.rb"]
-    t.pattern = 'spec/**/*_spec.rb'
-  end
-rescue
-end
+# begin
+#   require 'rspec/core/rake_task'
+#   RSpec::Core::RakeTask.new do |t|
+#     t.rspec_opts = ["-c", "-f progress", "-r ./spec/spec_helper.rb"]
+#     t.pattern = 'spec/**/*_spec.rb'
+#   end
+# rescue
+# end
 
 require 'resque'
 require 'resque/tasks'
