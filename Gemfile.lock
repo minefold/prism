@@ -1,11 +1,6 @@
 GIT
-  remote: https://github.com/snappycode/god
-  revision: 95a7fc083d46c49f1a4189fad9a1e7c72343dee1
-  specs:
-    god (0.11.0)
-
-PATH
-  remote: ~/code/temp/fog
+  remote: https://github.com/snappycode/fog
+  revision: 940c3cbc7b7c16a3c0ca4e77a76033258ca4654a
   specs:
     fog (0.10.0)
       builder
@@ -17,6 +12,12 @@ PATH
       net-ssh (~> 2.1.4)
       nokogiri (~> 1.5.0)
       ruby-hmac
+
+GIT
+  remote: https://github.com/snappycode/god
+  revision: 95a7fc083d46c49f1a4189fad9a1e7c72343dee1
+  specs:
+    god (0.11.0)
 
 GEM
   remote: http://rubygems.org/
