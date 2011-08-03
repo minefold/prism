@@ -35,8 +35,7 @@ module Job
         puts "world archive downloaded: #{File.new(archive_file).size / 1024 / 1024} Mb"
       
         puts "Downloading world tiles"
-        tiles_bucket = storage.world_tiles
-        remote_tiles_files = tiles_bucket.files.all(:prefix => world_id)
+        remote_tiles_files = storage.world_tiles.files.all(:prefix => world_id)
         if remote_tiles_files
           remote_tiles_files.reject{|f| f.key.end_with? "/" }.each do |remote_tile_file|
             filename = remote_tile_file.key
@@ -60,7 +59,7 @@ module Job
           remote_file = file.gsub "#{tile_path}/", ""
           remote_file = "#{world_id}/#{remote_file}"
           print "."
-          tiles_bucket.files.create key:remote_file, body:File.open(file), public:true
+          storage.world_tiles.files.create key:remote_file, body:File.open(file), public:true
         end
         
         puts "mapping completed"
