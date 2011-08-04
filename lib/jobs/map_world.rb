@@ -43,13 +43,13 @@ module Job
         #   end
         # end
         
-        # puts "downloading world archive:#{filename}"
-        # remote_file = storage.worlds.files.get filename
-        # File.open(archive_file, 'w') {|local_file| local_file.write(remote_file.body)}
-        # puts "world archive downloaded: #{File.new(archive_file).size / 1024 / 1024} Mb"
-        #       
-        # puts "extracting #{archive_file}"
-        # TarGz.new.extract archive_file
+        puts "downloading world archive:#{filename}"
+        remote_file = storage.worlds.files.get filename
+        File.open(archive_file, 'w') {|local_file| local_file.write(remote_file.body)}
+        puts "world archive downloaded: #{File.new(archive_file).size / 1024 / 1024} Mb"
+              
+        puts "extracting #{archive_file}"
+        TarGz.new.extract archive_file
         
         world_data_path = "#{base_path}/#{world_id}/#{world_id}"
         tile_path = "#{base_path}/tiles"
