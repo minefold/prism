@@ -16,8 +16,6 @@ God.watch do |w|
     'FOLD_ENV' => fold_env, 'FOLD_WORKER_USER' => uid,
   }
   
-  w.behavior(:clean_pid_file)
-  
   # determine the state on startup
   w.transition(:init, { true => :up, false => :start }) do |on|
     on.condition(:process_running) do |c|
