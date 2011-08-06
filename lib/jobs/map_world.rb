@@ -40,7 +40,8 @@ module Job
       end
 
       # create a file with the latest modification date of the world
-      run_command %Q{sh -c "touch -t $(date -r $(find #{world_data_path} -type f -exec stat -f '%m' '{}' + | sort -nr | head -n1) -j +"%Y%m%d%H%M.%S") #{tile_path}/last_map_run"}
+      last_modified_time = Dir['**/*'].select{|f| File.file? f }.map{|f| File.mtime f }.sort.last
+      run_command "touch -t '#{last_modified_time.strftime("%Y%m%d%H%M.%S")}' #{tile_path}/last_map_run"
     end
     
     def self.download local_file, remote_file

@@ -15,6 +15,10 @@ class WorkerCommand
     end
   end
   
+  def start
+    worker.start!
+  end
+
   def stop
     worker.server.stop
   end
@@ -34,6 +38,6 @@ class WorkerCommand
   private
   
   def worker
-    Worker.running.find {|w| w.instance_id == instance_id}
+    Worker.all.find {|w| w.instance_id == instance_id}
   end
 end
