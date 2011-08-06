@@ -74,13 +74,16 @@ module Worker
       ensure_resque_isnt_running = kill_process_command('[r]esque')
       ensure_god_isnt_running = kill_process_command('[g]od -c')
       ensure_thin_isnt_running = kill_process_command('[t]hin')
+      ensure_tail_isnt_running = kill_process_command('[t]ail')
+      ensure_logger_isnt_running = kill_process_command('[l]ogger -t')
+      
       write_out_env_vars = "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER"
       clone_repo = "cd ~ && sudo rm -rf minefold && sudo rm -rf ~/.bundler && GIT_SSH=~/deploy-ssh-wrapper git clone -q --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}"
       bundle_install = "cd ~/minefold && bundle install --path ~/bundle --deployment --quiet --binstubs --without proxy:development:test"
       start_worker_app = "#{god} -c ~/minefold/worker/config/worker.god && #{god} start worker-app"
       
       commands = [
-        "#{ensure_god_isnt_running}; #{ensure_thin_isnt_running}; #{ensure_resque_isnt_running}; #{write_out_env_vars}",
+        "#{ensure_god_isnt_running}; #{ensure_thin_isnt_running}; #{ensure_resque_isnt_running}; #{ensure_tail_isnt_running}; #{ensure_logger_isnt_running}; #{write_out_env_vars}",
         "#{clone_repo} && #{bundle_install}",
         "#{start_worker_app}"
       ]

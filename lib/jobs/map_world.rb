@@ -5,67 +5,79 @@ class MapError < StandardError; end
 
 module Job
   class MapWorld
+    extend Resque::Plugins::Lock
+    
     @queue = :worlds_to_map
     
     def self.storage
       Storage.new
     end
     
-    def self.map_world world_data_path, tile_path
+    def self.run_command cmd
+      puts "#{cmd}"
+      result = `#{cmd}`
+      puts result
+      result
+    end
+    
+    def self.map_world world_id, world_data_path, tile_path
       Dir.chdir File.dirname(File.expand_path(MAPPER)) do
-        cmd = "#{MAPPER} -B 2 -T 16 -i #{world_data_path} -o #{tile_path} -h 1"
-        puts "#{cmd}"
-      
-        result = `#{cmd}`
-        puts result
+        result = nil
+        
+        last_map_run = storage.world_tiles.files.get("#{world_id}/last_map_run")
+        if last_map_run
+          puts "incremental map generation"
+          download "#{tile_path}/last_map_run", last_map_run
+          download "#{tile_path}/pigmap.params", storage.world_tiles.files.get("#{world_id}/pigmap.params")
+          run_command "find #{world_data_path} -newer #{tile_path}/last_map_run > #{world_data_path}/map_changes"
+          result = run_command "#{MAPPER} -h 1 -r #{world_data_path}/map_changes  -i #{world_data_path} -o #{tile_path}"
+        else
+          puts "full map generation"
+          result = run_command "#{MAPPER} -h 1 -B 2 -T 16 -i #{world_data_path} -o #{tile_path}"
+        end
+        
         raise MapError, result unless $?.success?
       end
+
+      # create a file with the latest modification date of the world
+      run_command %Q{sh -c "touch -t $(date -r $(find #{world_data_path} -type f -exec stat -f '%m' '{}' + | sort -nr | head -n1) -j +"%Y%m%d%H%M.%S") #{tile_path}/last_map_run"}
+    end
+    
+    def self.download local_file, remote_file
+      File.open(local_file, 'w') {|local_file| local_file.write(remote_file.body)}
     end
   
     def self.perform world_id
       base_path = "#{Dir.tmpdir}/#{world_id}"
-      puts "starting map_world:#{world_id} in #{base_path}"
       filename = "#{world_id}.tar.gz"
       archive_file = "#{base_path}/#{filename}"
+      world_data_path = "#{base_path}/#{world_id}/#{world_id}"
+      tile_path = "#{base_path}/tiles"
+
+      puts "starting map_world:#{world_id} in #{base_path}"
       
       FileUtils.mkdir_p base_path
+      FileUtils.rm_rf tile_path
+      FileUtils.mkdir_p tile_path
       
       Dir.chdir base_path do
-        # remote_tiles_files = storage.world_tiles.files.all(:prefix => world_id)
-        # if remote_tiles_files
-        #   puts "Downloading #{remote_tiles_files.size} world tiles"
-        #   files = remote_tiles_files.reject{|f| f.key.end_with? "/" }
-        #   Parallel.each(files, in_processes:4) do |remote_tile_file|
-        #     filename = remote_tile_file.key
-        # 
-        #     FileUtils.mkdir_p File.dirname(filename)
-        #     File.open(filename, 'w') {|local_file| local_file.write(remote_tile_file.body)}
-        #   end
-        # end
-        
         puts "downloading world archive:#{filename}"
-        remote_file = storage.worlds.files.get filename
-        File.open(archive_file, 'w') {|local_file| local_file.write(remote_file.body)}
+        download archive_file, storage.worlds.files.get(filename)
         puts "world archive downloaded: #{File.new(archive_file).size / 1024 / 1024} Mb"
               
         puts "extracting #{archive_file}"
         TarGz.new.extract archive_file
         
-        world_data_path = "#{base_path}/#{world_id}/#{world_id}"
-        tile_path = "#{base_path}/tiles"
-
-        map_world world_data_path, tile_path
+        map_world world_id, world_data_path, tile_path
 
         files = Dir["#{tile_path}/**/*"].reject{|f| File.directory? f }
         puts "uploading #{files.size} tiles"
         
         Parallel.each(files, in_processes:4) do |file|
-          i ||= 0
-          remote_file = file.gsub "#{tile_path}/", ""
-          remote_file = "#{world_id}/#{remote_file}"
-          storage.world_tiles.files.create key:remote_file, body:File.open(file), public:true
-          i += 1
-          puts "#{i} tiles uploaded" if i % 1000 == 0
+          remote_file_path = file.gsub "#{tile_path}/", ""
+          remote_file_path = "#{world_id}/#{remote_file_path}"
+          
+          storage.world_tiles.files.create key:remote_file_path, body:File.open(file), public:true
         end
         
         puts "mapping completed"

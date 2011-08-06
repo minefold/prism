@@ -31,10 +31,10 @@ module GodHelpers
   def god_start config_file, task
     if god_running?
       god "load #{config_file}"
-      god "start #{task}"
     else   
       god "-c #{config_file}"
     end
+    god "start #{task}"
   end
   
   def god_stop task_name

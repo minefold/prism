@@ -92,6 +92,8 @@ EM.run do
   end  
   
   EM::PeriodicTimer.new(5 * 60) do
+#     {"class"=>"Job::MapWorld", "args"=>["4e2a709c665a8900010002e9"]}
+
     Resque.enqueue(Job::MapWorld, world_id)
   end
 end

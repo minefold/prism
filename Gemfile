@@ -11,6 +11,7 @@ gem 'parallel'
 gem 'eventmachine', '1.0.0.beta.3'
 gem 'rake'
 gem 'resque'
+gem 'resque-lock', require:'resque/plugins/lock'
 
 group :proxy do
   gem "hiredis", "~> 0.3.1"
