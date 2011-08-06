@@ -11,8 +11,8 @@ module GodHelpers
 
   def sudo cmd
     full_cmd = "cd #{ROOT} && #{sudo_cmd} #{cmd}"
-    `#{full_cmd}`
-    p "#{$?.exitstatus}:#{full_cmd}"
+    result = `#{full_cmd}`
+    p "#{full_cmd}:#{$?.exitstatus}\n#{result}"
   end
 
   def god cmd
