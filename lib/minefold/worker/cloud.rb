@@ -21,7 +21,7 @@ module Worker
       options = {
         :private_key_path => SSH_PRIVATE_KEY_PATH,
         :username => 'ubuntu',
-        :image_id => 'ami-373ff95e',
+        :image_id => 'ami-6f864706',
         :groups => %W{default proxy},
         :flavor_id => 'm1.large'
       }.merge(options)

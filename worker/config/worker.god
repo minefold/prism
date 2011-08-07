@@ -7,7 +7,7 @@ God.watch do |w|
   w.name = "worker-app"
   w.interval = 5.seconds # default
   w.start = "bundle exec thin start -p 3000"
-  w.log_cmd = "/usr/bin/logger -t '[#{fold_env}|#{w.name}]'"
+  w.log_cmd = "/usr/bin/logger -t '#{fold_env}|#{w.name}'"
   w.dir = root
   
   w.uid = uid
