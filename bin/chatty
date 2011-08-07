@@ -74,7 +74,9 @@ EM.run do
       
       Pusher["world:#{world_id}"].trigger_async "chat:create", {
         user: {
-          username: line.chat_user
+          id: user['_id'],
+          username: user['username'],
+          email: user['email']
         },
         body: line.chat_message
       }.to_json
