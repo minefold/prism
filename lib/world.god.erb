@@ -7,21 +7,20 @@ world_path = "#{worlds_path}/#{world_id}"
 stdin_file = "#{world_path}/world.stdin"
 worker_user = '<%= Fold.worker_user %>'
 fold_env = '<%= Fold.env %>'
-
-short_world_id = world_id[-5..-1]
+slug = '<%= world['slug'] %>'
 
 `touch #{stdin_file}; chown #{worker_user} #{stdin_file}`
 
 God.watch do |w|
   w.uid = worker_user
   
-  w.group = "<%= world_id %>"
-  w.name = "minecraft-<%= world_id %>"
+  w.group = world_id
+  w.name = "minecraft-#{world_id}"
   w.interval = 3.seconds
   w.dir = world_path
   w.start = "java -Xmx<%= max_heap_size %>M -Xms<%= min_heap_size %>M -jar server.jar nogui"
   w.start_grace = 10.seconds
-  w.log_cmd = "/usr/bin/logger -t '#{fold_env}|server|#{short_world_id}'"
+  w.log_cmd = "/usr/bin/logger -t '#{fold_env[0..2]}|server|#{slug}'"
   w.stdin_cmd = "tail -fn0 #{stdin_file}"
   
   w.behavior(:clean_pid_file)
@@ -36,13 +35,13 @@ end
 God.watch do |w|
   w.uid = worker_user
   
-  w.group = "<%= world_id %>"
-  w.name = "chatty-<%= world_id %>"
-  w.env = { 'FOLD_ENV' => '<%= Fold.env %>'}
+  w.group = world_id
+  w.name = "chatty-#{world_id}"
+  w.env = { 'FOLD_ENV' => fold_env}
   w.interval = 3.seconds
-  w.start = "bundle exec <%= BIN %>/chatty <%= world_id %>"
+  w.start = "bundle exec <%= BIN %>/chatty #{world_id}"
   w.dir = "<%= ROOT %>"
-  w.log_cmd = "/usr/bin/logger -t '#{fold_env}|chatty|#{short_world_id}'"
+  w.log_cmd = "/usr/bin/logger -t '#{fold_env[0..2]}|chatty|#{slug}'"
   w.start_grace = 1.seconds
   
   w.behavior(:clean_pid_file)

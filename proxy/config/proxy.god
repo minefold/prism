@@ -11,7 +11,7 @@ God.watch do |w|
   w.env = {'FOLD_ENV' => 'production'}
   
   w.start = "bundle exec #{ROOT}/bin/proxy"
-  w.log_cmd = "/usr/bin/logger -t '#{fold_env}|#{w.name}'"
+  w.log_cmd = "/usr/bin/logger -t '#{fold_env[0..2]}|#{w.name}'"
   w.dir = ROOT
   
 
