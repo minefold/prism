@@ -27,9 +27,11 @@ module Job
         last_map_run = storage.world_tiles.files.get("#{world_id}/last_map_run")
         if last_map_run
           puts "incremental map generation"
-          download "#{tile_path}/last_map_run", last_map_run
+          last_run_path = "#{tile_path}/last_map_run"
+
+          download last_run_path, last_map_run
           download "#{tile_path}/pigmap.params", storage.world_tiles.files.get("#{world_id}/pigmap.params")
-          run_command "find #{world_data_path} -newer #{tile_path}/last_map_run > #{world_data_path}/map_changes"
+          run_command "touch -t $(cat #{last_run_path}) #{last_run_path} && find #{world_data_path} -newer #{last_run_path} > #{world_data_path}/map_changes"
           result = run_command "#{MAPPER} -h 1 -r #{world_data_path}/map_changes  -i #{world_data_path} -o #{tile_path}"
         else
           puts "full map generation"
@@ -41,7 +43,8 @@ module Job
 
       # create a file with the latest modification date of the world
       last_modified_time = Dir['**/*'].select{|f| File.file? f }.map{|f| File.mtime f }.sort.last
-      run_command "touch -t '#{last_modified_time.strftime("%Y%m%d%H%M.%S")}' #{tile_path}/last_map_run"
+      puts "last map modification:#{last_modified_time.strftime('%Y-%m-%d %H:%M.%S')}"
+      run_command "echo '#{last_modified_time.strftime("%Y%m%d%H%M.%S")}' > #{tile_path}/last_map_run"
     end
     
     def self.download local_file, remote_file

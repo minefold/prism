@@ -32,6 +32,7 @@ get "/worlds/:id/destroy" do
   content_type :json
   world = find_world(params[:id])
   world.stop!
+  world.backup!
   world.to_json
 end
 
