@@ -87,15 +87,16 @@ EM.run do
   EM::PeriodicTimer.new(1 * 60) do
     puts "starting backup:#{world_id}"
     @local_world.disable_world_saving
-    EM.defer(proc { @local_world.backup! }, proc { 
-        @local_world.enable_world_saving
-        puts "backup completed:#{world_id}"
-      })
+    # wait 3 secs so the world has stopped saving
+    EM.add_timer(3) do
+      EM.defer(proc { @local_world.backup! }, proc { 
+          @local_world.enable_world_saving
+          puts "backup completed:#{world_id}"
+        })
+    end
   end  
   
   EM::PeriodicTimer.new(5 * 60) do
-#     {"class"=>"Job::MapWorld", "args"=>["4e2a709c665a8900010002e9"]}
-
     Resque.enqueue(Job::MapWorld, world_id)
   end
 end
