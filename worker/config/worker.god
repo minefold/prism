@@ -78,7 +78,7 @@ God.watch do |w|
   w.dir      = root
   w.env      = {"QUEUE"=>"worlds_to_map", "FOLD_ENV"=>fold_env}
   w.start    = "bundle exec rake resque:work"
-  w.log_cmd = "/usr/bin/logger -t '[#{fold_env[0..2]}|#{w.name}]'"
+  w.log_cmd = "/usr/bin/logger -t '#{fold_env[0..2]}|#{w.name}'"
 
   w.uid = uid
 
