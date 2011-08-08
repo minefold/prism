@@ -35,7 +35,7 @@ module Job
           result = run_command "#{MAPPER} -h 1 -r #{world_data_path}/map_changes  -i #{world_data_path} -o #{tile_path}"
         else
           puts "full map generation"
-          result = run_command "#{MAPPER} -h 1 -B 2 -T 16 -i #{world_data_path} -o #{tile_path}"
+          result = run_command "#{MAPPER} -h 1 -B 4 -T 4 -i #{world_data_path} -o #{tile_path}"
         end
         
         raise MapError, result unless $?.success?
