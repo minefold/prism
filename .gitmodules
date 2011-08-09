@@ -1,6 +1,0 @@
-[submodule "chef"]
-	path = chef
-	url = git@github.com:snappycode/minefold-chef.git
-[submodule "vendor/overviewer"]
-	path = vendor/overviewer
-	url = git@github.com:minefold/Minecraft-Overviewer.git
