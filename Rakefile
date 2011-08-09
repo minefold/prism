@@ -3,22 +3,22 @@ require 'rake/clean'
 
 CLEAN.add 'tmp'
 
-require 'rspec/core/rake_task'
-RSpec::Core::RakeTask.new do |t|
-  t.rspec_opts = ["-c", "-f progress", "-r ./spec/spec_helper.rb"]
-  t.pattern = 'spec/**/*_spec.rb'
-end
+# begin
+#   require 'rspec/core/rake_task'
+#   RSpec::Core::RakeTask.new do |t|
+#     t.rspec_opts = ["-c", "-f progress", "-r ./spec/spec_helper.rb"]
+#     t.pattern = 'spec/**/*_spec.rb'
+#   end
+# rescue
+# end
 
 require 'resque'
 require 'resque/tasks'
 
 task "resque:setup" do
-  require 'mongo'
-  require 'httparty'
+  require 'bundler/setup'
+  Bundler.require :default, :chatty
   require 'minefold'
-  require 'jobs'
-  require 'fog'
-  require 'parallel'
 
   if REDISTOGO_URL
     uri = URI.parse(REDISTOGO_URL)
@@ -26,8 +26,13 @@ task "resque:setup" do
   end
 end
 
-task "map_world" do
+task "map_world" => "resque:setup" do
   require 'jobs'
   Resque.enqueue(Job::MapWorld, ENV['WORLD_ID'])
 end
 
+namespace :prism do
+  task :deploy do
+    `ssh -i .ssh/minefold.pem ubuntu@pluto.minefold.com "cd ~/minefold && GIT_SSH=~/deploy-ssh-wrapper git pull origin master && bundle --binstubs --without test chatty cli worker && sudo bin/god restart proxy"`
+  end
+end

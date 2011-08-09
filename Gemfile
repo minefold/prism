@@ -9,9 +9,11 @@ gem 'bson_ext'
 gem 'looksee'
 gem 'parallel'
 gem 'eventmachine', '1.0.0.beta.3'
+gem 'rake'
+gem 'resque'
+gem 'resque-lock', require:'resque/plugins/lock'
 
 group :proxy do
-  gem 'resque'
   gem "hiredis", "~> 0.3.1"
   gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
 end

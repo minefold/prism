@@ -159,6 +159,23 @@ module Client
     end
   end
   
+  def pluralize amount, singular
+    "#{amount} #{singular}#{amount == 1 ? '' : 's'}"
+  end
+  
+  def time_in_words minutes
+    case
+    when minutes < 60
+      pluralize(minutes, "minute")
+    else
+      pluralize(minutes / 60, "hour")
+    end
+  end
+  
+  def send_delayed_message delay, message
+    EM.add_timer(delay) { EM.defer { send_world_player_message @world_id, @username, message }}
+  end
+  
   def proxy_client worker, world
     return unless @client_connected
     
@@ -182,14 +199,15 @@ module Client
     
     CONNECTED_PLAYERS[@world_id] ||= []
     CONNECTED_PLAYERS[@world_id] << @username unless CONNECTED_PLAYERS[@world_id].include? @username
-    info "#{CONNECTED_PLAYERS[@world_id].length} player(s)"
+
+    player_count = CONNECTED_PLAYERS[@world_id].length
+    info "#{player_count} player(s)"
+    
+    send_delayed_message 7,  "Hi #{@username} welcome to minefold!"
+    send_delayed_message 13, "You have #{time_in_words @user['credits']} of play remaining"
+    send_delayed_message 17, "There #{player_count == 1 ? 'is' : 'are'} #{pluralize player_count, "player"} in this world"
     
     @f_connection_established.succeed
-    
-    # EM.add_timer(7) { 
-    #   send_player_message @world_id, @username, "Oh hi there #{@username}, welcome to minefold!" 
-    #   send_player_message @world_id, @username, "You've got #{@user['credits']} credits left" 
-    # }
   end
   
   def receive_data data
@@ -209,8 +227,6 @@ module Client
 
       # TODO: Untested, mongo may raise an error. Hopefully, instead it
       #       returns nil and the client connected is dropped.
-      # TODO: Separate method for dropping a connection rather than unbinding
-      #       as logging/stats need to be different.
       unless @user && @user['world_id']
         info "unauthorised player"
         return close_connection
@@ -246,6 +262,22 @@ module Client
   def send data
     @f_connection_established.callback { send_data data}
   end
+  
+  def minutes_updated amount
+    messages = {
+      30 => "You have 30 minutes remaining",
+      10 => "You have 10 minutes remaining",
+      5  => "You have 5 minutes remaining!",
+      1  => "You have 1 minute remaining!"
+    }
+    
+    if message = messages[amount]
+      send_delayed_message 0.1, message
+      if amount == 1
+        send_delayed_message 30, "To continue playing, top up your account at minefold.com!"
+      end
+    end
+  end
 
   def deduct_minutes amount
     return unless @client_connected
@@ -255,9 +287,12 @@ module Client
                     query: {"_id"  => @user_objectid},
                     update:{"$inc" => {"credits" => -amount, "minutes_played" => amount }}
                   })
-      info "deducting 1 credit. #{user['credits']} remaining. Played:#{user['minutes_played']} minutes"
+      credits = user['credits'] - amount
+      info "deducting 1 credit. #{credits} remaining. Played:#{user['minutes_played']} minutes"
+      
+      EM.next_tick { minutes_updated credits }
 
-      if user['credits'] <= amount
+      if credits <= 0
         EM.next_tick do
           info "disconnecting. 0 minutes remaining"
           close_connection

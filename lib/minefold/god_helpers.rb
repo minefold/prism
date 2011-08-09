@@ -11,8 +11,8 @@ module GodHelpers
 
   def sudo cmd
     full_cmd = "cd #{ROOT} && #{sudo_cmd} #{cmd}"
-    `#{full_cmd}`
-    p "#{$?.exitstatus}:#{full_cmd}"
+    result = `#{full_cmd}`
+    p "#{full_cmd}:#{$?.exitstatus}\n#{result}"
   end
 
   def god cmd
@@ -31,10 +31,10 @@ module GodHelpers
   def god_start config_file, task
     if god_running?
       god "load #{config_file}"
-      god "start #{task}"
     else   
       god "-c #{config_file}"
     end
+    god "start #{task}"
   end
   
   def god_stop task_name

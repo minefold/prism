@@ -5,64 +5,86 @@ class MapError < StandardError; end
 
 module Job
   class MapWorld
+    extend Resque::Plugins::Lock
+    
     @queue = :worlds_to_map
-  
+    
     def self.storage
-      @storage ||= Fog::Storage.new({
-        :provider                 => 'AWS',
-        :aws_secret_access_key    => EC2_SECRET_KEY,
-        :aws_access_key_id        => EC2_ACCESS_KEY
-      })
+      Storage.new
+    end
+    
+    def self.run_command cmd
+      puts "#{cmd}"
+      result = `#{cmd}`
+      puts result
+      result
+    end
+    
+    def self.map_world world_id, world_data_path, tile_path
+      Dir.chdir File.dirname(File.expand_path(MAPPER)) do
+        result = nil
+        
+        last_map_run = storage.world_tiles.files.get("#{world_id}/last_map_run")
+        if last_map_run
+          puts "incremental map generation"
+          last_run_path = "#{tile_path}/last_map_run"
+
+          download last_run_path, last_map_run
+          download "#{tile_path}/pigmap.params", storage.world_tiles.files.get("#{world_id}/pigmap.params")
+          run_command "touch -t $(cat #{last_run_path}) #{last_run_path} && find #{world_data_path} -newer #{last_run_path} > #{world_data_path}/map_changes"
+          result = run_command "#{MAPPER} -h 1 -r #{world_data_path}/map_changes  -i #{world_data_path} -o #{tile_path}"
+        else
+          puts "full map generation"
+          result = run_command "#{MAPPER} -h 1 -B 4 -T 4 -i #{world_data_path} -o #{tile_path}"
+        end
+        
+        raise MapError, result unless $?.success?
+      end
+
+      # create a file with the latest modification date of the world
+      last_modified_time = Dir['**/*'].select{|f| File.file? f }.map{|f| File.mtime f }.sort.last
+      puts "last map modification:#{last_modified_time.strftime('%Y-%m-%d %H:%M.%S')}"
+      run_command "echo '#{last_modified_time.strftime("%Y%m%d%H%M.%S")}' > #{tile_path}/last_map_run"
+    end
+    
+    def self.download local_file, remote_file
+      File.open(local_file, 'w') {|local_file| local_file.write(remote_file.body)}
     end
   
     def self.perform world_id
       base_path = "#{Dir.tmpdir}/#{world_id}"
       filename = "#{world_id}.tar.gz"
       archive_file = "#{base_path}/#{filename}"
+      world_data_path = "#{base_path}/#{world_id}/#{world_id}"
+      tile_path = "#{base_path}/tiles"
+
+      puts "starting map_world:#{world_id} in #{base_path}"
       
       FileUtils.mkdir_p base_path
+      FileUtils.rm_rf tile_path
+      FileUtils.mkdir_p tile_path
       
       Dir.chdir base_path do
-        puts "Downloading world archive:#{filename} => #{archive_file}"
-        unless File.exists? archive_file 
-          remote_file = Storage.new.worlds.files.get filename
-          File.open(archive_file, 'w') {|local_file| local_file.write(remote_file.body)}
-        end
-      
-        puts "Downloading world tiles"
-        tiles_bucket = storage.directories.create(key:"minefold.production.world-tiles", public:false)
-        remote_tiles_files = tiles_bucket.files.all(:prefix => world_id)
-        if remote_tiles_files.any?
-          Parallel.each(remote_tiles_files.reject{|f| f.key.end_with? "/" }, in_threads: 10) do |remote_tile_file|
-            filename = remote_tile_file.key
-            puts "#{filename}"
-
-            FileUtils.mkdir_p File.dirname(filename)
-            File.open(filename, 'w') {|local_file| local_file.write(remote_tile_file.body)}
-          end
-        end
-      
-        puts "Extracting #{archive_file}"
+        puts "downloading world archive:#{filename}"
+        download archive_file, storage.worlds.files.get(filename)
+        puts "world archive downloaded: #{File.new(archive_file).size / 1024 / 1024} Mb"
+              
+        puts "extracting #{archive_file}"
         TarGz.new.extract archive_file
         
-        world_data_path = "#{base_path}/#{world_id}/#{world_id}"
-        tile_path = "#{base_path}/tiles"
+        map_world world_id, world_data_path, tile_path
 
-        cmd = "/Users/dave/code/Minecraft-Overviewer/overviewer.py --rendermodes=lighting #{world_data_path} #{tile_path}"
-        puts "#{cmd}"
+        files = Dir["#{tile_path}/**/*"].reject{|f| File.directory? f }
+        puts "uploading #{files.size} tiles"
         
-        result = `#{cmd}`
-        raise MapError, result unless $?.success?
-      
-        puts "Uploading tiles:#{tile_path}"
-        Parrallel.each(Dir["#{tile_path}/**/*"].reject{|f| File.directory? f }, in_threads:10) do |file|
-          remote_file = file.gsub "#{tile_path}/", ""
-          remote_file = "#{world_id}/#{remote_file}"
-          puts remote_file
-          tiles_bucket.files.create key:remote_file, body:File.open(file), public:false
+        Parallel.each(files, in_processes:4) do |file|
+          remote_file_path = file.gsub "#{tile_path}/", ""
+          remote_file_path = "#{world_id}/#{remote_file_path}"
+          
+          storage.world_tiles.files.create key:remote_file_path, body:File.open(file), public:true
         end
         
-        puts "Done"
+        puts "mapping completed"
       end
     end
   end

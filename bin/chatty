@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# encoding: ISO-8859-1
 
 require 'bundler/setup'
 Bundler.require :default, :chatty
@@ -31,63 +32,92 @@ end
 
 Pusher.url = PUSHER_URL
 
+class LogReader < EventMachine::FileTail
+  attr_accessor :world_id
+  
+  def initialize(path, startpos=-1)
+    super(path, startpos)
+    puts "Tailing #{path}"
+    @buffer = BufferedTokenizer.new
+    
+    yield self
+  end
+  
+  def users
+    MinefoldDb.connection['users']
+  end
+  
+  def wall_items
+    MinefoldDb.connection['wall_items']
+  end
+
+  def world_objectid
+    BSON::ObjectId(world_id)
+  end
+  
+  def receive_data(data)
+    @buffer.extract(data.force_encoding('ISO-8859-1')).each do |l|
+      line = LogLine.new l
+      if line.chat_user
+        # TODO: WHAT IF THE USER DOESN'T EXIST?
+        user = users.find({'username' => line.chat_user}).first
+
+        result = wall_items.insert(
+          '_type' => 'Chat',
+
+          'wall_type' => 'World',
+          'wall_id' => world_objectid,
+
+          'user_id' => user['_id'],
+
+          'body' => line.chat_message,
+          'username' => line.chat_user,
+          'created_at' => line.timestamp,
+          'updated_at' => line.timestamp
+        )
+        puts "[#{result}] #{line.timestamp} [#{line.chat_user}] #{line.chat_message}"
+
+        Pusher["world:#{world_id}"].trigger_async "chat:create", {
+          user: {
+            id: user['_id'],
+            username: user['username'],
+            email: user['email']
+          },
+          body: line.chat_message
+        }.to_json
+
+      end
+    end
+  end
+end
+
 EM.epoll
 EM.run do
   @local_world = LocalWorld.new world_id
-
-  connection = MinefoldDb.connection
-
-  users_collection = connection['users']
-  worlds_collection = connection['worlds']
-  wall_items_collection = connection['wall_items']
-
-  world_objectid = BSON::ObjectId(world_id)
   
   input_channel = "world.#{world_id}.input"
+  puts "[#{Fold.env}] online subscribed:#{input_channel} tailing:#{@local_world.server_log}"
   
   @sub = EMPubSub.connect
   @sub.subscribe(input_channel) do |type, channel, message|
     @local_world.console_message "#{message}" if type == "message"
   end
   
-  puts "[#{Fold.env}] online subscribed:#{input_channel} tailing:#{@local_world.server_log}"
-  EventMachine::file_tail @local_world.server_log do |filetail, l|
-    line = LogLine.new l
-    if line.chat_user
-      # TODO: WHAT IF THE USER DOESN'T EXIST?
-      user = users_collection.find({'username' => line.chat_user}).first
-
-      result = wall_items_collection.insert(
-        '_type' => 'Chat',
-
-        'wall_type' => 'World',
-        'wall_id' => world_objectid,
-
-        'user_id' => user['_id'],
-
-        'body' => line.chat_message,
-        'username' => line.chat_user,
-        'created_at' => line.timestamp,
-        'updated_at' => line.timestamp
-      )
-      puts "[#{result}] #{line.timestamp} [#{line.chat_user}] #{line.chat_message}"
-      
-      Pusher["world:#{world_id}"].trigger_async "chat:create", {
-        user: {
-          username: line.chat_user
-        },
-        body: line.chat_message
-      }.to_json
-      
-    end
-  end
+  EventMachine::file_tail(@local_world.server_log, LogReader) {|r| r.world_id = world_id }
   
   EM::PeriodicTimer.new(1 * 60) do
     puts "starting backup:#{world_id}"
     @local_world.disable_world_saving
-    EM.defer(proc { @local_world.backup! }, proc { 
-        @local_world.enable_world_saving
-        puts "backup completed:#{world_id}"
-      })
+    # wait 3 secs so the world has stopped saving
+    EM.add_timer(3) do
+      EM.defer(proc { @local_world.backup! }, proc { 
+          @local_world.enable_world_saving
+          puts "backup completed:#{world_id}"
+        })
+    end
+  end  
+  
+  EM::PeriodicTimer.new(5 * 60) do
+    Resque.enqueue(Job::MapWorld, world_id)
   end
 end

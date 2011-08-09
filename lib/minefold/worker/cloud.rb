@@ -21,7 +21,7 @@ module Worker
       options = {
         :private_key_path => SSH_PRIVATE_KEY_PATH,
         :username => 'ubuntu',
-        :image_id => 'ami-87a462ee',
+        :image_id => 'ami-6f864706',
         :groups => %W{default proxy},
         :flavor_id => 'm1.large'
       }.merge(options)
@@ -64,23 +64,28 @@ module Worker
     end
     
     def kill_process_command matcher
-      "sudo kill -9 $(ps -eF | grep '#{matcher}' | awk '{print $2}')"
+      "sudo kill -9 $(ps -eF | grep '#{matcher}' | awk '{print $2}') &> /dev/null"
     end
 
     def prepare_for_minefold
       puts "Preparing worker:#{instance_id} for minefold"
       god = "cd ~/minefold && sudo bin/god"
       
-      ensure_god_isnt_running = kill_process_command('[g]od -c')
-      ensure_thin_isnt_running = kill_process_command('[t]hin')
       write_out_env_vars = "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER"
       clone_repo = "cd ~ && sudo rm -rf minefold && sudo rm -rf ~/.bundler && GIT_SSH=~/deploy-ssh-wrapper git clone -q --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO}"
-      bundle_install = "cd ~/minefold && bundle install --deployment --quiet --binstubs --without proxy development test cli"
+      bundle_install = "cd ~/minefold && bundle install --path ~/bundle --deployment --quiet --binstubs --without proxy:development:test"
       start_worker_app = "#{god} -c ~/minefold/worker/config/worker.god && #{god} start worker-app"
       
       commands = [
-        "#{ensure_god_isnt_running}; #{ensure_thin_isnt_running}; #{write_out_env_vars}",
-        "#{clone_repo} && #{bundle_install}; #{ensure_god_isnt_running}; #{ensure_thin_isnt_running}",
+        [kill_process_command('[g]od -c'), 
+          kill_process_command('[t]hin'),
+          kill_process_command('[r]esque'),
+          kill_process_command('[t]ail'),
+          kill_process_command('[l]ogger -t'),
+          kill_process_command('[j]ava'),
+          write_out_env_vars
+          ].join(";"),
+        "#{clone_repo} && #{bundle_install}",
         "#{start_worker_app}"
       ]
     

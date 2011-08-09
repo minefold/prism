@@ -27,11 +27,7 @@ class LocalWorld
       end
     end
 
-    def server_properties world_id, port
-      col = MinefoldDb.connection['worlds']
-
-      options = col.find_one({'_id' => BSON::ObjectId(world_id)})['options']
-
+    def server_properties world_id, options, port
       options.merge({
         "allow-flight"     => false,
         "allow-nether"     => true,
@@ -73,6 +69,10 @@ class LocalWorld
 
       # create world path if it aint there
       FileUtils.mkdir_p world_path
+      
+      # get world from db
+      worlds = MinefoldDb.connection['worlds']
+      world = worlds.find_one({'_id' => BSON::ObjectId(world_id)})
 
       # check s3 for world
       archived_world = Storage.new.worlds.files.get("#{world_id}.tar.gz")
@@ -97,7 +97,7 @@ class LocalWorld
       port = LocalWorld.next_available_port
 
       # create server.properties
-      File.open(properties_path, 'w') {|file| file.puts server_properties(world_id, port) }
+      File.open(properties_path, 'w') {|file| file.puts server_properties(world_id, world['options'], port) }
 
       # create world.god
       template = ERB.new File.read "#{LIB}/world.god.erb"
@@ -110,10 +110,10 @@ class LocalWorld
       puts "starting server on port #{port}"
       god_start god_config, world_id
 
-      world = LocalWorld.new world_id
+      local_world = LocalWorld.new world_id
       puts "Waiting for server init"
       Timeout::timeout(10) do
-        until world.state == :running
+        until local_world.state == :running
           sleep 1
         end
       end

@@ -15,8 +15,6 @@ class EMPubSub < EM::Connection
   end
   
   def subscribe(*channels, &blk)
-    puts "subscribe"
-    
     channels.each { |c| @blocks[c.to_s] = blk }
     call_command('subscribe', *channels)
   end

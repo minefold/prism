@@ -12,7 +12,8 @@ end
 # TODO: make this stuff restful
 get "/worlds/create" do
   content_type :json
-  world = LocalWorld.start params[:id], params[:min_heap_size], params[:max_heap_size]
+  min_heap_size, max_heap_size = params[:min_heap_size] || 512, params[:max_heap_size] || 2048
+  world = LocalWorld.start params[:id], min_heap_size, max_heap_size
   world.to_json
 end
 
@@ -31,6 +32,7 @@ get "/worlds/:id/destroy" do
   content_type :json
   world = find_world(params[:id])
   world.stop!
+  world.backup!
   world.to_json
 end
 
