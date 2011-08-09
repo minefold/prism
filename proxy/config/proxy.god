@@ -1,6 +1,6 @@
 ROOT = File.expand_path '../../', File.dirname(__FILE__)
 
-fold_env = ENV['FOLD_ENV'] || 'development'
+fold_env = 'production'
 God.pid_file_directory = "#{ROOT}/tmp/pids"
 
 God.watch do |w|
@@ -8,7 +8,7 @@ God.watch do |w|
   w.interval = 5.seconds
 
   w.uid = 'ubuntu'
-  w.env = {'FOLD_ENV' => 'production'}
+  w.env = {'FOLD_ENV' => fold_env }
   
   w.start = "bundle exec #{ROOT}/bin/proxy"
   w.log_cmd = "/usr/bin/logger -t '#{fold_env[0..2]}|#{w.name}'"
