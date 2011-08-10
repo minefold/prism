@@ -277,6 +277,8 @@ module Client
         send_delayed_message 30, "To continue playing, top up your account at minefold.com!"
       end
     end
+    
+    EM.defer { CreditMailer.send_low_credit "#{@user_objectid}" } if amount == 30
   end
 
   def deduct_minutes amount
