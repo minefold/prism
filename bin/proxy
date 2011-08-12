@@ -178,7 +178,10 @@ module Client
     end
     info "starting credit muncher:#{@credit_muncher}"
     
-    EM.defer { 
+    EM.defer {
+      Resque.push('low', :class => 'Verify', :args => [ @username, Time.now.utc ])
+      # Resque.push('player_connections', :class => 'PlayerConnected', :args => [ "#{@user_objectid}" ])
+      
       redis.sadd "world:#{@world_id}:connected_players", "#{@user_objectid}" 
       redis.sadd "world:running", "#{@world_id}"
     }

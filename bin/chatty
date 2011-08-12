@@ -43,14 +43,6 @@ class LogReader < EventMachine::FileTail
     yield self
   end
   
-  def users
-    MinefoldDb.connection['users']
-  end
-  
-  def wall_items
-    MinefoldDb.connection['wall_items']
-  end
-
   def world_objectid
     BSON::ObjectId(world_id)
   end
@@ -59,33 +51,10 @@ class LogReader < EventMachine::FileTail
     @buffer.extract(data.force_encoding('ISO-8859-1')).each do |l|
       line = LogLine.new l
       if line.chat_user
-        # TODO: WHAT IF THE USER DOESN'T EXIST?
-        user = users.find({'username' => line.chat_user}).first
-
-        result = wall_items.insert(
-          '_type' => 'Chat',
-
-          'wall_type' => 'World',
-          'wall_id' => world_objectid,
-
-          'user_id' => user['_id'],
-
-          'body' => line.chat_message,
-          'username' => line.chat_user,
-          'created_at' => line.timestamp,
-          'updated_at' => line.timestamp
-        )
-        puts "[#{result}] #{line.timestamp} [#{line.chat_user}] #{line.chat_message}"
-
-        Pusher["world:#{world_id}"].trigger_async "chat:create", {
-          user: {
-            id: user['_id'],
-            username: user['username'],
-            email: user['email']
-          },
-          body: line.chat_message
-        }.to_json
-
+        # push onto redis queue, don't use mongo
+        Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_objectid}", line.chat_user, line.chat_message ])
+        
+        puts "[#{line.chat_user}] #{line.chat_message}"
       end
     end
   end
