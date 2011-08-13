@@ -36,3 +36,10 @@ namespace :prism do
     `ssh -i .ssh/minefold.pem ubuntu@pluto.minefold.com "cd ~/minefold && GIT_SSH=~/deploy-ssh-wrapper git pull origin master && bundle --binstubs --without test chatty cli worker && sudo bin/god restart proxy"`
   end
 end
+
+namespace :graphite do
+  desc "Deploy the graphite dashboard.conf"
+  task :dashboard do
+    `scp -i .ssh/minefold.pem conf/graphite/dashboard.conf ubuntu@pluto.minefold.com:/opt/graphite/conf/dashboard.conf`
+  end
+end
