@@ -31,7 +31,7 @@ God.watch do |w|
   
   w.dir = "/home/ubuntu/statsd"
   
-  w.start = "node #{w.dir}/stats.js #{w.dir}/exampleConfig.js"
+  w.start = "node #{w.dir}/stats.js #{w.dir}/default-config.js"
   w.log_cmd = "/usr/bin/logger -t '#{fold_env[0..2]}|#{w.name}'"
   
   w.behavior(:clean_pid_file)
