@@ -6,6 +6,7 @@ require 'json'
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
+require 'prism'
 require 'sauron'
 require 'logger'
 
@@ -67,6 +68,8 @@ module Client
   include ProxyLogging
   include ProxyAsyncMethods
   include Minefold::Redis
+  include Prism::ChatMessaging
+  include Prism::CreditMuncher
   
   def post_init
     @f_connection_established = EM::DefaultDeferrable.new
@@ -159,23 +162,6 @@ module Client
     end
   end
   
-  def pluralize amount, singular
-    "#{amount} #{singular}#{amount == 1 ? '' : 's'}"
-  end
-  
-  def time_in_words minutes
-    case
-    when minutes < 60
-      pluralize(minutes, "minute")
-    else
-      pluralize(minutes / 60, "hour")
-    end
-  end
-  
-  def send_delayed_message delay, message
-    EM.add_timer(delay) { EM.defer { send_world_player_message @world_id, @username, message }}
-  end
-  
   def proxy_client worker, world
     return unless @client_connected
     
@@ -192,7 +178,10 @@ module Client
     end
     info "starting credit muncher:#{@credit_muncher}"
     
-    EM.defer { 
+    EM.defer {
+      Resque.push('low', :class => 'Verify', :args => [ @username, Time.now.utc ])
+      # Resque.push('player_connections', :class => 'PlayerConnected', :args => [ "#{@user_objectid}" ])
+      
       redis.sadd "world:#{@world_id}:connected_players", "#{@user_objectid}" 
       redis.sadd "world:running", "#{@world_id}"
     }
@@ -281,28 +270,6 @@ module Client
     EM.defer { CreditMailer.send_low_credit "#{@user_objectid}" } if amount == 30
   end
 
-  def deduct_minutes amount
-    return unless @client_connected
-    
-    EM.defer do
-      user = DB['users'].find_and_modify({ 
-                    query: {"_id"  => @user_objectid},
-                    update:{"$inc" => {"credits" => -amount, "minutes_played" => amount }}
-                  })
-      credits = user['credits'] - amount
-      info "deducting 1 credit. #{credits} remaining. Played:#{user['minutes_played']} minutes"
-      
-      EM.next_tick { minutes_updated credits }
-
-      if credits <= 0
-        EM.next_tick do
-          info "disconnecting. 0 minutes remaining"
-          close_connection
-        end
-      end
-    end
-  end
-  
   # sometimes crashes the client...
   # def send_chat_message message
   #   
@@ -576,6 +543,11 @@ EventMachine.run do
       puts 'terminated'
     end
   end
+  
+  EM::PeriodicTimer.new(15) { EM.defer do
+      player_count = CONNECTED_PLAYERS.inject(0) {|count, world| count + w.size}
+      Statsd.raw 'players.connected', player_count
+    end }
 
   puts "#{ENV['FOLD_ENV']} mode. listening on 0.0.0.0:25565. Creating #{WORKER_INSTANCE_TYPE} workers"
 end

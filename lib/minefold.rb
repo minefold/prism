@@ -15,6 +15,10 @@ module Fold
         :aws_access_key_id        => EC2_ACCESS_KEY
       })
     end
+    
+    def root
+      @root ||= File.expand_path File.join File.dirname(__FILE__), '../'
+    end
   end
 end
 
@@ -29,4 +33,5 @@ require 'minefold/worker'
 require 'minefold/worlds'
 require 'minefold/world'
 require 'jobs'
+require 'statsd'
 require "#{Fold.env}"

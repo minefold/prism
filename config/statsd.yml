@@ -1,0 +1,9 @@
+production:
+  host: logs.minefold.com
+  port: 8125
+staging:
+  host: localhost
+  port: 8125
+development:
+  host: localhost
+  port: 8125
