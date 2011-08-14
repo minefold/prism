@@ -543,6 +543,11 @@ EventMachine.run do
       puts 'terminated'
     end
   end
+  
+  EM::PeriodicTimer.new(15) { EM.defer do
+      player_count = CONNECTED_PLAYERS.inject(0) {|count, world| count + w.size}
+      Statsd.raw 'players.connected', player_count
+    end }
 
   puts "#{ENV['FOLD_ENV']} mode. listening on 0.0.0.0:25565. Creating #{WORKER_INSTANCE_TYPE} workers"
 end

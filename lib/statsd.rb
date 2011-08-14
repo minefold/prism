@@ -1,77 +1,36 @@
 require 'socket'
 require 'yaml'
 
-# ruby_example.rb
-
-# Ian Sefferman <iseff@iseff.com>
-# http://www.iseff.com
- 
-# If this is running in a Rails environment,  will pick up config/statsd.yml. 
-# config/statsd.yml should look like:
-# production:
-#   host: statsd.domain.com
-#   port: 8125
-# development:
-#   host: localhost
-#   port: 8125
-
-# If this file is not running in Rails environment, will pick up ./statsd.yml
-# ./statsd.yml should look like:
-# host: localhost
-# port: 8125
-
-# If neither of these files are present, it will default to localhost:8125
-
-# Sends statistics to the stats daemon over UDP
 class Statsd
+  def self.timing bucket, milliseconds
+    Statsd.send_data bucket, milliseconds, 'ms'
+  end
+
+  def self.count bucket, increment, sample_rate = 1 
+    Statsd.send_data bucket, increment, 'c', sample_rate
+  end
+
+  def self.raw bucket, value
+    Statsd.send_data bucket, value, 'r'
+  end
   
-  def self.timing(stats, time, sample_rate=1)
-    Statsd.update_stats(stats, time, sample_rate, 'ms')
-  end
-
-  def self.increment(stats, sample_rate=1)
-    Statsd.update_stats(stats, 1, sample_rate)
-  end
-
-  def self.decrement(stats, sample_rate=1)
-    Statsd.update_stats(stats, -1, sample_rate)
-  end
-  
-  def self.update_stats(stats, delta=1, sample_rate=1, metric='c')
-    stats = [stats].flatten
-
-    data = {}
-    stats.each do |stat|
-      data[stat] = "%s|%s" % [delta, metric]
-    end
-
-    Statsd.send(data, sample_rate)
-  end
-
-  def self.send(data, sample_rate=1)
+  def self.send_data bucket, value, metric, sample_rate = 1
+    sampling = sample_rate != 1 ? "|@#{sample_rate}" : ""
+    packet = "#{bucket}:#{value}|#{metric}#{sampling}"
     begin
-      host = config["host"] || "localhost"
-      port = config["port"] || "8125"
-      
-      sampled_data = {}
-      if sample_rate < 1
-        if rand <= sample_rate
-          data.each_pair do |stat, val|
-            sampled_data[stat] = "%s|@%s" % [val, sample_rate]
-          end
-        end
-      else
-        sampled_data = data
-      end
-      
       udp = UDPSocket.new
-      sampled_data.each_pair do |stat, val|
-        send_data = "%s:%s" % [stat, val]
-        udp.send send_data, 0, host, port
-      end
+      udp.send packet, 0, host, port
     rescue => e
       puts e.message
     end
+  end
+  
+  def self.host
+    config["host"] || "localhost"
+  end
+  
+  def self.port
+    config["port"] || "8125"
   end
 
   def self.config
