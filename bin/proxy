@@ -76,6 +76,7 @@ module Client
     @client_connected = true
     @min_heap_size, @max_heap_size = 512, 4096
     @instance_type = WORKER_INSTANCE_TYPE
+    @connected_at = Time.now
   end
   
   def info message
@@ -135,16 +136,22 @@ module Client
             if available_worker
               # there is an idle worker available to us
               info "using running worker #{available_worker.instance_id} to start world"
+              @connection_history = :started_world
+              
               start_world available_worker
             else
               stopped_worker = workers.find{|w| w.server.state == 'stopped' }
               if stopped_worker
                 # theres a stopped worker we can start and use
                 info "starting stopped worker #{stopped_worker.instance_id}"
+                @connection_history = :started_worker
+                
                 start_worker_and_world stopped_worker
               else
                 # no workers, lets create one
                 info "creating new worker"
+                @connection_history = :created_worker
+                
                 create_worker_and_start_world
               end
             end
@@ -195,6 +202,13 @@ module Client
     send_delayed_message 7,  "Hi #{@username} welcome to minefold!"
     send_delayed_message 13, "You have #{time_in_words @user['credits']} of play remaining"
     send_delayed_message 17, "There #{player_count == 1 ? 'is' : 'are'} #{pluralize player_count, "player"} in this world"
+    
+    connection_time = ((Time.now - @connected_at) * 1000).to_i
+    
+    @connection_history ||= :running_world
+    Statsd.timing "timers.connection.#{@connection_history}", connection_time
+    
+    puts "timers.connection.#{@connection_history}", connection_time
     
     @f_connection_established.succeed
   end
