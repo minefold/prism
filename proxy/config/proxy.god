@@ -14,11 +14,28 @@ God.watch do |w|
   w.log_cmd = "/usr/bin/logger -t '#{fold_env[0..2]}|#{w.name}'"
   w.dir = ROOT
   
-
-  # Cleanup the pid file (this is needed for processes running as a daemon)
   w.behavior(:clean_pid_file)
 
-  # Conditions under which to start the process
+  w.start_if do |start|
+    start.condition(:process_running) do |c|
+      c.running = false
+    end
+  end
+end
+
+God.watch do |w|
+  w.name = "statsd"
+  w.interval = 5.seconds
+
+  w.uid = 'ubuntu'
+  
+  w.dir = "/home/ubuntu/statsd"
+  
+  w.start = "node #{w.dir}/stats.js #{w.dir}/exampleConfig.js"
+  w.log_cmd = "/usr/bin/logger -t '#{fold_env[0..2]}|#{w.name}'"
+  
+  w.behavior(:clean_pid_file)
+
   w.start_if do |start|
     start.condition(:process_running) do |c|
       c.running = false
