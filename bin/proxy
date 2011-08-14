@@ -208,8 +208,6 @@ module Client
     @connection_history ||= :running_world
     Statsd.timing "timers.connection.#{@connection_history}", connection_time
     
-    puts "timers.connection.#{@connection_history}", connection_time
-    
     @f_connection_established.succeed
   end
   
