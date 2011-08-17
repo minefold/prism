@@ -37,7 +37,7 @@ module PlayerCoordinator
       redis = EM::Hiredis.connect
       redis.callback do 
         debug "waiting for world"
-        redis.lpush "players:requesting_world", { 'user_id' => user['_id'].to_s, 'world_id' => user['world_id'].to_s }.to_json
+        redis.lpush "players:requesting_world", { 'username' => username, 'user_id' => user['_id'].to_s, 'world_id' => user['world_id'].to_s }.to_json
       end
     end
     

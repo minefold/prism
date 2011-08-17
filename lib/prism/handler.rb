@@ -1,8 +1,11 @@
 module Prism
   class Handler
-    attr_reader :connection
+    include Debugger
+    
+    attr_reader :connection, :buffered_data
 
     def init; end
+    def exit; end
     def receive_data data; end    
 
     def initialize connection, *args

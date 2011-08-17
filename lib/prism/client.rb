@@ -2,9 +2,10 @@ module Prism
   module Client
     include Debugger
     
-    attr_reader :handler
+    attr_reader :handler, :buffered_data
         
     def post_init
+      @buffered_data = ""
       set_handler UnknownPlayerHandler
     end
     

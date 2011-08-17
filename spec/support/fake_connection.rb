@@ -13,7 +13,12 @@ module EM
     def initialize handler, *args
       extend handler
       @connection_open = true
-      post_init *args
+      
+      post_init
+    end
+    
+    def send_data data
+      
     end
   
     def close_connection

@@ -1,15 +1,18 @@
 module Prism
   class KnownPlayerHandler < Handler
+    include MinecraftKeepalive
+    
     attr_reader :username
     
     def init username
       @username = username
       
-      @keepalive = EM::PeriodicTimer.new 15 do
-        connection.send_data [0].pack('C')
-      end
-      
+      start_keepalive
       request_player_connection
+    end
+    
+    def exit
+      stop_keepalive
     end
     
     def request_player_connection

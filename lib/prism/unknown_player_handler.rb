@@ -2,6 +2,8 @@ module Prism
   class UnknownPlayerHandler < Handler
   
     def receive_data data
+      connection.buffered_data << data
+      
       header = data.unpack('C').first
       return connection.close_connection unless header == 0x02
 

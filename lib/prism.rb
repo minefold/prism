@@ -1,4 +1,5 @@
 require 'prism/handler'
+require 'prism/minecraft_keepalive'
 require 'prism/unknown_player_handler'
 require 'prism/known_player_handler'
 require 'prism/connected_player_handler'
