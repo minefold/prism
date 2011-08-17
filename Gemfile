@@ -12,6 +12,7 @@ gem 'eventmachine', '1.0.0.beta.3'
 gem 'rake'
 gem "hiredis", "~> 0.3.1"
 gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
+gem 'em-hiredis'
 gem 'resque'
 gem 'resque-lock', require:'resque/plugins/lock'
 gem "resque-loner"
@@ -24,9 +25,13 @@ end
 
 group :test do
   gem 'rspec', '~> 2.6.0'
+  gem 'rr', '~> 1.0.3'
   gem "ZenTest", "~> 4.4.2"
+  gem "autotest-growl"
+  gem "autotest-fsevent"
   gem "virtualbox"
   gem 'hirb'
+  gem 'spork', '~> 0.9.0.rc'
 end
 
 group :chatty do

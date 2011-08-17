@@ -1,10 +1,22 @@
-ENV["FOLD_ENV"] ||= 'test'
+require 'rubygems'
+require 'spork'
 
-require 'bundler/setup'
-Bundler.require :default, :proxy, :worker
+Spork.prefork do
+  ENV["FOLD_ENV"] ||= 'test'
 
-require 'minefold'
+  require 'bundler/setup'
+  Bundler.require :default, :test, :proxy, :worker
 
-RSpec.configure do |c|
-  Fog.mock!
+  require 'minefold'
+
+  RSpec.configure do |c|
+    Fog.mock!
+    c.mock_with :rr
+  end
 end
+
+Spork.each_run do
+  require 'prism'
+  Dir[File.join File.dirname(__FILE__), "support/**/*.rb"].each {|f| p f; require f}
+end
+

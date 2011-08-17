@@ -16,8 +16,6 @@ STDOUT.sync = true
 puts "Connecting to Mongo"
 DB = MinefoldDb.connection
 
-# DB['users'].find(:username => @username)
-
 CONNECTED_PLAYERS = {}
 BUSY_WORKERS = {}  # worker is either starting, stopping or starting a new world (ie. busy, don't use it)
 SUPERVISED_WORLDS = {} # world is running, starting or stopping (ie. connect for it or wait)
