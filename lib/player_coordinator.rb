@@ -1,0 +1,2 @@
+require 'player_coordinator/connecting_players'
+require 'player_coordinator/connecting_player'

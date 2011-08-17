@@ -1,0 +1,2 @@
+require 'world_coordinator/world_request'
+require 'world_coordinator/world_request_processor'

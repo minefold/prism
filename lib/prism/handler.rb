@@ -13,5 +13,9 @@ module Prism
     def change_handler &blk
       @on_change_handler = blk
     end
+    
+    def new_handler klass, *args
+      @on_change_handler.call klass, *args
+    end
   end
 end

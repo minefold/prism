@@ -5,11 +5,25 @@ module Prism
     def init username
       @username = username
       
-      redis = EM::Hiredis.connect
-      redis.callback { redis.lpush "players:requesting_world", username }
+      @keepalive = EM::PeriodicTimer.new 15 do
+        connection.send_data [0].pack('C')
+      end
       
-      redis.subscribe("players:requesting_world_result:#{username}")
+      request_player_connection
+    end
+    
+    def request_player_connection
+      redis = EM::Hiredis.connect
+      redis.callback { redis.lpush "players:requesting_connection", username }
+      
+      subscriber = EM::Hiredis.connect
+      subscriber.subscribe("players:requesting_connection_result:#{username}")
+      subscriber.on(:message) do |channel, message|
+        data = JSON.parse message
+        new_handler ConnectedPlayerHandler, username, data["host"], data["port"]
+      end
       
     end
+    
   end
 end

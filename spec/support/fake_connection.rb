@@ -1,16 +1,27 @@
-module Prism
-  class FakeConnection
-    include Prism::Client
+module EM
+  def self.connect host, port, handler, *args
+    FakeConnection.new handler, *args
+  end
   
+  def self.enable_proxy from, to
+    
+  end
+  
+  class FakeConnection
     attr_reader :connection_open
 
-    def initialize
+    def initialize handler, *args
+      extend handler
       @connection_open = true
-      post_init
+      post_init *args
     end
   
     def close_connection
       @connection_open = false
+    end
+    
+    def signature
+      1
     end
 
   

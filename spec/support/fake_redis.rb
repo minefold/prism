@@ -11,9 +11,15 @@ module EM
       attr_accessor :subscriptions
     end
     
+    attr_reader :active_subscription
+    
     def self.reset
       self.lists = {}
       self.subscriptions = {}
+    end
+    
+    def self.publish channel, value
+      subscriptions[channel].each {|s| s.callback channel, value }
     end
     
     def lists
@@ -34,8 +40,23 @@ module EM
     end
     
     def subscribe channel
-      subscriptions[channel] ||= []
-      subscriptions[channel] << self
+      @active_subscription_channel = channel
+    end
+    
+    def on event, &blk
+      subscriptions[@active_subscription_channel] ||= []
+      subscriptions[@active_subscription_channel] << FakeRedisSubscription.new(blk)
+    end
+  end
+  
+  
+  class FakeRedisSubscription
+    def initialize blk
+      @blk = blk
+    end
+    
+    def callback *args
+        @blk.call *args
     end
   end
 end

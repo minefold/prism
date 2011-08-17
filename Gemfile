@@ -16,6 +16,7 @@ gem 'em-hiredis'
 gem 'resque'
 gem 'resque-lock', require:'resque/plugins/lock'
 gem "resque-loner"
+gem "em-mongo"
 
 group :worker do
   gem 'sinatra'
@@ -24,6 +25,7 @@ group :worker do
 end
 
 group :test do
+  gem 'foreman'
   gem 'rspec', '~> 2.6.0'
   gem 'rr', '~> 1.0.3'
   gem "ZenTest", "~> 4.4.2"

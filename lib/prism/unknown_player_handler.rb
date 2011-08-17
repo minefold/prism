@@ -7,7 +7,7 @@ module Prism
 
       username = data[3..-1].force_encoding('UTF-16BE').encode('UTF-8')
     
-      @on_change_handler.call KnownPlayerHandler, username
+      new_handler KnownPlayerHandler, username
     end
   end
 end

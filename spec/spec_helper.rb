@@ -17,6 +17,12 @@ end
 
 Spork.each_run do
   require 'prism'
-  Dir[File.join File.dirname(__FILE__), "support/**/*.rb"].each {|f| p f; require f}
+  Dir[File.join File.dirname(__FILE__), "support/**/*.rb"].each {|f| require f}
+  
+  module Prism
+    module Debugger
+      def debug *args; end
+    end
+  end
 end
 
