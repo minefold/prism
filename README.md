@@ -7,6 +7,8 @@ overviewer:
   ARCHFLAGS="-arch i386 -arch x86_64" C_INCLUDE_PATH="`pwd`/vendor/pil/libImaging" python ./setup.py build
 
 
+# state
+
 players:user_id (HASH)
   whatupdave => '91823746'
   chrislloyd => '89337893'
@@ -29,15 +31,12 @@ workers:running (SET)
 workers:i-5678:worlds (SET)
   world1
 
+# queues
   
-players:connecting (LIST)
+players:requesting_connection
   whatupdave
-  
-players:waiting (LIST)
-  whatupdave
-  chrislloyd
-  
-players:disconnecting (LIST)
+
+players:disconnecting
   mod
 
 
@@ -76,8 +75,17 @@ player_coordinator:
   on player_disconnecting : username
     if last player out
       stop_world
-    
       
+      
+  a world has a weight of 200, player 100
+  
+  instance can carry 5 * 1024 = 5120
+  
+  instance is available or will be available
+
+
+
+
 world_coordinator:
   on startup
     BLPOP players:waiting

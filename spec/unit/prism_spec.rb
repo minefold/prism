@@ -39,9 +39,7 @@ describe Prism::Client do
     context "when running world result received" do
       before { redis.publish "players:requesting_connection_result:whatupdave", { status:'world_running', host:"0.0.0.0", port:"4001"}.to_json }
       
-      it "should proxy client" do
-        
-      end
+      it "should proxy client"
     end
   end
 end

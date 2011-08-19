@@ -1,3 +1,2 @@
-prism: bin/prism
-players: bin/player_coordinator
-worlds: bin/world_coordinator
+prism: bundle exec bin/prism
+backend: bundle exec bin/prism_back

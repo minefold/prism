@@ -1,4 +1,4 @@
-module WorldCoordinator
+module Prism
   class WorldRequest
     include Debugger
     

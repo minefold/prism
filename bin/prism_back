@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+require 'bundler/setup'
+Bundler.require :default, :proxy
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'minefold'
+require 'prism'
+
+module Prism
+  STDOUT.sync = true
+  EM.epoll
+  EM.run do
+    QueueProcessor.new "players:requesting_connection", ConnectingPlayer
+    QueueProcessor.new("players:requesting_world") do |data|
+      request = JSON.parse data
+      WorldRequest.new request['username'], request['user_id'], request['world_id']
+    end
+
+    
+    # PlayerCoordinator::ConnectingPlayers.new.start_processing
+    # PlayerCoordinator::DisconnectingPlayers.process
+  
+    puts "#{Fold.env} mode"
+  end
+end

@@ -1,4 +1,4 @@
-module PlayerCoordinator
+module Prism
   class ConnectingPlayer
     include Debugger
     attr_reader :username
