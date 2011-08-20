@@ -9,8 +9,17 @@ require 'prism'
 
 STDOUT.sync = true
 EM.epoll
-EM.run do
-  EM.start_server '0.0.0.0', 25565, Prism::Client
-  
-  puts "#{Fold.env} mode. listening on 0.0.0.0:25565"
+
+module Prism
+  EM.run do
+    puts "Initialising"
+    redis = EM::Hiredis.connect
+    redis.callback do
+      redis.del("prism:active_connections") do
+        EM.start_server '0.0.0.0', 25565, Client
+
+        puts "#{Fold.env} mode. listening on 0.0.0.0:25565"
+      end
+    end
+  end
 end

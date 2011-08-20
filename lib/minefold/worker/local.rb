@@ -56,11 +56,10 @@ module Worker
     end
     
     include GodHelpers
-    attr_reader :server, :worlds
+    attr_reader :server
     
     def initialize server
       @server = server
-      @worlds = []
     end
     
     def start!

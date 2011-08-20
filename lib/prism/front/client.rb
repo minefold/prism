@@ -19,5 +19,9 @@ module Prism
     def receive_data data
       handler.receive_data data
     end
+    
+    def unbind
+      handler.unbind
+    end
   end
 end

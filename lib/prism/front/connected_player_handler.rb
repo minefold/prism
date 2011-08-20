@@ -1,5 +1,7 @@
 module Prism
   module ServerConnection
+    include Debugger
+    
     def initialize client, buffered_data
       @client, @buffered_data = client, buffered_data
     end
@@ -13,6 +15,7 @@ module Prism
     end
 
     def unbind
+      debug "server connection closed"
       @client.close_connection_after_writing
     end
   end
@@ -24,6 +27,10 @@ module Prism
     
     def receive_data data
       @server.send_data data
+    end
+    
+    def unbind
+      debug "Process client disconnect"
     end
   end
 end

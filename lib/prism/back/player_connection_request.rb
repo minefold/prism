@@ -1,6 +1,5 @@
 module Prism
-  class ConnectingPlayer
-    include Debugger
+  class PlayerConnectionRequest < Request
     attr_reader :username
     
     alias_method :debug_original, :debug
@@ -9,14 +8,10 @@ module Prism
       debug_original "[#{@username}]", *args
     end
     
-    def initialize username
+    def run username
       @username = username
       @db = EM::Mongo::Connection.new('localhost').db('minefold')
       
-      process
-    end
-    
-    def process
       debug "processing #{username}"
 
       resp = @db.collection('users').find_one(:username => /#{username}/i)
@@ -37,12 +32,12 @@ module Prism
       redis = EM::Hiredis.connect
       redis.callback do 
         debug "waiting for world"
-        redis.lpush "players:requesting_world", { 'username' => username, 'user_id' => user['_id'].to_s, 'world_id' => user['world_id'].to_s }.to_json
+        redis.lpush "players:world_request", { 'username' => username, 'user_id' => user['_id'].to_s, 'world_id' => user['world_id'].to_s }.to_json
       end
     end
     
     def unrecognised_player_connecting
-      debug "unrecognised"
+      error "unrecognised"
     end
   end
 end

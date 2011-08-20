@@ -2,8 +2,8 @@ module Prism
   class QueueProcessor
     include Debugger
     
-    def initialize queue, klass = nil, &blk
-      @queue, @klass, @blk = queue, klass, blk
+    def initialize queue, klass
+      @queue, @klass = queue, klass
 
       start_processing
     end
@@ -18,11 +18,8 @@ module Prism
       @pop = @redis.blpop @queue, 0
       @pop.callback do |channel, item|
         debug "recv #{@queue} #{item}"
-        if @klass
-          @klass.new item
-        else
-          @blk.call item
-        end
+        @klass.new.process item
+
         listen
       end
     end

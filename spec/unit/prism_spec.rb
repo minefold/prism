@@ -33,11 +33,11 @@ describe Prism::Client do
     end
     
     it "should subscribe to request result" do
-      redis.subscriptions["players:requesting_connection_result:whatupdave"].should have(1).subscribers
+      redis.subscriptions["players:connection_request:whatupdave"].should have(1).subscribers
     end
     
     context "when running world result received" do
-      before { redis.publish "players:requesting_connection_result:whatupdave", { status:'world_running', host:"0.0.0.0", port:"4001"}.to_json }
+      before { redis.publish "players:connection_request:whatupdave", { status:'world_running', host:"0.0.0.0", port:"4001"}.to_json }
       
       it "should proxy client"
     end

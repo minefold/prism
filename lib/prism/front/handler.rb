@@ -7,6 +7,7 @@ module Prism
     def init; end
     def exit; end
     def receive_data data; end    
+    def unbind; debug "client disconnected"; end    
 
     def initialize connection, *args
       @connection = connection
@@ -18,6 +19,7 @@ module Prism
     end
     
     def new_handler klass, *args
+      exit
       @on_change_handler.call klass, *args
     end
   end

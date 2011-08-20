@@ -25,9 +25,12 @@ prism:active_connections (SET)
 worlds:running (HASH)
   world1 => i-5637, 1.2.3.4, 4001
   
-workers:running (SET)
+workers:running (HASH)
+  i-5678 => 1.2.3.4
+
+workers:sleeping (SET)
   i-5678
-  
+
 workers:i-5678:worlds (SET)
   world1
 
@@ -38,6 +41,8 @@ players:requesting_connection
 
 players:disconnecting
   mod
+
+workers:not_responding
 
 
 prism:
