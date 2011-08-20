@@ -10,8 +10,7 @@ module Prism
     
     def start_processing
       debug "processing #{@queue}"
-      @redis = EM::Hiredis.connect
-      @redis.callback { listen }
+      @redis = PrismRedis.new {|redis| listen }
     end
     
     def listen

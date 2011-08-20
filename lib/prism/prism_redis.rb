@@ -50,7 +50,7 @@ module Prism
     end
     
     def method_missing sym, *args, &blk
-      redis.send sym, *args
+      redis.send sym, *args, &blk
     end
     
     def handle_error e

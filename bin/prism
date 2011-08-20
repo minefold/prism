@@ -13,8 +13,7 @@ EM.epoll
 module Prism
   EM.run do
     puts "Initialising"
-    redis = EM::Hiredis.connect
-    redis.callback do
+    PrismRedis.new do |redis|
       redis.del("prism:active_connections") do
         EM.start_server '0.0.0.0', 25565, Client
 
