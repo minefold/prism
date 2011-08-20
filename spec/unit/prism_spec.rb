@@ -29,11 +29,11 @@ describe Prism::Client do
     before { @connection.fake_recv_auth 'whatupdave' }
     
     it "should push user onto connecting queue" do
-      redis.lists["players:connection_request"].should include('whatupdave')
+      redis.internal_lists["players:connection_request"].should include('whatupdave')
     end
     
     it "should subscribe to request result" do
-      redis.subscriptions["players:connection_request:whatupdave"].should have(1).subscribers
+      redis.internal_subscriptions["players:connection_request:whatupdave"].should have(1).subscribers
     end
   end
 end

@@ -7,8 +7,9 @@ module Prism
     def run username, user_id, world_id
       @username, @user_id, @world_id = username, user_id, world_id
       
-      @redis = EM::Hiredis.connect
-      @redis.callback do
+      redis_connect do |redis|
+        @redis = redis
+        
         resp = redis.hget "worlds:running", world_id
         resp.callback do |world_data|
           if world_data
