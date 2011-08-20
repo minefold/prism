@@ -29,7 +29,6 @@ module Prism
           it "should request world start" do
             redis.internal_lists["worlds:requests:start"].should include({instance_id:"i-1234", world_id:"world1", min_heap_size:512, max_heap_size:2048}.to_json)
           end
-          
         end
         
         context "a sleeping worker is available" do

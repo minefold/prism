@@ -3,9 +3,7 @@ module Prism
     extend Debugger
     
     def redis_connect &blk
-      connection = EM::Hiredis.connect
-      connection.callback { yield PrismRedis.new(connection) }
-      connection.errback {|e| error "failed to connect to redis: #{e}" }
+      PrismRedis.new &blk
     end
   end
   
@@ -13,9 +11,10 @@ module Prism
     include Debugger
     
     attr_reader :redis
-    def initialize redis
-      @redis = redis
-      @redis.errback {|e| handle_error e}
+    def initialize &blk
+      @redis = EM::Hiredis.connect
+      @redis.errback {|e| error "failed to connect to redis: #{e}" }
+      @redis.callback { blk.call(self) }
     end
     
     def store_running_worker instance_id, host, started_at
@@ -30,6 +29,24 @@ module Prism
       op = redis.hset channel, key, value.to_json
       op.errback {|e| handle_error e }
       op
+    end
+    
+    def rpc channel, request_key, data, &blk
+      lpush channel, data
+      
+      PrismRedis.new do |subscriber|
+        debug "subscribing #{channel}:#{request_key}"
+        subscriber.subscribe "#{channel}:#{request_key}"
+        subscriber.on :message do |channel, response|
+          debug "response > #{channel} #{response}"
+          subscriber.unsubscribe channel
+          yield response
+        end
+      end
+    end
+
+    def rpc_json channel, request_key, request_data, &blk
+      rpc(channel, request_key, request_data) {|response| yield JSON.parse(response) }
     end
     
     def method_missing sym, *args, &blk
