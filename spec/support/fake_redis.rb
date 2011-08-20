@@ -7,8 +7,7 @@ module EM
   
   class FakeRedis
     class << self
-      attr_accessor :lists
-      attr_accessor :subscriptions
+      attr_accessor :lists, :subscriptions, :internal_published, :internal_hashes
     end
     
     attr_reader :active_subscription
@@ -16,6 +15,8 @@ module EM
     def self.reset
       self.lists = {}
       self.subscriptions = {}
+      self.internal_published = {}
+      self.internal_hashes = {}
     end
     
     def self.publish channel, value
@@ -29,14 +30,40 @@ module EM
     def subscriptions
       self.class.subscriptions
     end
+
+    def internal_hashes
+      self.class.internal_hashes
+    end
+    
+    def internal_published
+      self.class.internal_published
+    end
     
     def callback
-      yield
+      yield self
     end
     
     def lpush list, value
       lists[list] ||= []
       lists[list] << value
+    end
+    
+    def hget hash, key
+      FakeRedisOperation.new internal_hashes[hash][key]
+    end
+    
+    def hset hash, key, value
+      internal_hashes[hash] ||= {}
+      internal_hashes[hash][key] = value
+    end
+    
+    def publish channel, value
+      internal_published[channel] ||= []
+      internal_published[channel] << value
+      
+      if subscriptions[channel]
+        subscriptions[channel].each {|s| s}
+      end
     end
     
     def subscribe channel
@@ -56,7 +83,17 @@ module EM
     end
     
     def callback *args
-        @blk.call *args
+      @blk.call *args
+    end
+  end
+  
+  class FakeRedisOperation
+    def initialize value
+      @value = value
+    end
+    
+    def callback
+      yield @value
     end
   end
 end

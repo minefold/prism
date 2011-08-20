@@ -28,7 +28,7 @@ module Prism
             worlds.each do |world|
               puts "  #{world.id} > #{worker.public_ip_address}:#{world.port}"
               
-              redis.hset "worlds:running", world.id, { instance_id:worker.instance_id, host:worker.public_ip_address, port:world.port }.to_json
+              redis.store_running_world worker.instance_id, world.id, worker.public_ip_address, world.port
             end
           else
             puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} <not responding>"

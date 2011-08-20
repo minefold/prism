@@ -29,17 +29,11 @@ describe Prism::Client do
     before { @connection.fake_recv_auth 'whatupdave' }
     
     it "should push user onto connecting queue" do
-      redis.lists["players:requesting_connection"].should include('whatupdave')
+      redis.lists["players:connection_request"].should include('whatupdave')
     end
     
     it "should subscribe to request result" do
       redis.subscriptions["players:connection_request:whatupdave"].should have(1).subscribers
-    end
-    
-    context "when running world result received" do
-      before { redis.publish "players:connection_request:whatupdave", { status:'world_running', host:"0.0.0.0", port:"4001"}.to_json }
-      
-      it "should proxy client"
     end
   end
 end
