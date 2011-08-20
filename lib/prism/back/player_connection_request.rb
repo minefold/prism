@@ -1,6 +1,6 @@
 module Prism
   class PlayerConnectionRequest < Request
-    attr_reader :username
+    process "players:connection_request", :username
     
     alias_method :debug_original, :debug
     
@@ -8,8 +8,7 @@ module Prism
       debug_original "[#{@username}]", *args
     end
     
-    def run username
-      @username = username
+    def run
       @db = EM::Mongo::Connection.new('localhost').db('minefold')
       
       debug "processing #{username}"

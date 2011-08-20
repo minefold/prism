@@ -2,8 +2,8 @@ module Prism
   class QueueProcessor
     include Debugger
     
-    def initialize queue, klass
-      @queue, @klass = queue, klass
+    def initialize klass
+      @queue, @klass = klass.queue, klass
 
       start_processing
     end

@@ -40,14 +40,13 @@ module Prism
       end
     end
     
-    QueueProcessor.new "players:connection_request", PlayerConnectionRequest
-    QueueProcessor.new "players:world_request", PlayerWorldRequest
-    QueueProcessor.new "worlds:requests:start", WorldStartRequest
-    QueueProcessor.new "workers:requests:start", WorkerStartRequest
-    QueueProcessor.new "workers:requests:create", WorkerCreateRequest
-    
-    # PlayerCoordinator::ConnectingPlayers.new.start_processing
-    # PlayerCoordinator::DisconnectingPlayers.process
+    [ PlayerConnectionRequest, 
+      PlayerWorldRequest, 
+      WorldStartRequest,
+      WorkerStartRequest, 
+      WorkerCreateRequest].each do |klass|
+        QueueProcessor.new klass
+    end
   
     puts "Started. #{Fold.env} mode"
   end

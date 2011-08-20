@@ -1,9 +1,9 @@
 module Prism
   class WorldStartRequest < Request
     
-    message_arguments :instance_id, :world_id, :min_heap_size, :max_heap_size
+    process "worlds:requests:start", :instance_id, :world_id, :min_heap_size, :max_heap_size
     
-    def run instance_id, world_id, min_heap_size, max_heap_size
+    def run
       # SUPERVISED_WORLDS[@world_id].worker = worker
       # BUSY_WORKERS[worker.instance_id] = :starting_world
 

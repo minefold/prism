@@ -1,12 +1,10 @@
 module Prism
   class PlayerWorldRequest < Request
-    attr_reader :redis, :username, :user_id, :world_id
+    attr_reader :redis
     
-    message_arguments :username, :user_id, :world_id
+    process "players:world_request", :username, :user_id, :world_id
     
-    def run username, user_id, world_id
-      @username, @user_id, @world_id = username, user_id, world_id
-      
+    def run
       redis_connect do |redis|
         @redis = redis
         

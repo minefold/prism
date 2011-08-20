@@ -11,7 +11,7 @@ module Prism
       context "requested world is running" do
         before {
           redis.internal_hashes["worlds:running"] = {"world1" => { instance_id:"i-1234", host:"0.0.0.0", port:"4000" }.to_json }
-          request.run "whatupdave", "user1", "world1"
+          request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
         }
         
         it "should connect player to world" do
@@ -23,7 +23,7 @@ module Prism
         context "a running worker is available" do
           before {
             redis.internal_hashes["workers:running"] = {"i-1234" => { instance_id:"i-1234", host:"0.0.0.0", started_at:Time.now.utc.to_s }.to_json}
-            request.run "whatupdave", "user1", "world1"
+            request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
           }
         
           it "should request world start" do
@@ -34,7 +34,7 @@ module Prism
         context "a sleeping worker is available" do
           before {
             redis.internal_sets["workers:sleeping"] = ["i-1234"]
-            request.run "whatupdave", "user1", "world1"
+            request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
           }
         
           it "should request worker start" do
@@ -44,7 +44,7 @@ module Prism
 
         context "no worker is available" do
           before {
-            request.run "whatupdave", "user1", "world1"
+            request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
           }
         
           it "should request worker create" do
