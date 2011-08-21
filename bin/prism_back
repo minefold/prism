@@ -40,8 +40,8 @@ module Prism
       end
     end
     
-    [ PlayerConnectionEvent, 
-      PlayerDisconnectionRequest, 
+    [ PlayerConnectionRequest, 
+      PlayerDisconnectionEvent, 
       PlayerWorldRequest, 
       WorldStartRequest,
       WorldStopRequest,

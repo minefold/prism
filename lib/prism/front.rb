@@ -5,5 +5,6 @@ require 'prism/front/unknown_player_handler'
 require 'prism/front/known_player_handler'
 require 'prism/front/connected_player_handler'
 require 'prism/front/client'
+
 require 'prism/front/chat_messaging'
 require 'prism/front/credit_muncher'

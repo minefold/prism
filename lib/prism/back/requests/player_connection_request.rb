@@ -1,5 +1,5 @@
 module Prism
-  class PlayerConnectionEvent < Request
+  class PlayerConnectionRequest < Request
     process "players:connection_request", :username
     
     alias_method :debug_original, :debug

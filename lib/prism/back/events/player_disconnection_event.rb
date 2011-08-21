@@ -26,8 +26,13 @@ module Prism
     def stop_world world_id
       op = redis.hget "worlds:running", world_id
       op.callback do |message|
-        world_data = JSON.parse message
-        redis.lpush "worlds:requests:stop", {instance_id:world_data['instance_id'], world_id:world_id}.to_json
+        if message
+          world_data = JSON.parse message
+          redis.lpush "worlds:requests:stop", {instance_id:world_data['instance_id'], world_id:world_id}.to_json
+        else
+          p world_id
+          debug "world:#{world_id} not running. No stop required"
+        end
       end
     end
   end

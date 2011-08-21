@@ -7,7 +7,7 @@ module Debugger
     puts message
   end
   
-  def error message
-    puts "ERROR: #{message}"
+  def error message, error = nil
+    puts "ERROR: #{message}\n#{error}"
   end
 end

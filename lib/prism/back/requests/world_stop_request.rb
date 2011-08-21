@@ -7,9 +7,9 @@ module Prism
       info "stopping world #{instance_id} > #{world_id}"
       EM.defer(proc { 
           begin
-            world = worker.stop_world world_id
+            worker = Worker.find instance_id
+            worker.stop_world world_id
             info "world stopped"
-            world
           rescue => e
             error "stop world", e
           end

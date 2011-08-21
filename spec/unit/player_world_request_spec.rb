@@ -16,6 +16,8 @@ module Prism
         it "should connect player to world" do
           redis.internal_published["players:connection_request:whatupdave"].should include({host:"0.0.0.0", port:"4000"}.to_json)
         end
+        
+        specify { redis.internal_hashes["players:playing"]["whatupdave"].should == "world1" }
       end
       
       context "requested world is not running" do
