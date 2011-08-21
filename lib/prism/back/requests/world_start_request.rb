@@ -4,9 +4,6 @@ module Prism
     process "worlds:requests:start", :instance_id, :world_id, :min_heap_size, :max_heap_size
     
     def run
-      # SUPERVISED_WORLDS[@world_id].worker = worker
-      # BUSY_WORKERS[worker.instance_id] = :starting_world
-
       info "starting world #{instance_id} > #{world_id}"
       EM.defer(proc { 
           begin
@@ -29,9 +26,6 @@ module Prism
             end
           else
             error "world didn't start"
-            # couldn't start world, mark worker as bad
-            # SUPERVISED_WORLDS.delete @world_id
-            # BUSY_WORKERS[worker.instance_id] = :not_responding
           end
       })
     end

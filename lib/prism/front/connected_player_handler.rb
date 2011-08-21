@@ -21,8 +21,11 @@ module Prism
   end
   
   class ConnectedPlayerHandler < Handler
+    attr_reader :username
+    
     def init username, host, port
       @server = EM.connect host, port, ServerConnection, connection, connection.buffered_data
+      @username = username
     end
     
     def receive_data data
@@ -30,7 +33,9 @@ module Prism
     end
     
     def unbind
-      debug "Process client disconnect"
+      debug "client connection closed"
+      
+      PrismRedis.new {|redis| redis.lpush "players:disconnection_request", username }
     end
   end
 end

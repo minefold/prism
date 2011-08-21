@@ -34,6 +34,8 @@ module Prism
     def rpc channel, request_key, data, &blk
       lpush channel, data
       
+      return unless block_given?
+      
       PrismRedis.new do |subscriber|
         debug "subscribing #{channel}:#{request_key}"
         subscriber.subscribe "#{channel}:#{request_key}"

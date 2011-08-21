@@ -9,7 +9,7 @@ overviewer:
 
 # state
 
-players:user_id (HASH)
+usernames (HASH)
   whatupdave => '91823746'
   chrislloyd => '89337893'
   willrax    => '89437832'
@@ -18,6 +18,12 @@ players:world_id (HASH)
   whatupdave => '91823746'
   chrislloyd => '89337893'
   willrax    => '89437832'
+  
+players:playing (HASH)
+  whatupdave => '91823746'
+  
+worlds:91823746:connected_players (SET)
+  whatupdave
 
 prism:active_connections (SET)
   willrax

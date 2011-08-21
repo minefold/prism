@@ -24,7 +24,7 @@ module Prism
     
     def connect_player_to_world host, port
       debug "connecting player:#{username}:#{user_id} to world:#{world_id}"
-      
+      @redis.hset_hash "players:playing", username, world_id
       @redis.publish "players:connection_request:#{username}", {host:host, port:port}.to_json
     end
     

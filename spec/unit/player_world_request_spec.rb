@@ -3,7 +3,6 @@ require 'spec_helper'
 module Prism
   describe PlayerWorldRequest do
     let(:redis) { EM::FakeRedis }
-    before { redis.reset }
   
     context "player connects" do
       let(:request) { PlayerWorldRequest.new }
