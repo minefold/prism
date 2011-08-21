@@ -1,6 +1,8 @@
 module Prism
   class WorkerStartRequest < Request
-    def run instance_id
+    process "workers:requests:start", :instance_id
+    
+    def run 
       # BUSY_WORKERS[worker.instance_id] = :starting
 
       EM.defer(proc { 

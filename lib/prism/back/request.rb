@@ -2,26 +2,25 @@ module Prism
   class Request
     include Debugger
     include Redis
+    include Mongo
     
     class << self
-      attr_reader :arguments
-      def message_arguments *args
-        @arguments = args
+      attr_reader :queue, :message_parts
+      
+      def process queue = nil, *message_parts
+        
+        @queue, @message_parts = queue, message_parts
+        
+        message_parts.each {|part| self.__send__(:attr_reader, "#{part}") }
       end
     end
     
     def process message
-      args = [message]
+      parts = self.class.message_parts.size == 1 ? { self.class.message_parts.first => message } : JSON.parse(message)
       
-      if self.class.arguments
-        data = JSON.parse message
-        
-        args = self.class.arguments.map {|a| data[a.to_s] }
-      end
+      parts.each{|k,v| self.instance_variable_set(:"@#{k}", v) }
       
-      args.each
-      
-      run *args
+      run
     end
   end
 end

@@ -1,0 +1,7 @@
+require 'prism/prism_redis'
+require 'prism/front/handler'
+require 'prism/front/minecraft_keepalive'
+require 'prism/front/unknown_player_handler'
+require 'prism/front/known_player_handler'
+require 'prism/front/connected_player_handler'
+require 'prism/front/client'

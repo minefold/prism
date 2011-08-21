@@ -44,26 +44,39 @@ module EM
     def lpush list, value
       internal_lists[list] ||= []
       internal_lists[list] << value
+      op value
     end
     
     # set methods
     def smembers set
-      FakeRedisOperation.new(internal_sets[set] || [])
+      op(internal_sets[set] || [])
+    end
+    
+    def srem set, member
+      op internal_sets[set].delete member
+    end
+    
+    def scard set
+      op internal_sets[set].size
     end
     
     # hash methods
     def hgetall hash
-      FakeRedisOperation.new (internal_hashes[hash] || {}).map{|k,v| [k,v] }.flatten
+      op (internal_hashes[hash] || {}).map{|k,v| [k,v] }.flatten
     end
     
     def hget hash, key
-      value = internal_hashes[hash] ? internal_hashes[hash][key] : nil
-      FakeRedisOperation.new value
+      op internal_hashes[hash] ? internal_hashes[hash][key] : nil
     end
     
     def hset hash, key, value
       internal_hashes[hash] ||= {}
       internal_hashes[hash][key] = value
+      op value
+    end
+    
+    def hdel hash, key
+      op internal_hashes[hash].delete(key)
     end
     
     def publish channel, value
@@ -82,6 +95,12 @@ module EM
     def on event, &blk
       internal_subscriptions[@active_subscription_channel] ||= []
       internal_subscriptions[@active_subscription_channel] << FakeRedisSubscription.new(blk)
+    end
+    
+    private
+    
+    def op value
+      FakeRedisOperation.new value
     end
   end
   
@@ -103,6 +122,10 @@ module EM
     
     def callback
       yield @value
+    end
+    
+    def errback
+      
     end
   end
 end

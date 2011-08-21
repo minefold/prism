@@ -1,9 +1,9 @@
 module Prism
   class WorkerCreateRequest < Request
 
-    # channel "workers:requests:create"
+    process "workers:requests:create", :request_id
     
-    def run request_id
+    def run
       instance_type = 'm1.large'
       
       info "creating new worker type:#{instance_type}"

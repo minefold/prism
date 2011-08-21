@@ -5,7 +5,7 @@ Bundler.require :default, :proxy
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
-require 'prism'
+require 'prism/front'
 
 STDOUT.sync = true
 EM.epoll
@@ -13,8 +13,11 @@ EM.epoll
 module Prism
   EM.run do
     puts "Initialising"
-    redis = EM::Hiredis.connect
-    redis.callback do
+    PrismRedis.new do |redis|
+      op = redis.keys("worlds:*:connected_players")
+      op.callback {|key| redis.del key }
+
+      redis.del("players:playing")
       redis.del("prism:active_connections") do
         EM.start_server '0.0.0.0', 25565, Client
 

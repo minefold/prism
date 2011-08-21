@@ -5,7 +5,6 @@ describe Prism::Client do
 
   before :each do
     @connection = EM::FakeConnection.new Prism::Client
-    redis.reset
   end
   
   context "no data has been sent" do

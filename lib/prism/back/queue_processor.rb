@@ -2,16 +2,15 @@ module Prism
   class QueueProcessor
     include Debugger
     
-    def initialize queue, klass
-      @queue, @klass = queue, klass
+    def initialize klass
+      @queue, @klass = klass.queue, klass
 
       start_processing
     end
     
     def start_processing
       debug "processing #{@queue}"
-      @redis = EM::Hiredis.connect
-      @redis.callback { listen }
+      @redis = PrismRedis.new {|redis| listen }
     end
     
     def listen

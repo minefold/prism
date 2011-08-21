@@ -1,12 +1,10 @@
 module Prism
   class PlayerWorldRequest < Request
-    attr_reader :redis, :username, :user_id, :world_id
+    attr_reader :redis
     
-    message_arguments :username, :user_id, :world_id
+    process "players:world_request", :username, :user_id, :world_id
     
-    def run username, user_id, world_id
-      @username, @user_id, @world_id = username, user_id, world_id
-      
+    def run
       redis_connect do |redis|
         @redis = redis
         
@@ -26,7 +24,7 @@ module Prism
     
     def connect_player_to_world host, port
       debug "connecting player:#{username}:#{user_id} to world:#{world_id}"
-      
+      @redis.hset "players:playing", username, world_id
       @redis.publish "players:connection_request:#{username}", {host:host, port:port}.to_json
     end
     
@@ -61,26 +59,9 @@ module Prism
       end
     end
     
-    def redis_request channel, request_key, data
-      redis.lpush channel, data
-      
-      subscriber = EM::Hiredis.connect
-      debug "subscribing #{channel}:#{request_key}"
-      subscriber.subscribe "#{channel}:#{request_key}"
-      subscriber.on :message do |channel, response|
-        debug "response > #{channel} #{response}"
-        subscriber.unsubscribe channel
-        yield response
-      end
-    end
-
-    def redis_request_json channel, request_key, request_data
-      redis_request(channel, request_key, request_data) {|response| yield JSON.parse(response) }
-    end
-    
     def start_world_on_running_worker instance_id
       debug "starting world:#{world_id} on running worker:#{instance_id}"
-      redis_request_json "worlds:requests:start", world_id, {
+      redis.rpc_json "worlds:requests:start", world_id, {
         instance_id:instance_id, 
         world_id:world_id, 
         min_heap_size:512, max_heap_size:2048 }.to_json do |world|
@@ -90,7 +71,7 @@ module Prism
     
     def start_world_on_sleeping_worker instance_id
       debug "starting world:#{world_id} on sleeping worker:#{instance_id}"
-      redis_request_json "workers:requests:start", instance_id, instance_id do |worker|
+      redis.rpc_json "workers:requests:start", instance_id, instance_id do |worker|
         debug "started sleeping worker:#{instance_id}"
         
         start_world_on_running_worker instance_id
@@ -100,7 +81,7 @@ module Prism
     def start_world_on_new_worker
       request_id = `uuidgen`.strip
       debug "starting world:#{world_id} on new worker"
-      redis_request_json "workers:requests:create", request_id, request_id do |worker|
+      redis.rpc_json "workers:requests:create", request_id, request_id do |worker|
         start_world_on_running_worker worker['instance_id']
       end
     end

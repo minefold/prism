@@ -21,8 +21,15 @@ module Prism
   end
   
   class ConnectedPlayerHandler < Handler
+    attr_reader :username
+    
     def init username, host, port
       @server = EM.connect host, port, ServerConnection, connection, connection.buffered_data
+      @username = username
+      
+      @credit_muncher = EventMachine::PeriodicTimer.new(60) do
+        PrismRedis.new{|redis| redis.lpush "players:minute_played", {username:username, timestamp:Time.now.utc}.to_json }
+      end
     end
     
     def receive_data data
@@ -30,7 +37,10 @@ module Prism
     end
     
     def unbind
-      debug "Process client disconnect"
+      debug "client connection closed"
+
+      @credit_muncher.cancel if @credit_muncher      
+      PrismRedis.new {|redis| redis.lpush "players:disconnection_request", username }
     end
   end
 end

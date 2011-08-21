@@ -16,17 +16,11 @@ module Prism
     end
     
     def request_player_connection
-      redis = EM::Hiredis.connect
-      redis.callback { redis.lpush "players:connection_request", username }
-      
-      subscriber = EM::Hiredis.connect
-      debug "subscribing to players:connection_request:#{username}"
-      subscriber.subscribe("players:connection_request:#{username}")
-      subscriber.on(:message) do |channel, message|
-        data = JSON.parse message
-        new_handler ConnectedPlayerHandler, username, data["host"], data["port"]
+      PrismRedis.new do |redis|
+        redis.rpc_json "players:connection_request", username, username do |connection|
+          new_handler ConnectedPlayerHandler, username, connection["host"], connection["port"]
+        end
       end
-      
     end
     
   end

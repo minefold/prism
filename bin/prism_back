@@ -5,7 +5,7 @@ Bundler.require :default, :proxy
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
-require 'prism'
+require 'prism/back'
 
 STDOUT.sync = true
 EM.epoll
@@ -13,41 +13,43 @@ EM.epoll
 module Prism
   EM.run do
     puts "Gathering state"
-    redis = PrismRedis.new EM::Hiredis.connect
-    
-    redis.del("worlds:running")
-    redis.del("workers:running")
-    op = redis.del("workers:sleeping")
-    op.callback do
-      Worker.all.each do |worker|
-        if worker.running?
-          if worker.responding?
-            puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} worlds:#{worker.worlds.size}"
-            redis.store_running_worker worker.instance_id, worker.public_ip_address, worker.started_at
-            worlds = worker.worlds
-            worlds.each do |world|
-              puts "  #{world.id} > #{worker.public_ip_address}:#{world.port}"
+    PrismRedis.new do |redis|
+      redis.del("worlds:running")
+      redis.del("workers:running")
+      op = redis.del("workers:sleeping")
+      op.callback do
+        Worker.all.each do |worker|
+          if worker.running?
+            if worker.responding?
+              puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} worlds:#{worker.worlds.size}"
+              redis.store_running_worker worker.instance_id, worker.public_ip_address, worker.started_at
+              worlds = worker.worlds
+              worlds.each do |world|
+                puts "  #{world.id} > #{worker.public_ip_address}:#{world.port}"
               
-              redis.store_running_world worker.instance_id, world.id, worker.public_ip_address, world.port
+                redis.store_running_world worker.instance_id, world.id, worker.public_ip_address, world.port
+              end
+            else
+              puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} <not responding>"
             end
           else
-            puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} <not responding>"
+            puts "worker:#{worker.instance_id} sleeping"
+            redis.sadd "workers:sleeping", worker.instance_id
           end
-        else
-          puts "worker:#{worker.instance_id} sleeping"
-          redis.sadd "workers:sleeping", worker.instance_id
         end
       end
     end
     
-    QueueProcessor.new "players:connection_request", PlayerConnectionRequest
-    QueueProcessor.new "players:world_request", PlayerWorldRequest
-    QueueProcessor.new "worlds:requests:start", WorldStartRequest
-    QueueProcessor.new "workers:requests:start", WorkerStartRequest
-    QueueProcessor.new "workers:requests:create", WorkerCreateRequest
-    
-    # PlayerCoordinator::ConnectingPlayers.new.start_processing
-    # PlayerCoordinator::DisconnectingPlayers.process
+    [ PlayerConnectionRequest, 
+      PlayerDisconnectionEvent, 
+      PlayerMinutePlayedEvent, 
+      PlayerWorldRequest, 
+      WorldStartRequest,
+      WorldStopRequest,
+      WorkerStartRequest, 
+      WorkerCreateRequest].each do |klass|
+        QueueProcessor.new klass
+    end
   
     puts "Started. #{Fold.env} mode"
   end

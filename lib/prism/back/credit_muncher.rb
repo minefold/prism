@@ -8,6 +8,7 @@ module Prism
                       query: {"_id"  => @user_objectid},
                       update:{"$inc" => {"credits" => -amount, "minutes_played" => amount }}
                     })
+        
         credits = user['credits'] - amount
         info "deducting 1 credit. #{credits} remaining. Played:#{user['minutes_played']} minutes"
 
