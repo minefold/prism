@@ -41,7 +41,12 @@ workers:i-5678:worlds (SET)
   world1
 
 # queues
-  
+
+players:minute_played
+  username:whatupdave, time:[timestamp]
+  username:whatupdave, time:[timestamp]
+  username:chrislloyd, time:[timestamp]
+
 players:requesting_connection
   whatupdave
 
@@ -50,44 +55,9 @@ players:disconnecting
 
 workers:not_responding
 
-
-prism:
-  on connection 
-    extract username
-    LPUSH username onto players:connecting queue
-    subscribe to connection_info:@username
-  
-  on connection_info : status
-    status:
-      world_running: host, port
-        SADD players:connected
-        proxy client to host:port
-        
-      unknown_player
-        disconnect client
-    
-  on disconnect
-    LPUSH username onto players:disconnecting queue
-    
-
-
-player_coordinator:
-  on startup
-    BLPOP players:connecting
-    BLPOP players:disconnecting
-    
-  on player_connecting : username
-    mongo get user_id, world_id
-    HSET players:user_id
-    HSET players:world_id
-    LPUSH players:waiting
-    
-    
-  on player_disconnecting : username
-    if last player out
-      stop_world
       
-      
+# allocation
+
   a world has a weight of 200, player 100
   
   instance can carry 5 * 1024 = 5120
@@ -95,17 +65,5 @@ player_coordinator:
   instance is available or will be available
 
 
-
-
-world_coordinator:
-  on startup
-    BLPOP players:waiting
-    
-  on player_started_waiting
-    world running?
-      
-    determine if world needs starting
-    determine if worker needs starting
-    
     
     

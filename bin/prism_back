@@ -42,6 +42,7 @@ module Prism
     
     [ PlayerConnectionRequest, 
       PlayerDisconnectionEvent, 
+      PlayerMinutePlayedEvent, 
       PlayerWorldRequest, 
       WorldStartRequest,
       WorldStopRequest,

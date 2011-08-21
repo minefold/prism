@@ -2,6 +2,7 @@ module Prism
   class Request
     include Debugger
     include Redis
+    include Mongo
     
     class << self
       attr_reader :queue, :message_parts

@@ -34,6 +34,7 @@ group :test do
   gem "virtualbox"
   gem 'hirb'
   gem 'spork', '~> 0.9.0.rc'
+  gem 'timecop', '~> 0.3.5'
 end
 
 group :chatty do
