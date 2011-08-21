@@ -27,22 +27,21 @@ class LocalWorld
       end
     end
 
-    def server_properties world_id, options, port
-      options.merge({
-        "allow-flight"     => false,
+    def server_properties world, port
+      { "allow-flight"     => false,
         "allow-nether"     => true,
-        "level-name"       => world_id,
-        # "level-seed"       => '',
+        "level-name"       => world['_id'].to_s,
+        "level-seed"       => world['seed'].to_s,
         "max-players"      => 255,
         "online-mode"      => true,
-        # "pvp"              => true,
+        "pvp"              => world['pvp'].to_s,
         "server-ip"        => "0.0.0.0",
         "server-port"      => port,
-        # "spawn-animals"    => true,
-        # "spawn-monsters"   => true,
+        "spawn-animals"    => world['spawn_animals'].to_s,
+        "spawn-monsters"   => world['spawn_monsters'].to_s,
         "view-distance"    => 10,
         "white-list"       => false
-      }).map {|values| values.join('=')}.join("\n")
+      }.map {|values| values.join('=')}.join("\n")
     end
 
     def find id
@@ -97,7 +96,7 @@ class LocalWorld
       port = LocalWorld.next_available_port
 
       # create server.properties
-      File.open(properties_path, 'w') {|file| file.puts server_properties(world_id, world['options'], port) }
+      File.open(properties_path, 'w') {|file| file.puts server_properties(world, port) }
 
       # create world.god
       template = ERB.new File.read "#{LIB}/world.god.erb"
