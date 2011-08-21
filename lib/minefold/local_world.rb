@@ -32,13 +32,13 @@ class LocalWorld
         "allow-flight"     => false,
         "allow-nether"     => true,
         "level-name"       => world_id,
-        "level-seed"       => '',
+        # "level-seed"       => '',
         "max-players"      => 255,
         "online-mode"      => true,
         # "pvp"              => true,
         "server-ip"        => "0.0.0.0",
         "server-port"      => port,
-        "spawn-animals"    => true,
+        # "spawn-animals"    => true,
         # "spawn-monsters"   => true,
         "view-distance"    => 10,
         "white-list"       => false
@@ -69,7 +69,7 @@ class LocalWorld
 
       # create world path if it aint there
       FileUtils.mkdir_p world_path
-      
+
       # get world from db
       worlds = MinefoldDb.connection['worlds']
       world = worlds.find_one({'_id' => BSON::ObjectId(world_id)})
