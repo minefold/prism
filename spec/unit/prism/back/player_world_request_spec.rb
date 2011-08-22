@@ -1,5 +1,9 @@
 require 'spec_helper'
 
+def world_running name, options
+  EM::FakeRedis.internal_hashes["worlds:running"] = {name => options.to_json }
+end
+
 module Prism
   describe PlayerWorldRequest do
     let(:redis) { EM::FakeRedis }
@@ -9,7 +13,7 @@ module Prism
       
       context "requested world is running" do
         before {
-          redis.internal_hashes["worlds:running"] = {"world1" => { instance_id:"i-1234", host:"0.0.0.0", port:"4000" }.to_json }
+          world_running "world1", instance_id:"i-1234", host:"0.0.0.0", port:"4000"
           request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
         }
         
