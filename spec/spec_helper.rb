@@ -25,6 +25,7 @@ Spork.each_run do
   
   module Debugger
     def debug *args; end
+    def info *args; end
   end
 end
 

@@ -71,7 +71,7 @@ module Prism
     
     def start_world_on_sleeping_worker instance_id
       debug "starting world:#{world_id} on sleeping worker:#{instance_id}"
-      redis.rpc_json "workers:requests:start", instance_id, instance_id do |worker|
+      redis.rpc_json "workers:requests:start", instance_id do |worker|
         debug "started sleeping worker:#{instance_id}"
         
         start_world_on_running_worker instance_id
@@ -81,7 +81,7 @@ module Prism
     def start_world_on_new_worker
       request_id = `uuidgen`.strip
       debug "starting world:#{world_id} on new worker"
-      redis.rpc_json "workers:requests:create", request_id, request_id do |worker|
+      redis.rpc_json "workers:requests:create", request_id do |worker|
         start_world_on_running_worker worker['instance_id']
       end
     end

@@ -31,7 +31,9 @@ module Prism
       op
     end
     
-    def rpc channel, request_key, data, &blk
+    def rpc channel, request_key, data = nil, &blk
+      data ||= request_key
+      
       lpush channel, data
       
       return unless block_given?
@@ -47,7 +49,7 @@ module Prism
       end
     end
 
-    def rpc_json channel, request_key, request_data, &blk
+    def rpc_json channel, request_key, request_data = nil, &blk
       rpc(channel, request_key, request_data) {|response| yield JSON.parse(response) }
     end
     

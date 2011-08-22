@@ -1,6 +1,7 @@
 module Prism
   class Request
     include Debugger
+    
     include Redis
     include Mongo
     

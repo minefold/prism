@@ -16,11 +16,11 @@ module Prism
     PrismRedis.new do |redis|
       op = redis.keys("worlds:*:connected_players")
       op.callback {|key| redis.del key }
-
+  
       redis.del("players:playing")
       redis.del("prism:active_connections") do
         EM.start_server '0.0.0.0', 25565, Client
-
+  
         puts "#{Fold.env} mode. listening on 0.0.0.0:25565"
       end
     end

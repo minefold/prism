@@ -1,12 +1,8 @@
 module Prism
   class PlayerConnectionRequest < Request
     process "players:connection_request", :username
-    
-    alias_method :debug_original, :debug
-    
-    def debug *args
-      debug_original "[#{@username}]", *args
-    end
+
+    def log_tag; username; end
     
     def run
       debug "processing #{username}"
@@ -32,6 +28,7 @@ module Prism
     
     def unrecognised_player_connecting
       error "unrecognised"
+      PrismRedis.new {|redis| redis.publish "players:connection_request:#{username}", nil }
     end
   end
 end

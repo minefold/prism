@@ -17,7 +17,7 @@ module Prism
     
     def request_player_connection
       PrismRedis.new do |redis|
-        redis.rpc_json "players:connection_request", username, username do |connection|
+        redis.rpc_json "players:connection_request", username do |connection|
           new_handler ConnectedPlayerHandler, username, connection["host"], connection["port"]
         end
       end

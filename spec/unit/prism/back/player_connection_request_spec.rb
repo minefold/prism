@@ -12,14 +12,10 @@ module Prism
       stub(@mongo).collection('users').returns(@users = Object.new)
     }
     
+    let(:user_oid) { BSON::ObjectId.new }
+    
     context "when player exists" do
-      let(:user_oid) { BSON::ObjectId.new }
-      
       before { 
-        # redis.internal_hashes["players:playing"] = {"whatupdave" => "world1"}
-        # redis.internal_sets["worlds:world1:connected_players"] = ["whatupdave"]
-        # redis.internal_hashes["worlds:running"] = {"world1" => {instance_id:'i-1234', host:'0.0.0.0', port:'0.0.0.0'}.to_json }
-        
         mock(@users).find_one(:username => /whatupdave/i).returns({'_id' => user_oid, 'world_id' => 'world1'})
         
         request.process "whatupdave" 
@@ -30,6 +26,20 @@ module Prism
       end
       
       specify { redis.internal_hashes["usernames"].should include({"whatupdave" => "#{user_oid}"}) }
+    end
+    
+    context "when player doesn't exist" do
+      before { 
+        mock(@users).find_one(:username => /cjwoodward/i).returns(nil)
+        
+        request.process "cjwoodward" 
+      }
+      
+      it "should publish error" do
+        redis.internal_published["players:connection_request:cjwoodward"].should include(nil)
+      end
+      
+      
     end
   end
 end
