@@ -28,6 +28,10 @@ worlds:91823746:connected_players (SET)
 prism:active_connections (SET)
   willrax
   
+worlds:busy (HASH)
+  world2 => i-1234, starting
+  world5 => i-1234, stopping
+  
 worlds:running (HASH)
   world1 => i-5637, 1.2.3.4, 4001
   

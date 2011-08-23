@@ -16,12 +16,17 @@ module Prism
       end
     end
     
+    attr_reader :redis
+    
     def process message
       parts = self.class.message_parts.size == 1 ? { self.class.message_parts.first => message } : JSON.parse(message)
       
       parts.each{|k,v| self.instance_variable_set(:"@#{k}", v) }
       
-      run
+      redis_connect do |redis|
+        @redis = redis
+        run
+      end
     end
   end
 end

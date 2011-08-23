@@ -21,14 +21,18 @@ task "redis:state" do
   redis = Redis.new
   ["players:playing",
    "prism:active_connections",
-   "worlds:running",
-   "workers:running"].each do |hash|
-     p hash, redis.hgetall(hash)
+   "worlds:running", "world:busy",
+   "workers:running", "workers:busy"].each do |hash|
+     puts hash
+     p redis.hgetall(hash)
+     puts
   end
   
   ["players:minute_played", "players:requesting_connection", "players:disconnecting"].each do |list|
     length = redis.llen list
-    p list, redis.lrange(list, 0, length)
+    puts list
+    p redis.lrange(list, 0, length)
+    puts
   end
 end
 

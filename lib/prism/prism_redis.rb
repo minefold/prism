@@ -53,6 +53,10 @@ module Prism
       rpc(channel, request_key, request_data) {|response| yield JSON.parse(response) }
     end
     
+    def publish_json channel, hash
+      publish channel, hash.to_json
+    end
+    
     def method_missing sym, *args, &blk
       redis.send sym, *args, &blk
     end

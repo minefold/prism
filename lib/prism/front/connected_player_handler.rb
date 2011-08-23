@@ -36,7 +36,10 @@ module Prism
     end
     
     def exit
-      @credit_muncher.cancel if @credit_muncher      
+      if @credit_muncher
+        debug "stopping credit muncher"
+        @credit_muncher.cancel 
+      end
       PrismRedis.new {|redis| redis.lpush "players:disconnection_request", username }
     end
     
