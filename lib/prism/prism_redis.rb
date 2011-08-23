@@ -12,7 +12,7 @@ module Prism
     
     attr_reader :redis
     def initialize &blk
-      @redis = EM::Hiredis.connect
+      @redis = EM::Hiredis.connect(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
       @redis.errback {|e| error "failed to connect to redis: #{e}" }
       @redis.callback { blk.call(self) }
     end
