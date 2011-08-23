@@ -4,6 +4,15 @@ def world_running name, options
   EM::FakeRedis.internal_hashes["worlds:running"] = {name => options.to_json }
 end
 
+def worker_running instance_id, options = {}
+  options = {instance_id:instance_id, host:"0.0.0.0", started_at:Time.now.utc.to_s}.merge(options)
+  (EM::FakeRedis.internal_hashes["workers:running"] ||= {})[instance_id] = options.to_json
+end
+
+def worker_sleeping instance_id
+  (EM::FakeRedis.internal_sets["workers:sleeping"] ||= []) << instance_id
+end
+
 module Prism
   describe PlayerWorldRequest do
     let(:redis) { EM::FakeRedis }
@@ -27,7 +36,7 @@ module Prism
       context "requested world is not running" do
         context "a running worker is available" do
           before {
-            redis.internal_hashes["workers:running"] = {"i-1234" => { instance_id:"i-1234", host:"0.0.0.0", started_at:Time.now.utc.to_s }.to_json}
+            worker_running "i-1234"
             request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
           }
         
@@ -38,7 +47,7 @@ module Prism
         
         context "a sleeping worker is available" do
           before {
-            redis.internal_sets["workers:sleeping"] = ["i-1234"]
+            worker_sleeping "i-1234"
             request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
           }
         
@@ -57,7 +66,9 @@ module Prism
           end
         end
       end
-      
     end
+    
+    
+    
   end
 end

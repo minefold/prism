@@ -3,6 +3,8 @@ require 'spork'
 
 Spork.prefork do
   ENV["FOLD_ENV"] ||= 'test'
+  
+  REDISTOGO_URL = nil
 
   require 'bundler/setup'
   Bundler.require :default, :test, :proxy, :worker

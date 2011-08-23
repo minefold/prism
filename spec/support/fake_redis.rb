@@ -1,6 +1,6 @@
 module EM
   module Hiredis
-    def self.connect
+    def self.connect url
       FakeRedis.new
     end
   end

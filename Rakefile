@@ -17,6 +17,21 @@ rescue LoadError
   # no rspec
 end
 
+task "redis:state" do
+  redis = Redis.new
+  ["players:playing",
+   "prism:active_connections",
+   "worlds:running",
+   "workers:running"].each do |hash|
+     p hash, redis.hgetall(hash)
+  end
+  
+  ["players:minute_played", "players:requesting_connection", "players:disconnecting"].each do |list|
+    length = redis.llen list
+    p list, redis.lrange(list, 0, length)
+  end
+end
+
 require 'resque'
 require 'resque/tasks'
 
