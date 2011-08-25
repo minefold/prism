@@ -1,5 +1,7 @@
 module Prism
   class WorkerCreateRequest < DeferredOperationRequest
+    attr_reader :instance_type
+    
     process "workers:requests:create", :request_id
     
     def before_operation
@@ -7,7 +9,7 @@ module Prism
     end
     
     def busy_hash
-      ["workers:busy", instance_id, state:'creating']
+      ["workers:busy", request_id, state:'creating']
     end
     
     def perform_operation

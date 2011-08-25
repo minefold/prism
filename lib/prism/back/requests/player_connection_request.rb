@@ -20,7 +20,6 @@ module Prism
       debug "found user:#{user['_id']} world:#{user['world_id']}"
       
       PrismRedis.new do |redis|
-        debug "waiting for world"
         redis.hset "usernames", username, user['_id'].to_s
         redis.lpush "players:world_request", { 'username' => username, 'user_id' => user['_id'].to_s, 'world_id' => user['world_id'].to_s }.to_json
       end

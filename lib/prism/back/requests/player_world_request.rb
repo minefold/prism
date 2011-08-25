@@ -1,35 +1,47 @@
 module Prism
   class PlayerWorldRequest < Request
-    attr_reader :redis
-    
     process "players:world_request", :username, :user_id, :world_id
     
     def run
-      redis_connect do |redis|
-        @redis = redis
-        
-        redis.hget_json "worlds:running", world_id do |world|
-          if world
-            debug "world:#{world_id} is already running"
-            connect_player_to_world world['host'], world['port']
-          else
-            debug "world:#{world_id} is not running"
-            
-            redis.hget_json "worlds:busy", world_id do |world_busy|
-              if world_busy
-                redis_subscribe_json "worlds:requests:start:#{world_id}" do |world|
-                  connect_player_to_world world['host'], world['port']
-                end
-              else
-                get_world_started
-              end
-            end
-          end
+      redis.hget_json "worlds:busy", world_id do |busy_world|
+        if busy_world
+          start_busy_world busy_world
+        else
+          get_world_started
         end
       end
     end
     
     def get_world_started
+      redis.hget_json "worlds:running", world_id do |world|
+        if world
+          debug "world:#{world_id} is already running"
+          connect_player_to_world world['host'], world['port']
+        else
+          debug "world:#{world_id} is not running"
+          start_world
+        end
+      end
+    end
+
+    
+    def start_busy_world busy_world
+      if busy_world['state'].include? 'starting'
+        debug "world:#{world_id} start already requested"
+        redis_subscribe_json "worlds:requests:start:#{world_id}" do |world|
+          connect_player_to_world world['host'], world['port']
+        end
+      else
+        debug "world:#{world_id} is stopping. will request start when stopped"
+        redis.hset_hash "worlds:busy", world_id, state:'stopping => starting'
+        redis_subscribe_json "worlds:requests:stop:#{world_id}" do
+          debug "world:#{world_id} stopped. Requesting restart"
+          start_world
+        end
+      end
+    end
+    
+    def start_world
       debug "getting world:#{world_id} started"
       
       # any free workers?
@@ -88,9 +100,8 @@ module Prism
     end
     
     def connect_player_to_world host, port
-      debug "connecting player:#{username}:#{user_id} to world:#{world_id}"
-      @redis.hset "players:playing", username, world_id
-      @redis.publish "players:connection_request:#{username}", {host:host, port:port}.to_json
+      redis.hset "players:playing", username, world_id
+      redis.publish "players:connection_request:#{username}", {host:host, port:port}.to_json
     end
     
   end

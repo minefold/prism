@@ -11,7 +11,7 @@ module Prism
         subscriber.subscribe channel
         subscriber.on :message do |channel, response|
           subscriber.unsubscribe channel
-          yield response
+          yield JSON.parse(response)
         end
       end
     end
@@ -58,7 +58,7 @@ module Prism
         debug "subscribing #{channel}:#{request_key}"
         subscriber.subscribe "#{channel}:#{request_key}"
         subscriber.on :message do |channel, response|
-          debug "response > #{channel} #{response}"
+          debug "#{channel} > #{response}"
           subscriber.unsubscribe channel
           yield response
         end

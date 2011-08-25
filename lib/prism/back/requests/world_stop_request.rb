@@ -4,7 +4,7 @@ module Prism
     process "worlds:requests:stop", :instance_id, :world_id
     
     def busy_hash
-      ["world:busy", world_id, instance_id:instance_id, state:'stopping']
+      ["worlds:busy", world_id, instance_id:instance_id, state:'stopping']
     end
     
     def perform_operation
@@ -16,7 +16,9 @@ module Prism
     def operation_succeeded world
       info "stopped world"
       redis.hdel "worlds:running", world_id
-      redis.del "worlds:#{world_id}:connected_players"
+      redis.del "worlds:#{world_id}:connected_players" do
+        redis.publish "worlds:requests:stop:#{world_id}"
+      end
     end
     
     def operation_failed

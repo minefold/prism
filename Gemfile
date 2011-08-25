@@ -25,18 +25,18 @@ group :worker do
 end
 
 group :test do
-  gem 'foreman'
-  gem 'rspec', '~> 2.6.0'
-  gem 'rr', '~> 1.0.3'
-  gem "ZenTest", "~> 4.4.2"
-  gem "autotest-growl"
   gem "autotest-fsevent"
-  gem "virtualbox"
+  gem "autotest-growl"
+  gem 'foreman'
   gem 'hirb'
+  gem 'launchy'
+  gem 'rr', '~> 1.0.3'
+  gem 'rspec', '~> 2.6.0'
+  gem 'simplecov', '>= 0.4.0', :require => false
   gem 'spork', '~> 0.9.0.rc'
   gem 'timecop', '~> 0.3.5'
-  gem 'simplecov', '>= 0.4.0', :require => false
-  gem 'launchy'
+  gem "virtualbox"
+  gem "ZenTest", "~> 4.4.2"
 end
 
 group :chatty do

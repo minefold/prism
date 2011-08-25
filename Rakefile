@@ -31,7 +31,7 @@ task "redis:state" do
   redis = Redis.new
   ["players:playing",
    "prism:active_connections",
-   "worlds:running", "world:busy",
+   "worlds:running", "worlds:busy",
    "workers:running", "workers:busy"].each do |hash|
      puts hash
      p redis.hgetall(hash)

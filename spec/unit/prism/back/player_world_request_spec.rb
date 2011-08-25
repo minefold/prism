@@ -8,6 +8,10 @@ def world_starting world_id
   EM::FakeRedis.internal_hashes["worlds:busy"] = {world_id => {state:'starting'}.to_json }
 end
 
+def world_stopping world_id
+  EM::FakeRedis.internal_hashes["worlds:busy"] = {world_id => {state:'stopping'}.to_json }
+end
+
 def worker_running instance_id, options = {}
   options = {instance_id:instance_id, host:"0.0.0.0", started_at:Time.now.utc.to_s}.merge(options)
   (EM::FakeRedis.internal_hashes["workers:running"] ||= {})[instance_id] = options.to_json
@@ -30,15 +34,35 @@ module Prism
       
       context "requested world is running" do
         before {
+          worker_running "i-1234"
           world_running "world1", instance_id:"i-1234", host:"0.0.0.0", port:"4000"
-          process_json username:"whatupdave", user_id:"user1", world_id:"world1"
         }
         
-        it "should connect player to world" do
-          redis.internal_published["players:connection_request:whatupdave"].should include({host:"0.0.0.0", port:"4000"}.to_json)
+        context "world is not busy" do
+          before { process_json username:"whatupdave", user_id:"user1", world_id:"world1" }
+
+          it "should connect player to world" do
+            redis.internal_published["players:connection_request:whatupdave"].should include({host:"0.0.0.0", port:"4000"}.to_json)
+          end
+          specify { redis.internal_hashes["players:playing"]["whatupdave"].should == "world1" }
         end
         
-        specify { redis.internal_hashes["players:playing"]["whatupdave"].should == "world1" }
+        context "requested world is stopping" do
+          before {
+            world_stopping 'world1'
+            puts "----"
+            process_json username:"whatupdave", user_id:"user1", world_id:"world1"
+            puts "----"
+          }
+
+          it "should subscribe to world stop" do
+            
+            redis.internal_subscriptions["worlds:requests:stop:world1"].should have(1).subscribers
+          end      
+          it "should update busy state to indicate world is restarting" do
+            redis.internal_hashes["worlds:busy"]["world1"].should == {state:'stopping => starting'}.to_json
+          end      
+        end
       end
       
       context "requested world is not running" do
@@ -84,12 +108,8 @@ module Prism
         it "should subscribe to world start" do
           redis.internal_subscriptions["worlds:requests:start:world7"].should have(1).subscribers
         end
-        
       end
-      
     end
-    
-    
     
   end
 end
