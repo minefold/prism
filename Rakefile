@@ -1,6 +1,8 @@
 require 'bundler/setup'
+Bundler
 
 $:.unshift File.join File.dirname(__FILE__), 'lib'
+require 'rake'
 require 'rake/clean'
 
 CLEAN.add 'tmp'
@@ -8,10 +10,18 @@ CLEAN.add 'tmp'
 # RSpec
 begin
   require "rspec/core/rake_task"
+  require 'launchy'
   
   RSpec::Core::RakeTask.new(:spec) do |t|
     t.pattern = 'spec/**/*_spec.rb'
     t.rspec_opts = ["-c", "-f progress", "-r ./spec/spec_helper.rb"]
+  end
+  
+  desc "Run tests with coverage"
+  task :coverage do
+    ENV['COVERAGE'] = 'true'
+    Rake::Task["spec"].execute
+    Launchy.open("file://" + File.expand_path("../coverage/index.html", __FILE__))
   end
 rescue LoadError
   # no rspec

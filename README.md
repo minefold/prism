@@ -29,8 +29,8 @@ prism:active_connections (SET)
   willrax
   
 worlds:busy (HASH)
-  world2 => i-1234, starting
-  world5 => i-1234, stopping
+  world2 => i-1234, state:starting, next_state:
+  world5 => i-1234, state:stopping, next_state:starting
   
 worlds:running (HASH)
   world1 => i-5637, 1.2.3.4, 4001
@@ -61,11 +61,8 @@ workers:not_responding
 
       
 # allocation
-
   a world has a weight of 200, player 100
-  
   instance can carry 5 * 1024 = 5120
-  
   instance is available or will be available
 
 

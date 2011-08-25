@@ -1,7 +1,11 @@
 require 'spec_helper'
 
-def world_running name, options
-  EM::FakeRedis.internal_hashes["worlds:running"] = {name => options.to_json }
+def world_running world_id, options
+  EM::FakeRedis.internal_hashes["worlds:running"] = {world_id => options.to_json }
+end
+
+def world_starting world_id, options
+  EM::FakeRedis.internal_hashes["worlds:busy"] = {world_id => {state:starting}.to_json }
 end
 
 def worker_running instance_id, options = {}
@@ -66,6 +70,13 @@ module Prism
           end
         end
       end
+      
+      context "requested world is starting" do
+        before {
+          world_starting 'world7'
+        }
+      end
+      
     end
     
     

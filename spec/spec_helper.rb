@@ -1,13 +1,19 @@
-require 'rubygems'
+if ENV['COVERAGE']
+  puts "running with coverage"
+  require "simplecov"
+  SimpleCov.start do
+    add_filter '/spec/'
+  end
+end
 require 'spork'
 
 Spork.prefork do
   ENV["FOLD_ENV"] ||= 'test'
   
-  REDISTOGO_URL = nil
-
   require 'bundler/setup'
-  Bundler.require :default, :test, :proxy, :worker
+  Bundler.require :default, :test
+  
+  REDISTOGO_URL = nil
 
   RSpec.configure do |c|
     Fog.mock!

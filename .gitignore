@@ -3,3 +3,4 @@ worlds
 backups
 log/*
 tmp/*
+coverage

@@ -35,6 +35,8 @@ group :test do
   gem 'hirb'
   gem 'spork', '~> 0.9.0.rc'
   gem 'timecop', '~> 0.3.5'
+  gem 'simplecov', '>= 0.4.0', :require => false
+  gem 'launchy'
 end
 
 group :chatty do
