@@ -5,6 +5,16 @@ module Prism
     def redis_connect &blk
       PrismRedis.new &blk
     end
+
+    def redis_subscribe_json channel, &blk
+      PrismRedis.new do |subscriber|
+        subscriber.subscribe channel
+        subscriber.on :message do |channel, response|
+          subscriber.unsubscribe channel
+          yield response
+        end
+      end
+    end
   end
   
   class PrismRedis
@@ -23,6 +33,12 @@ module Prism
 
     def store_running_world instance_id, world_id, host, port
       hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
+    end
+    
+    def hget_json key, field
+      op = redis.hget key, field
+      op.errback {|e| handle_error e }
+      op.callback {|data| yield data ? JSON.parse(data) : nil }
     end
     
     def hset_hash channel, key, value
@@ -48,7 +64,7 @@ module Prism
         end
       end
     end
-
+    
     def rpc_json channel, request_key, request_data = nil, &blk
       rpc(channel, request_key, request_data) {|response| yield JSON.parse(response) }
     end

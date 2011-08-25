@@ -8,24 +8,25 @@ module Prism
       redis_connect do |redis|
         @redis = redis
         
-        resp = redis.hget "worlds:running", world_id
-        resp.callback do |world_data|
-          if world_data
+        redis.hget_json "worlds:running", world_id do |world|
+          if world
             debug "world:#{world_id} is already running"
-            world = JSON.parse world_data
             connect_player_to_world world['host'], world['port']
           else
             debug "world:#{world_id} is not running"
-            get_world_started
+            
+            redis.hget_json "worlds:busy", world_id do |world_busy|
+              if world_busy
+                redis_subscribe_json "worlds:requests:start:#{world_id}" do |world|
+                  connect_player_to_world world['host'], world['port']
+                end
+              else
+                get_world_started
+              end
+            end
           end
         end
       end
-    end
-    
-    def connect_player_to_world host, port
-      debug "connecting player:#{username}:#{user_id} to world:#{world_id}"
-      @redis.hset "players:playing", username, world_id
-      @redis.publish "players:connection_request:#{username}", {host:host, port:port}.to_json
     end
     
     def get_world_started
@@ -85,5 +86,12 @@ module Prism
         start_world_on_running_worker worker['instance_id']
       end
     end
+    
+    def connect_player_to_world host, port
+      debug "connecting player:#{username}:#{user_id} to world:#{world_id}"
+      @redis.hset "players:playing", username, world_id
+      @redis.publish "players:connection_request:#{username}", {host:host, port:port}.to_json
+    end
+    
   end
 end

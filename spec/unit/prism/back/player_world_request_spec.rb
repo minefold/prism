@@ -4,8 +4,8 @@ def world_running world_id, options
   EM::FakeRedis.internal_hashes["worlds:running"] = {world_id => options.to_json }
 end
 
-def world_starting world_id, options
-  EM::FakeRedis.internal_hashes["worlds:busy"] = {world_id => {state:starting}.to_json }
+def world_starting world_id
+  EM::FakeRedis.internal_hashes["worlds:busy"] = {world_id => {state:'starting'}.to_json }
 end
 
 def worker_running instance_id, options = {}
@@ -24,10 +24,14 @@ module Prism
     context "player connects" do
       let(:request) { PlayerWorldRequest.new }
       
+      def process_json data
+        request.process data.to_json
+      end
+      
       context "requested world is running" do
         before {
           world_running "world1", instance_id:"i-1234", host:"0.0.0.0", port:"4000"
-          request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
+          process_json username:"whatupdave", user_id:"user1", world_id:"world1"
         }
         
         it "should connect player to world" do
@@ -41,7 +45,7 @@ module Prism
         context "a running worker is available" do
           before {
             worker_running "i-1234"
-            request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
+            process_json username:"whatupdave", user_id:"user1", world_id:"world1"
           }
         
           it "should request world start" do
@@ -52,7 +56,7 @@ module Prism
         context "a sleeping worker is available" do
           before {
             worker_sleeping "i-1234"
-            request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
+            process_json username:"whatupdave", user_id:"user1", world_id:"world1"
           }
         
           it "should request worker start" do
@@ -62,7 +66,7 @@ module Prism
 
         context "no worker is available" do
           before {
-            request.process({username:"whatupdave", user_id:"user1", world_id:"world1"}.to_json)
+            process_json username:"whatupdave", user_id:"user1", world_id:"world1"
           }
         
           it "should request worker create" do
@@ -71,10 +75,16 @@ module Prism
         end
       end
       
-      context "requested world is starting" do
-        before {
-          world_starting 'world7'
+      context "requested world is already starting" do
+        before { 
+          world_starting 'world7' 
+          process_json username:"whatupdave", user_id:"user1", world_id:"world7"
         }
+        
+        it "should subscribe to world start" do
+          redis.internal_subscriptions["worlds:requests:start:world7"].should have(1).subscribers
+        end
+        
       end
       
     end
