@@ -14,8 +14,7 @@ module Prism
   EM.run do
     puts "Gathering state"
     PrismRedis.new do |redis|
-      redis.del("worlds:running")
-      redis.del("workers:running")
+      %w[worlds:running worlds:busy workers:running workers:busy].each{|key| redis.del key }
       op = redis.del("workers:sleeping")
       op.callback do
         Worker.all.each do |worker|
