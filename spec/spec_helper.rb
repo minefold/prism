@@ -27,11 +27,11 @@ Spork.each_run do
   require 'prism/back'
   Dir[File.join File.dirname(__FILE__), "support/**/*.rb"].each {|f| require f}
   
-  # module Debugger
-  #   def debug *args; end
-  #   def info *args; end
-  #   def error *args; end
-  # end
+  module Debugger
+    def debug *args; end
+    def info *args; end
+    def error *args; end
+  end
   
   RSpec.configure do  |c|
     c.before(:each) { EM::FakeRedis.reset }

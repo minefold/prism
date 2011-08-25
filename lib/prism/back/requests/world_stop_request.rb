@@ -17,7 +17,7 @@ module Prism
       info "stopped world"
       redis.hdel "worlds:running", world_id
       redis.del "worlds:#{world_id}:connected_players" do
-        redis.publish "worlds:requests:stop:#{world_id}"
+        redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
       end
     end
     
