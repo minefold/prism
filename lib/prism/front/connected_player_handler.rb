@@ -36,6 +36,7 @@ module Prism
     end
     
     def exit
+      @server.close_connection_after_writing
       if @credit_muncher
         debug "stopping credit muncher"
         @credit_muncher.cancel 

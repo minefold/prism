@@ -50,9 +50,7 @@ module Prism
         context "requested world is stopping" do
           before {
             world_stopping 'world1'
-            puts "----"
             process_json username:"whatupdave", user_id:"user1", world_id:"world1"
-            puts "----"
           }
 
           it "should subscribe to world stop" do
