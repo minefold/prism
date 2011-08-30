@@ -1,10 +1,10 @@
 module Prism
   class DeferredOperationRequest < Request
     def run
-      op = redis.hset_hash *busy_hash
+      op = Prism.redis.hset_hash *busy_hash
       op.callback do 
         deferred_operation do
-          redis.hdel *busy_hash[0..1]
+          Prism.redis.hdel *busy_hash[0..1]
         end
       end
     end

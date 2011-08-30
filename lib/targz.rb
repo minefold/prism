@@ -14,23 +14,11 @@ class TarGz
   class Base
     attr_reader :options
     def initialize options = {}
-      @options = { sudo:false }.merge(options)
-    end
-    
-    def sudo_cmd
-      ENV['rvm_version'] ? 'rvmsudo' : 'sudo'
-    end
-
-    def sudo cmd
-      `#{sudo_cmd} #{cmd}`
+      @options = options
     end
     
     def run_command cmd
-      if options[:sudo]
-        sudo cmd
-      else
-        `#{cmd}`
-      end
+      `#{cmd}`
     end
     
     def archive path, output_file, options = {}

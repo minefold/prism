@@ -19,10 +19,10 @@ module Prism
     
     def operation_succeeded worker
       info "worker:#{worker.instance_id} created"
-      op = redis.store_running_worker worker.instance_id, worker.public_ip_address, Time.now.utc
+      op = Prism.redis.store_running_worker worker.instance_id, worker.public_ip_address, Time.now.utc
       op.callback {
         debug "publish workers:requests:create:#{request_id}"
-        redis.publish_json "workers:requests:create:#{request_id}", instance_id:worker.instance_id, host:worker.public_ip_address
+        Prism.redis.publish_json "workers:requests:create:#{request_id}", instance_id:worker.instance_id, host:worker.public_ip_address
       }
     end
     

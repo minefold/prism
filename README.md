@@ -65,6 +65,10 @@ workers:not_responding
   instance can carry 5 * 1024 = 5120
   instance is available or will be available
 
-
+# todo
+  make sure each request won't double up (worker start, world start)
+  recover from failures to start world, worker
+  recover from timeouts
+  regularly sweep workers
     
     

@@ -15,9 +15,9 @@ module Prism
     
     def operation_succeeded world
       info "stopped world"
-      redis.hdel "worlds:running", world_id
-      redis.del "worlds:#{world_id}:connected_players" do
-        redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
+      Prism.redis.hdel "worlds:running", world_id
+      Prism.redis.del "worlds:#{world_id}:connected_players" do
+        Prism.redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
       end
     end
     

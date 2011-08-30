@@ -33,6 +33,12 @@ Spork.each_run do
     def error *args; end
   end
   
+  module Prism
+    def self.redis
+      PrismRedis.new
+    end
+  end
+  
   RSpec.configure do  |c|
     c.before(:each) { EM::FakeRedis.reset }
   end

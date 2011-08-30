@@ -17,9 +17,9 @@ module Prism
     def operation_succeeded worker
       info "started stopped worker:#{instance_id}"
 
-      set = redis.store_running_worker instance_id, worker.public_ip_address, Time.now.utc
+      set = Prism.redis.store_running_worker instance_id, worker.public_ip_address, Time.now.utc
       set.callback {
-        redis.publish "workers:requests:start:#{instance_id}", worker.public_ip_address
+        Prism.redis.publish "workers:requests:start:#{instance_id}", worker.public_ip_address
       }
     end
     

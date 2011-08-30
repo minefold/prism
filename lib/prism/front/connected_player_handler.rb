@@ -31,7 +31,7 @@ module Prism
       
       debug "starting credit muncher"
       @credit_muncher = EventMachine::PeriodicTimer.new(60) do
-        PrismRedis.new{|redis| redis.lpush "players:minute_played", {username:username, timestamp:Time.now.utc}.to_json }
+        Prism.redis.lpush "players:minute_played", {username:username, timestamp:Time.now.utc}.to_json
       end
     end
     
@@ -41,7 +41,7 @@ module Prism
         debug "stopping credit muncher"
         @credit_muncher.cancel 
       end
-      PrismRedis.new {|redis| redis.lpush "players:disconnection_request", username }
+      Prism.redis.lpush "players:disconnection_request", username
     end
     
     def receive_data data

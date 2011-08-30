@@ -5,16 +5,6 @@ module Prism
     def redis_connect &blk
       PrismRedis.new &blk
     end
-
-    def redis_subscribe_json channel, &blk
-      PrismRedis.new do |subscriber|
-        subscriber.subscribe channel
-        subscriber.on :message do |channel, response|
-          subscriber.unsubscribe channel
-          yield JSON.parse(response)
-        end
-      end
-    end
   end
   
   class PrismRedis
@@ -24,7 +14,8 @@ module Prism
     def initialize &blk
       @redis = EM::Hiredis.connect(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
       @redis.errback {|e| error "failed to connect to redis: #{e}" }
-      @redis.callback { blk.call(self) }
+      @redis.callback { blk.call(self) } if blk
+      @redis
     end
     
     def store_running_worker instance_id, host, started_at
@@ -54,14 +45,10 @@ module Prism
       
       return unless block_given?
       
-      PrismRedis.new do |subscriber|
-        debug "subscribing #{channel}:#{request_key}"
-        subscriber.subscribe "#{channel}:#{request_key}"
-        subscriber.on :message do |channel, response|
-          debug "#{channel} > #{response}"
-          subscriber.unsubscribe channel
-          yield response
-        end
+      debug "subscribing #{channel}:#{request_key}"
+      subscribe_once "#{channel}:#{request_key}" do |response|
+        debug "#{channel} > #{response}"
+        yield response
       end
     end
     
@@ -69,6 +56,20 @@ module Prism
       rpc(channel, request_key, request_data) {|response| yield JSON.parse(response) }
     end
     
+    def subscribe_once channel, &blk
+      PrismRedis.new do |subscriber|
+        subscriber.subscribe channel
+        subscriber.on :message do |channel, response|
+          subscriber.cancel_subscription channel
+          yield response
+        end
+      end
+    end
+    
+    def subscribe_once_json channel, &blk
+      subscribe_once(channel) {|response| yield JSON.parse(response) }
+    end
+        
     def publish_json channel, hash
       publish channel, hash.to_json
     end
@@ -79,6 +80,11 @@ module Prism
     
     def handle_error e
       error "REDIS ERROR: #{e}"
+    end
+    
+    def cancel_subscription channel
+      op = unsubscribe channel
+      op.callback { redis.close_connection }
     end
   end
 end

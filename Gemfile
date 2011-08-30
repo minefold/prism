@@ -12,7 +12,7 @@ gem 'eventmachine', '1.0.0.beta3'
 gem 'rake'
 gem "hiredis", "~> 0.3.1"
 gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
-gem 'em-hiredis'
+gem 'em-hiredis', path:'~/code/em-hiredis'
 gem 'resque'
 gem 'resque-lock', require:'resque/plugins/lock'
 gem "resque-loner"

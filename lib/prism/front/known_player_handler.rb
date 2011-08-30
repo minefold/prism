@@ -14,14 +14,12 @@ module Prism
     
     def exit
       stop_keepalive
-      @subscription.unsubscribe "players:connection_request" if @subscription
+      @subscription.cancel_subscription "players:connection_request" if @subscription
     end
     
     def request_player_connection
-      PrismRedis.new do |redis|
-        @subscription = redis.rpc_json "players:connection_request", username do |connection|
-          new_handler ConnectedPlayerHandler, username, connection["host"], connection["port"] if connection_active
-        end
+      @subscription = Prism.redis.rpc_json "players:connection_request", username do |connection|
+        new_handler ConnectedPlayerHandler, username, connection["host"], connection["port"] if connection_active
       end
     end
     
