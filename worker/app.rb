@@ -31,11 +31,15 @@ end
 get "/worlds/:id/destroy" do
   content_type :json
   world = find_world(params[:id])
-  
-  Timeout::timeout(60) do
-    while world.backup_in_progress?
-      sleep 1
-    end  
+
+  begin
+    Timeout::timeout(120) do
+      while world.backup_in_progress? do 
+        sleep 1
+      end
+    end
+  rescue Timeout::Error
+    world.cancel_backup
   end
 
   world.stop!

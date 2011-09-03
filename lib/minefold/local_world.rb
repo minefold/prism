@@ -193,6 +193,10 @@ class LocalWorld
   def backup_in_progress?
     File.exists? "#{ROOT}/backups/#{id}.tar.gz"
   end
+  
+  def cancel_backup
+    FileUtils.rm "#{ROOT}/backups/#{id}.tar.gz"
+  end
 
   def backup!
     puts "Starting backup"
