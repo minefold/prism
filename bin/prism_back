@@ -56,6 +56,6 @@ module Prism
   
     puts "Started. #{Fold.env} mode"
     
-    # EM.add_periodic_timer(1) { puts EM.connection_count }
+    # EM.add_periodic_timer(1) { puts "." }
   end
 end

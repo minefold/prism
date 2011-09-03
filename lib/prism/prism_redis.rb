@@ -84,7 +84,10 @@ module Prism
     
     def cancel_subscription channel
       op = unsubscribe channel
-      op.callback { redis.close_connection }
+      op.callback { 
+        puts "closing redis connection"
+        redis.close_connection 
+      }
     end
   end
 end

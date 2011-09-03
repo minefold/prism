@@ -1,8 +1,8 @@
 source :rubygems
 
-gem 'god', git:'https://github.com/snappycode/god'
+gem 'god', git:'https://github.com/whatupdave/god'
 gem 'file-tail', :require => 'file/tail'
-gem 'fog', git:'https://github.com/snappycode/fog'
+gem 'fog', git:'https://github.com/whatupdave/fog'
 gem 'httparty'
 gem 'mongo'
 gem 'bson_ext'
@@ -12,7 +12,7 @@ gem 'eventmachine', '1.0.0.beta3'
 gem 'rake'
 gem "hiredis", "~> 0.3.1"
 gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
-gem 'em-hiredis', path:'~/code/em-hiredis'
+gem 'em-hiredis', git:'https://github.com/whatupdave/em-hiredis'
 gem 'resque'
 gem 'resque-lock', require:'resque/plugins/lock'
 gem "resque-loner"

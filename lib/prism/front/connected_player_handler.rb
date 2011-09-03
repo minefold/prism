@@ -31,6 +31,7 @@ module Prism
       
       debug "starting credit muncher"
       @credit_muncher = EventMachine::PeriodicTimer.new(60) do
+        debug "recording minute played"
         Prism.redis.lpush "players:minute_played", {username:username, timestamp:Time.now.utc}.to_json
       end
     end

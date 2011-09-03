@@ -14,7 +14,7 @@ module Prism
     
     def exit
       stop_keepalive
-      @subscription.cancel_subscription "players:connection_request" if @subscription
+      @subscription.cancel_subscription "players:connection_request"
     end
     
     def request_player_connection

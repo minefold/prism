@@ -1,5 +1,12 @@
 GIT
-  remote: https://github.com/snappycode/fog
+  remote: https://github.com/whatupdave/em-hiredis
+  revision: c83971568204fc06659866ce82b6a54d3626a2ca
+  specs:
+    em-hiredis (0.1.0)
+      hiredis (~> 0.3.0)
+
+GIT
+  remote: https://github.com/whatupdave/fog
   revision: 940c3cbc7b7c16a3c0ca4e77a76033258ca4654a
   specs:
     fog (0.10.0)
@@ -14,16 +21,10 @@ GIT
       ruby-hmac
 
 GIT
-  remote: https://github.com/snappycode/god
+  remote: https://github.com/whatupdave/god
   revision: 95a7fc083d46c49f1a4189fad9a1e7c72343dee1
   specs:
     god (0.11.0)
-
-PATH
-  remote: ~/code/em-hiredis
-  specs:
-    em-hiredis (0.1.0)
-      hiredis (~> 0.3.0)
 
 GEM
   remote: http://rubygems.org/
@@ -54,7 +55,7 @@ GEM
     foreman (0.19.0)
       term-ansicolor (~> 1.0.5)
       thor (>= 0.13.6)
-    formatador (0.2.0)
+    formatador (0.2.1)
     hirb (0.4.5)
     hiredis (0.3.1)
     httparty (0.7.8)

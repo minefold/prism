@@ -70,5 +70,3 @@ workers:not_responding
   recover from failures to start world, worker
   recover from timeouts
   regularly sweep workers
-    
-    

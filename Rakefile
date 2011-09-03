@@ -38,7 +38,7 @@ task "redis:state" do
      puts
   end
   
-  ["players:minute_played", "players:requesting_connection", "players:disconnecting"].each do |list|
+  ["players:minute_played", "players:requesting_connection", "players:disconnection_request"].each do |list|
     length = redis.llen list
     puts list
     p redis.lrange(list, 0, length)
