@@ -190,6 +190,9 @@ class LocalWorld
     while state == :running; end
   end
 
+  def backup_in_progress?
+    File.exists? "#{ROOT}/backups/#{id}.tar.gz"
+  end
 
   def backup!
     puts "Starting backup"
