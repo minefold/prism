@@ -5,6 +5,10 @@ module Prism
     let(:request) { PlayerDisconnectionEvent.new }
     let(:redis) { EM::FakeRedis }
     
+    before do
+      PrismRedis.redis_factory = proc { EM::FakeRedis.new }
+    end
+    
     specify { PlayerDisconnectionEvent.queue.should == "players:disconnection_request" }
     
     context "on process disconnection" do
@@ -16,6 +20,7 @@ module Prism
           
           request.process "whatupdave" 
         }
+        
         
         it "should request to stop world" do
           redis.internal_lists["worlds:requests:stop"].should include({instance_id:"i-1234", world_id:"world1"}.to_json)

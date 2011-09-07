@@ -33,7 +33,7 @@ get "/worlds/:id/destroy" do
   world = find_world(params[:id])
 
   begin
-    Timeout::timeout(120) do
+    Timeout::timeout(5 * 60) do
       while world.backup_in_progress? do 
         sleep 1
       end

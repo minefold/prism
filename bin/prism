@@ -11,22 +11,17 @@ STDOUT.sync = true
 EM.epoll
 
 module Prism
-  def self.redis
-    @redis ||= PrismRedis.new
-  end
-  
   EM.run do
     puts "Initialising"
-    Prism.redis.callback do
-      op = Prism.redis.keys("worlds:*:connected_players")
-      op.callback {|key| redis.del key }
-  
-      redis.del("players:playing") do
-        redis.del("prism:active_connections") do
+    redis = Prism.redis
+    op = redis.keys("worlds:*:connected_players")
+    op.callback {|key| redis.del key }
 
-          EM.start_server '0.0.0.0', 25565, Client
-          puts "#{Fold.env} mode. listening on 0.0.0.0:25565"
-        end
+    redis.del("players:playing") do
+      redis.del("prism:active_connections") do
+
+        EM.start_server '0.0.0.0', 25565, Client
+        puts "#{Fold.env} mode. listening on 0.0.0.0:25565"
       end
     end
     

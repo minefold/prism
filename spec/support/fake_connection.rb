@@ -1,12 +1,4 @@
 module EM
-  def self.connect host, port, handler, *args
-    FakeConnection.new handler, *args
-  end
-  
-  def self.enable_proxy from, to
-    
-  end
-  
   class FakeConnection
     attr_reader :connection_open
 

@@ -9,19 +9,20 @@ module Prism
       @username = username
       
       start_keepalive
+      @subscription = Prism::Redis.subscribe_once_json("players:connection_request:#{username}") do |connection|
+        puts "  subscription callback"
+        new_handler ConnectedPlayerHandler, username, connection["host"], connection["port"] if connection_active
+      end
       request_player_connection
     end
     
     def exit
       stop_keepalive
-      @subscription.cancel_subscription "players:connection_request"
+      @subscription.cancel
     end
     
     def request_player_connection
-      @subscription = Prism.redis.rpc_json "players:connection_request", username do |connection|
-        new_handler ConnectedPlayerHandler, username, connection["host"], connection["port"] if connection_active
-      end
+      Prism.redis.lpush "players:connection_request", username
     end
-    
   end
 end

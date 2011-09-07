@@ -7,6 +7,7 @@ module Prism
     let(:user_oid) { BSON::ObjectId.new }
     
     before {
+      PrismRedis.redis_factory = proc { EM::FakeRedis.new }
       redis.internal_hashes['usernames'] = {'whatupdave' => "#{user_oid}"}
       stub(request).mongo_connect.returns(@mongo = Object.new)
       stub(@mongo).collection('users').returns(@users = Object.new)

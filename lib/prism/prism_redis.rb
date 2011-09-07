@@ -1,20 +1,73 @@
+# encoding: UTF-8
+
 module Prism
-  module Redis
-    extend Debugger
-    
-    def redis_connect &blk
-      PrismRedis.new &blk
+  class << self
+    attr_writer :redis
+    def redis
+      @redis ||= PrismRedis.connect
     end
+    
+    attr_writer :redis_factory
+    def hiredis_connect
+      @redis_factory ? @redis_factory.call : EM::Hiredis.connect(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
+    end
+  end
+  
+  module Redis
+    def self.subscribe_once channel, &blk
+      RedisOneShotSubscription.new Prism.hiredis_connect, channel, &blk
+    end
+    
+    def self.subscribe_once_json channel, &blk
+      RedisOneShotSubscription.new(Prism.hiredis_connect, channel) { |message| blk.call JSON.parse message }
+    end
+  end
+  
+  class RedisOneShotSubscription
+    include Debugger
+    
+    attr_reader :connection, :channel
+    
+    def initialize connection, channel, &blk
+      @connection, @channel = connection, channel
+      @connection.errback {|e| error "failed to connect to redis: #{e}" }
+
+      debug "√ #{hex(connection.object_id)}:#{channel}"
+      @connection.subscribe channel
+      @connection.on :message do |channel, response|
+        unless @cancelled
+          cancel
+          debug "• #{hex(connection.object_id)}:#{channel} > #{response}"
+          blk.call response
+        end
+      end
+    end
+    
+    def cancel
+      @cancelled = true
+      debug "× #{hex(connection.object_id)}:#{channel}"
+      op = connection.unsubscribe channel
+      op.callback { connection.close_connection }
+    end
+    
+    def hex num
+      "0x%02X" % num
+    end
+    
   end
   
   class PrismRedis
     include Debugger
     
     attr_reader :redis
-    def initialize &blk
-      @redis = EM::Hiredis.connect(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
+    
+    def self.connect
+      new Prism.hiredis_connect
+    end
+    
+    def initialize connection
+      @redis = connection
       @redis.errback {|e| error "failed to connect to redis: #{e}" }
-      @redis.callback { blk.call(self) } if blk
       @redis
     end
     
@@ -38,38 +91,6 @@ module Prism
       op
     end
     
-    def rpc channel, request_key, data = nil, &blk
-      data ||= request_key
-      
-      lpush channel, data
-      
-      return unless block_given?
-      
-      debug "subscribing #{channel}:#{request_key}"
-      subscribe_once "#{channel}:#{request_key}" do |response|
-        debug "#{channel} > #{response}"
-        yield response
-      end
-    end
-    
-    def rpc_json channel, request_key, request_data = nil, &blk
-      rpc(channel, request_key, request_data) {|response| yield JSON.parse(response) }
-    end
-    
-    def subscribe_once channel, &blk
-      PrismRedis.new do |subscriber|
-        subscriber.subscribe channel
-        subscriber.on :message do |channel, response|
-          subscriber.cancel_subscription channel
-          yield response
-        end
-      end
-    end
-    
-    def subscribe_once_json channel, &blk
-      subscribe_once(channel) {|response| yield JSON.parse(response) }
-    end
-        
     def publish_json channel, hash
       publish channel, hash.to_json
     end
@@ -82,12 +103,6 @@ module Prism
       error "REDIS ERROR: #{e}"
     end
     
-    def cancel_subscription channel
-      op = unsubscribe channel
-      op.callback { 
-        puts "closing redis connection"
-        redis.close_connection 
-      }
-    end
+    
   end
 end

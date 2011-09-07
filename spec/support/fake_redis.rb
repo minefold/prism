@@ -1,12 +1,4 @@
 module EM
-  module Hiredis
-    def self.connect url
-      FakeRedis.new
-    end
-  end
-  
-  
-  
   class FakeRedis
     class << self
       attr_accessor :internal_lists, :internal_sets, :internal_subscriptions, :internal_published, :internal_hashes
@@ -32,7 +24,7 @@ module EM
     def internal_subscriptions; self.class.internal_subscriptions; end
     def internal_published; self.class.internal_published; end
     
-    def callback
+    def callback &blk
       yield self
     end
     
@@ -90,6 +82,10 @@ module EM
     
     def subscribe channel
       @active_subscription_channel = channel
+    end
+    
+    def unsubscribe channel
+      @active_subscription_channel = nil
     end
     
     def on event, &blk

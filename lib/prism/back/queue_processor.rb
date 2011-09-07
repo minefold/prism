@@ -10,7 +10,8 @@ module Prism
     
     def start_processing
       debug "processing #{@queue}"
-      @redis = PrismRedis.new {|redis| listen }
+      @redis = PrismRedis.connect
+      listen
     end
     
     def listen

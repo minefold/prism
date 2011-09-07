@@ -28,20 +28,16 @@ Spork.each_run do
   Dir[File.join File.dirname(__FILE__), "support/**/*.rb"].each {|f| require f}
   
   module Debugger
-    def debug *args; end
+    # def debug *args; end
     def info *args; end
     def error *args; end
   end
   
-  module Prism
-    def self.redis
-      PrismRedis.new
+  RSpec.configure do  |c|
+    c.before(:each) do 
+      Prism.redis = nil 
+      EM::FakeRedis.reset
     end
   end
-  
-  RSpec.configure do  |c|
-    c.before(:each) { EM::FakeRedis.reset }
-  end
-  
 end
 

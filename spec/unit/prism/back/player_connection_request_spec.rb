@@ -8,6 +8,7 @@ module Prism
     specify { PlayerConnectionRequest.queue.should == "players:connection_request" }
     
     before {
+      PrismRedis.redis_factory = proc { EM::FakeRedis.new }
       stub(request).mongo_connect.returns(@mongo = Object.new)
       stub(@mongo).collection('users').returns(@users = Object.new)
     }

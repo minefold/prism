@@ -11,51 +11,57 @@ STDOUT.sync = true
 EM.epoll
 
 module Prism
-  def self.redis
-    @redis ||= PrismRedis.new
-  end
-  
   EM.run do
     puts "Gathering state"
-    Prism.redis.callback do
-      %w[worlds:running worlds:busy workers:running workers:busy].each{|key| redis.del key }
-      op = Prism.redis.del("workers:sleeping")
-      op.callback do
-        Worker.all.each do |worker|
-          if worker.running?
-            if worker.responding?
-              puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} worlds:#{worker.worlds.size}"
-              Prism.redis.store_running_worker worker.instance_id, worker.public_ip_address, worker.started_at
-              worlds = worker.worlds
-              worlds.each do |world|
-                puts "  #{world.id} > #{worker.public_ip_address}:#{world.port}"
-              
-                Prism.redis.store_running_world worker.instance_id, world.id, worker.public_ip_address, world.port
-              end
-            else
-              puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} <not responding>"
+    redis = Prism.redis
+    %w[players:connection_request
+       players:disconnection_request
+       players:minute_played
+       players:world_request
+       worlds:requests:start
+       worlds:requests:stop
+       worlds:running 
+       worlds:busy 
+       workers:requests:start
+       workers:requests:create
+       workers:running 
+       workers:busy].each{|key| redis.del key }
+    op = redis.del("workers:sleeping")
+    op.callback do
+      Worker.all.each do |worker|
+        if worker.running?
+          if worker.responding?
+            puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} worlds:#{worker.worlds.size}"
+            redis.store_running_worker worker.instance_id, worker.public_ip_address, worker.started_at
+            worlds = worker.worlds
+            worlds.each do |world|
+              puts "  #{world.id} > #{worker.public_ip_address}:#{world.port}"
+            
+              redis.store_running_world worker.instance_id, world.id, worker.public_ip_address, world.port
             end
           else
-            puts "worker:#{worker.instance_id} sleeping"
-            Prism.redis.sadd "workers:sleeping", worker.instance_id
+            puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} <not responding>"
           end
+        else
+          puts "worker:#{worker.instance_id} sleeping"
+          redis.sadd "workers:sleeping", worker.instance_id
         end
       end
+      puts "Ready"
+
+      [ PlayerConnectionRequest, 
+        PlayerDisconnectionEvent, 
+        PlayerMinutePlayedEvent, 
+        PlayerWorldRequest, 
+        WorldStartRequest,
+        WorldStopRequest,
+        WorkerStartRequest, 
+        WorkerCreateRequest].each do |klass|
+          QueueProcessor.new klass
+      end
+
+      puts "Started. #{Fold.env} mode"
     end
-    
-    [ PlayerConnectionRequest, 
-      PlayerDisconnectionEvent, 
-      PlayerMinutePlayedEvent, 
-      PlayerWorldRequest, 
-      WorldStartRequest,
-      WorldStopRequest,
-      WorkerStartRequest, 
-      WorkerCreateRequest].each do |klass|
-        QueueProcessor.new klass
-    end
-  
-    puts "Started. #{Fold.env} mode"
-    
-    # EM.add_periodic_timer(1) { puts "." }
   end
+  # EM.add_periodic_timer(1) { puts "." }
 end

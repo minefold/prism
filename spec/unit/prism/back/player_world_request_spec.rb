@@ -25,6 +25,10 @@ module Prism
   describe PlayerWorldRequest do
     let(:redis) { EM::FakeRedis }
   
+    before do
+      PrismRedis.redis_factory = proc { EM::FakeRedis.new }
+    end
+  
     context "player connects" do
       let(:request) { PlayerWorldRequest.new }
       

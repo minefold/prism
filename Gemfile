@@ -37,6 +37,7 @@ group :test do
   gem 'timecop', '~> 0.3.5'
   gem "virtualbox"
   gem "ZenTest", "~> 4.4.2"
+  gem 'em-spec', git:'https://github.com/joshbuddy/em-spec.git', require:'em-spec/rspec'
 end
 
 group :chatty do
