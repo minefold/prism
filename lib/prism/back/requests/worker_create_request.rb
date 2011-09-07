@@ -4,15 +4,12 @@ module Prism
     
     process "workers:requests:create", :request_id
     
-    def before_operation
-      @instance_type = 'm1.large'
-    end
-    
     def busy_hash
       ["workers:busy", request_id, state:'creating']
     end
     
     def perform_operation
+      @instance_type = 'm1.large'
       info "creating new worker type:#{instance_type} req:#{request_id}"
       Worker.create flavor_id:instance_type
     end
