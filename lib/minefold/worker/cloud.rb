@@ -57,6 +57,7 @@ module Worker
 
     def stop!
       server.stop
+      self
     end
 
     def terminate!

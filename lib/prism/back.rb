@@ -6,6 +6,7 @@ require 'prism/back/request'
 require 'prism/back/deferred_operation_request'
 require 'prism/back/credit_muncher'
 require 'prism/back/chat_messaging'
+require 'prism/back/sweeper'
 
 Dir[File.expand_path('../back/requests/*.rb', __FILE__)].each { |f| require f }
 Dir[File.expand_path('../back/events/*.rb', __FILE__)].each { |f| require f }
