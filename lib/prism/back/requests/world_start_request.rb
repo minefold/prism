@@ -18,7 +18,7 @@ module Prism
       op = Prism.redis.store_running_world instance_id, world_id, @worker.public_ip_address, world.port
       op.callback {
         debug "publishing worlds:requests:start:#{world_id}"
-        Prism.redis.publish "worlds:requests:start:#{world_id}", { host:@worker.public_ip_address, port:world.port }.to_json
+        Prism.redis.publish_json "worlds:requests:start:#{world_id}", host:@worker.public_ip_address, port:world.port
       }
     end
     

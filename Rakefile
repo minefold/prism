@@ -1,11 +1,13 @@
 require 'bundler/setup'
-Bundler
-
-$:.unshift File.join File.dirname(__FILE__), 'lib'
+Bundler.require :default
 require 'rake'
 require 'rake/clean'
 
 CLEAN.add 'tmp'
+
+$:.unshift File.join File.dirname(__FILE__), 'lib'
+require 'minefold'
+Dir[File.expand_path('../lib/tasks/*.rb', __FILE__)].each { |f| require f }
 
 # RSpec
 begin
@@ -27,23 +29,9 @@ rescue LoadError
   # no rspec
 end
 
-task "redis:state" do
-  redis = Redis.new
-  ["players:playing",
-   "prism:active_connections",
-   "worlds:running", "worlds:busy",
-   "workers:running", "workers:busy"].each do |hash|
-     puts hash
-     p redis.hgetall(hash)
-     puts
-  end
-  
-  ["players:minute_played", "players:requesting_connection", "players:disconnection_request"].each do |list|
-    length = redis.llen list
-    puts list
-    p redis.lrange(list, 0, length)
-    puts
-  end
+def redis_connect
+  uri = URI.parse(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
+  Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
 end
 
 require 'resque'
@@ -55,8 +43,7 @@ task "resque:setup" do
   require 'minefold'
 
   if REDISTOGO_URL
-    uri = URI.parse(REDISTOGO_URL)
-    Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
+    Resque.redis = redis_connect
   end
 end
 

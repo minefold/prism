@@ -48,6 +48,15 @@ module Prism
         end
       end
       puts "Ready"
+      
+      subscription = PrismRedis.connect
+      subscription.psubscribe "worlds:requests:*"
+      subscription.psubscribe "workers:requests:*"
+      subscription.on :pmessage do |key, channel, message|
+        puts " • [#{channel}] #{message}"
+
+        Prism::Messaging.deliver_message channel, message
+      end
 
       [ PlayerConnectionRequest, 
         PlayerDisconnectionEvent, 

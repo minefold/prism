@@ -1,5 +1,7 @@
 module Prism
   class PlayerWorldRequest < Request
+    include Messaging
+    
     process "players:world_request", :username, :user_id, :world_id
     
     def run
@@ -28,13 +30,13 @@ module Prism
     def start_busy_world busy_world
       if busy_world['state'].include? 'starting'
         debug "world:#{world_id} start already requested"
-        Prism::Redis.subscribe_once_json "worlds:requests:start:#{world_id}" do |world|
+        listen_once_json "worlds:requests:start:#{world_id}" do |world|
           connect_player_to_world world['host'], world['port']
         end
       else
         debug "world:#{world_id} is stopping. will request start when stopped"
         Prism.redis.hset_hash "worlds:busy", world_id, state:'stopping => starting'
-        Prism::Redis.subscribe_once_json "worlds:requests:stop:#{world_id}" do
+        listen_once "worlds:requests:stop:#{world_id}" do
           debug "world:#{world_id} stopped. Requesting restart"
           start_world
         end
@@ -80,7 +82,7 @@ module Prism
         min_heap_size:512, max_heap_size:2048 
       }.to_json 
       
-      Prism::Redis.subscribe_once_json "worlds:requests:start:#{world_id}" do |world|
+      listen_once_json "worlds:requests:start:#{world_id}" do |world|
           connect_player_to_world world["host"], world["port"]
       end
     end
@@ -89,7 +91,7 @@ module Prism
       debug "starting world:#{world_id} on sleeping worker:#{instance_id}"
       
       Prism.redis.lpush "workers:requests:start", instance_id
-      Prism::Redis.subscribe_once "workers:requests:start:#{instance_id}" do
+      listen_once "workers:requests:start:#{instance_id}" do
         debug "started sleeping worker:#{instance_id}"
         
         start_world_on_running_worker instance_id
@@ -100,14 +102,15 @@ module Prism
       request_id = `uuidgen`.strip
       debug "starting world:#{world_id} on new worker"
       Prism.redis.lpush "workers:requests:create", request_id
-      Prism::Redis.subscribe_once_json "workers:requests:create:#{request_id}" do |worker|
+      listen_once_json "workers:requests:create:#{request_id}" do |worker|
         start_world_on_running_worker worker['instance_id']
       end
     end
     
     def connect_player_to_world host, port
+      puts "connecting to #{host}:#{port}"
       Prism.redis.hset "players:playing", username, world_id
-      Prism.redis.publish "players:connection_request:#{username}", {host:host, port:port}.to_json
+      Prism.redis.publish_json "players:connection_request:#{username}", host:host, port:port
     end
     
   end

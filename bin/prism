@@ -14,6 +14,16 @@ module Prism
   EM.run do
     puts "Initialising"
     redis = Prism.redis
+    
+    subscription = PrismRedis.connect
+    subscription.psubscribe "players:connection_request:*"
+    subscription.on :pmessage do |key, channel, message|
+      puts " • [#{channel}] #{message}"
+      
+      Prism::Messaging.deliver_message channel, message
+    end
+
+    
     op = redis.keys("worlds:*:connected_players")
     op.callback {|key| redis.del key }
 

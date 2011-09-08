@@ -17,6 +17,7 @@ gem 'resque'
 gem 'resque-lock', require:'resque/plugins/lock'
 gem "resque-loner"
 gem "em-mongo"
+gem 'hirb'
 
 group :worker do
   gem 'sinatra'
@@ -28,7 +29,6 @@ group :test do
   gem "autotest-fsevent"
   gem "autotest-growl"
   gem 'foreman'
-  gem 'hirb'
   gem 'launchy'
   gem 'rr', '~> 1.0.3'
   gem 'rspec', '~> 2.6.0'
