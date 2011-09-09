@@ -19,7 +19,6 @@ module Prism
     redis = Prism.redis
     %w[players:connection_request
        players:disconnection_request
-       players:minute_played
        players:world_request
        worlds:requests:start
        worlds:requests:stop

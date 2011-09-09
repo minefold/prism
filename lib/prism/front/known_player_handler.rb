@@ -26,7 +26,7 @@ module Prism
     end
         
     def request_player_connection
-      Prism.redis.lpush "players:connection_request", username
+      redis.lpush "players:connection_request", username
     end
   end
 end

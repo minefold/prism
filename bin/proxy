@@ -256,7 +256,7 @@ module Client
       10 => "You have 10 minutes remaining",
       5  => "You have 5 minutes remaining!",
       1  => "You have 1 minute remaining!"
-    }
+    }.freeze
     
     if message = messages[amount]
       send_delayed_message 0.1, message

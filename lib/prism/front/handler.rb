@@ -2,7 +2,7 @@ module Prism
   class Handler
     include Debugger
     
-    attr_reader :connection, :buffered_data, :connection_active
+    attr_reader :connection, :buffered_data, :connection_active, :redis
 
     def init; end
     def exit; end
@@ -11,6 +11,7 @@ module Prism
     def initialize connection, *args
       @connection = connection
       @connection_active = true
+      @redis = Prism.redis
       init *args
     end
     
