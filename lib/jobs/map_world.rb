@@ -85,6 +85,9 @@ module Job
           storage.world_tiles.files.create key:remote_file_path, body:File.open(file), public:true
         end
         
+        worlds = MinefoldDb.connection['worlds']
+        worlds.update({'_id' => BSON::ObjectId(world_id)}, {"$set" => { "last_mapped_at" => Time.now }})
+        
         puts "mapping completed"
       end
     end
