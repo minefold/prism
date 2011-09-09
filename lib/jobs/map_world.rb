@@ -86,7 +86,7 @@ module Job
         end
         
         worlds = MinefoldDb.connection['worlds']
-        worlds.update({'_id' => BSON::ObjectId(world_id)}, {"$set" => { "last_mapped_at" => Time.now }})
+        worlds.update({'_id' => BSON::ObjectId(world_id)}, {"$set" => { "last_mapped_at" => Time.now.utc }})
         
         puts "mapping completed"
       end

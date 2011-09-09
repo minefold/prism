@@ -11,7 +11,7 @@ module Prism
           mongo_connect.collection('users').find_and_modify({ 
               query: {"_id"  => BSON::ObjectId(user_id) },
               update:{
-                '$push' => {'credit_history' => { 'created_at' => Time.now.utc, 'delta' => -1 } },
+                '$push' => {'credit_events' => { 'created_at' => Time.now.utc, 'delta' => -1 } },
                 '$inc'  => {'credits' => -1, 'minutes_played' => 1 }
               }
             })
