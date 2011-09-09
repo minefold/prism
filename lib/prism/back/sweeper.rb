@@ -56,6 +56,7 @@ module Prism
             op.callback do |busy_world_data|
               busy_worlds = json_array_to_hash busy_world_data
               
+              
               workers.each do |instance_id, worker|
                 started_at = Time.parse worker['started_at']
                 uptime_minutes = ((Time.now - started_at) / 60).to_i

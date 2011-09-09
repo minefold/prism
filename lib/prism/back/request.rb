@@ -14,6 +14,8 @@ module Prism
       end
     end
     
+    def redis; Prism.redis; end
+    
     def process message
       parts = self.class.message_parts.size == 1 ? { self.class.message_parts.first => message } : JSON.parse(message)
       

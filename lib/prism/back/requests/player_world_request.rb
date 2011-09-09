@@ -1,11 +1,15 @@
 module Prism
   class PlayerWorldRequest < Request
     include Messaging
+    include ChatMessaging
     
-    process "players:world_request", :username, :user_id, :world_id
+    process "players:world_request", :username, :user_id, :world_id, :credits
+    
+    attr_reader :redis
     
     def run
-      Prism.redis.hget_json "worlds:busy", world_id do |busy_world|
+      @redis = Prism.redis
+      redis.hget_json "worlds:busy", world_id do |busy_world|
         if busy_world
           start_busy_world busy_world
         else
@@ -15,7 +19,7 @@ module Prism
     end
     
     def get_world_started
-      Prism.redis.hget_json "worlds:running", world_id do |world|
+      redis.hget_json "worlds:running", world_id do |world|
         if world
           debug "world:#{world_id} is already running"
           connect_player_to_world world['host'], world['port']
@@ -35,7 +39,7 @@ module Prism
         end
       else
         debug "world:#{world_id} is stopping. will request start when stopped"
-        Prism.redis.hset_hash "worlds:busy", world_id, state:'stopping => starting'
+        redis.hset_hash "worlds:busy", world_id, state:'stopping => starting'
         listen_once "worlds:requests:stop:#{world_id}" do
           debug "world:#{world_id} stopped. Requesting restart"
           start_world
@@ -47,7 +51,7 @@ module Prism
       debug "getting world:#{world_id} started"
       
       # any free workers?
-      resp = Prism.redis.hgetall "workers:running"
+      resp = redis.hgetall "workers:running"
       resp.callback do |workers|
         if workers.any?
           # [ "i-5678", {}, "i-6352", {}] etc
@@ -60,8 +64,8 @@ module Prism
           start_world_on_running_worker worker['instance_id']
         else
           
-          resp = Prism.redis.smembers "workers:sleeping"
-          resp.callback do |sleeping_workers|
+          op = redis.smembers "workers:sleeping"
+          op.callback do |sleeping_workers|
             debug "workers:sleeping #{sleeping_workers.size}"
             
             if sleeping_workers.any?
@@ -76,7 +80,7 @@ module Prism
     
     def start_world_on_running_worker instance_id
       debug "starting world:#{world_id} on running worker:#{instance_id}"
-      Prism.redis.lpush "worlds:requests:start", {
+      redis.lpush "worlds:requests:start", {
         instance_id:instance_id, 
         world_id:world_id, 
         min_heap_size:512, max_heap_size:2048 
@@ -90,7 +94,7 @@ module Prism
     def start_world_on_sleeping_worker instance_id
       debug "starting world:#{world_id} on sleeping worker:#{instance_id}"
       
-      Prism.redis.lpush "workers:requests:start", instance_id
+      redis.lpush "workers:requests:start", instance_id
       listen_once "workers:requests:start:#{instance_id}" do
         debug "started sleeping worker:#{instance_id}"
         
@@ -101,17 +105,24 @@ module Prism
     def start_world_on_new_worker
       request_id = `uuidgen`.strip
       debug "starting world:#{world_id} on new worker"
-      Prism.redis.lpush "workers:requests:create", request_id
+      redis.lpush "workers:requests:create", request_id
       listen_once_json "workers:requests:create:#{request_id}" do |worker|
         start_world_on_running_worker worker['instance_id']
       end
     end
     
-    def connect_player_to_world host, port
+    def connect_player_to_world  host, port
       puts "connecting to #{host}:#{port}"
-      Prism.redis.hset "players:playing", username, world_id
-      Prism.redis.publish_json "players:connection_request:#{username}", host:host, port:port
+      redis.hset "players:playing", username, world_id
+      redis.publish_json "players:connection_request:#{username}", host:host, port:port
+      
+      redis.sadd "worlds:#{world_id}:connected_players", username
+      op = redis.scard "worlds:#{world_id}:connected_players"
+      op.callback do |player_count|
+        send_delayed_message 7, "Hi #{username} welcome to minefold!"
+        send_delayed_message 13, "You have #{time_in_words credits} of play remaining"
+        send_delayed_message 17, "There #{player_count == 1 ? 'is' : 'are'} #{pluralize player_count, "player"} in this world"
+      end
     end
-    
   end
 end

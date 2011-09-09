@@ -48,6 +48,10 @@ module Prism
       op
     end
     
+    def lpush_hash list, value
+      redis.lpush list, value.to_json
+    end
+    
     def publish_json channel, hash
       publish channel, hash.to_json
     end

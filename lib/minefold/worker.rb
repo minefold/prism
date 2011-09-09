@@ -34,7 +34,7 @@ module Worker
     end
 
     def stop_world world_id
-      get "/worlds/#{world_id}/destroy"
+      get( "/worlds/#{world_id}/destroy", timeout:180
     end
     
     def responding?
