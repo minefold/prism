@@ -12,9 +12,13 @@ module Prism
       
       start_keepalive
       
-      listen_once_json "players:connection_request:#{username}" do |connection|
-        puts "  subscription callback"
-        new_handler ConnectedPlayerHandler, username, connection["host"], connection["port"] if connection_active
+      listen_once_json "players:connection_request:#{username}" do |response|
+        if connection_active and response['host']
+          new_handler ConnectedPlayerHandler, username, response["host"], response["port"]
+        else
+          connection.close_connection_after_writing
+          exit
+        end
       end
       
       request_player_connection

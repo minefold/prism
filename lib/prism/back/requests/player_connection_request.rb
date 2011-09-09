@@ -9,7 +9,11 @@ module Prism
 
       EM.defer(proc { mongo_connect.collection('users').find_one(:username => /#{username}/i) }, proc { |user|
         if user
-          recognised_player_connecting user
+          if user['credits'] > 0
+            recognised_player_connecting user
+          else
+            no_credit_player_connecting
+          end
         else
           unrecognised_player_connecting
         end
@@ -25,8 +29,13 @@ module Prism
     end
     
     def unrecognised_player_connecting
-      error "unrecognised"
-      redis.publish "players:connection_request:#{username}", nil
+      info "unrecognised"
+      redis.publish_json "players:connection_request:#{username}", {}
+    end
+    
+    def no_credit_player_connecting
+      info "user:#{username} has no credit"
+      redis.publish_json "players:connection_request:#{username}", {}
     end
   end
 end
