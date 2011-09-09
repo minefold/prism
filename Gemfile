@@ -18,6 +18,7 @@ gem 'resque-lock', require:'resque/plugins/lock'
 gem "resque-loner"
 gem "em-mongo"
 gem 'hirb'
+gem 'statsd-instrument', git:'https://github.com/Shopify/statsd-instrument.git'
 
 group :worker do
   gem 'sinatra'

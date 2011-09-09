@@ -30,12 +30,12 @@ module Prism
     
     def unrecognised_player_connecting
       info "unrecognised"
-      redis.publish_json "players:connection_request:#{username}", {}
+      redis.publish_json "players:connection_request:#{username}", rejected:'unrecognised_player'
     end
     
     def no_credit_player_connecting
       info "user:#{username} has no credit"
-      redis.publish_json "players:connection_request:#{username}", {}
+      redis.publish_json "players:connection_request:#{username}", rejected:'no_credit'
     end
   end
 end

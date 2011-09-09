@@ -30,6 +30,7 @@ module Prism
     def init username, host, port
       @server = EM.connect host, port, ServerConnection, connection, connection.buffered_data
       @username = username
+      @minecraft_session_started_at = Time.now
       
       debug "starting credit muncher"
       @credit_muncher = EventMachine::PeriodicTimer.new(60) do
@@ -38,6 +39,7 @@ module Prism
       end
       
       listen_once("players:disconnect:#{username}") { exit }
+      
     end
     
     def exit
@@ -47,6 +49,7 @@ module Prism
         @credit_muncher.cancel 
       end
       redis.lpush "players:disconnection_request", username
+      StatsD.measure_timer @minecraft_session_started_at, "sessions.minecraft"
     end
     
     def receive_data data

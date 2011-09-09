@@ -1,6 +1,7 @@
 require 'prism/prism_redis'
 require 'prism/prism_mongo'
 require 'prism/messaging'
+require 'prism/statsd_benchmarker'
 require 'prism/back/queue_processor'
 require 'prism/back/request'
 require 'prism/back/deferred_operation_request'

@@ -1,4 +1,10 @@
 GIT
+  remote: https://github.com/Shopify/statsd-instrument.git
+  revision: dc0e9b47a13df1c9dcd9942b24c17d9bc404a6c8
+  specs:
+    statsd-instrument (1.0.1)
+
+GIT
   remote: https://github.com/joshbuddy/em-spec.git
   revision: f74cbdc2c3b3e48200f1020a7dd2815f95d2faec
   specs:
@@ -185,6 +191,7 @@ DEPENDENCIES
   sinatra
   sinatra-reloader
   spork (~> 0.9.0.rc)
+  statsd-instrument!
   thin
   timecop (~> 0.3.5)
   virtualbox

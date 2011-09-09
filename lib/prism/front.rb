@@ -1,5 +1,6 @@
 require 'prism/prism_redis'
 require 'prism/messaging'
+require 'prism/statsd_benchmarker'
 require 'prism/front/handler'
 require 'prism/front/minecraft_keepalive'
 require 'prism/front/unknown_player_handler'

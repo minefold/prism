@@ -21,3 +21,5 @@ Storage.provider = Fog::Storage.new({
   :local_root    => "#{ROOT}/tmp/local_storage"
 })
 
+StatsD.logger = Logger.new(STDOUT)
+StatsD.mode = :development
