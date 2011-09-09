@@ -37,8 +37,9 @@ module Prism
         op.callback do |world_id|
           send_world_player_message world_id, username, message
           if credits_remaining == 1
-            EM.add_timer(1) { send_world_player_message world_id, username, "Top up your account at minefold.com" }
+            EM.add_timer(1)  { send_world_player_message world_id, username, "Top up your account at minefold.com" }
             EM.add_timer(40) { send_world_player_message world_id, username, "Thanks for playing!" }
+            EM.add_timer(60) { redis.publish "players:disconnect:#{username}", "no credit" }
           end
         end
       end

@@ -21,6 +21,8 @@ module Prism
   end
   
   class ConnectedPlayerHandler < Handler
+    include Messaging
+    
     attr_reader :username
     
     def log_tag; username; end
@@ -34,6 +36,8 @@ module Prism
         debug "recording minute played"
         redis.lpush_hash "players:minute_played", username:username, timestamp:Time.now.utc
       end
+      
+      listen_once("players:disconnect:#{username}") { exit }
     end
     
     def exit
