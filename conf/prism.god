@@ -4,7 +4,7 @@ fold_env = 'production'
 God.pid_file_directory = "#{ROOT}/tmp/pids"
 
 God.watch do |w|
-  w.name = "proxy"
+  w.name = "prism"
   w.interval = 5.seconds
 
   w.uid = 'ubuntu'

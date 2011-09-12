@@ -7,7 +7,7 @@ Bundler.require :default, :chatty
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'time'
-require 'em_pub_sub'
+require 'prism/prism_redis'
 
 STDOUT.sync = true
 
@@ -67,10 +67,9 @@ EM.run do
   input_channel = "world.#{world_id}.input"
   puts "[#{Fold.env}] online subscribed:#{input_channel} tailing:#{@local_world.server_log}"
   
-  @sub = EMPubSub.connect
-  @sub.subscribe(input_channel) do |type, channel, message|
-    @local_world.console_message "#{message}" if type == "message"
-  end
+  subscription = Prism::PrismRedis.connect
+  subscription.subscribe input_channel
+  subscription.on(:message) {|channel, message| @local_world.console_message message }
   
   EventMachine::file_tail(@local_world.server_log, LogReader) {|r| r.world_id = world_id }
   
