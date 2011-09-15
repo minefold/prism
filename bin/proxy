@@ -242,10 +242,15 @@ module Client
       
       info "connected. #{@user['credits']} credits remaining"
 
-      @keepalive = EventMachine::PeriodicTimer.new(5) do
-        send_data [0].pack('C')
+      @keepalive = EventMachine::PeriodicTimer.new(15) do
+        keepalive_packet = Prism::MinecraftPackets.create_server 0x00, keepalive_id:1337
+        send_data keepalive_packet
       end
       EM.next_tick { get_world_running }
+    elsif raw[0] == 0xFE
+      # server ping
+      send_data Prism::MinecraftPackets.create_server 0xFF, reason:'Minefold§555§1337'
+      close_connection_after_writing
     end
     
     # TODO: We need to check their auth details when they send it over the
