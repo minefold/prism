@@ -8,7 +8,7 @@ JAR = "#{WORLDS}/server.jar"
 PIDS = "#{ROOT}/tmp/pids"
 
 # TODO: put these somewhere more secure
-WORKER_GIT_REPO="git@github.com:snappycode/minefold.git"
+WORKER_GIT_REPO="git@github.com:whatupdave/minefold.git"
 EC2_SECRET_KEY="4VI8OqUBN6LSDP6cAWXUo0FM1L/uURRGIGyQCxvq"
 EC2_ACCESS_KEY="AKIAJPN5IJVEBB2QE35A"
 MONGOHQ_URL="mongodb://heroku:15a8f355615361aeda458c6d887aada2@staff.mongohq.com:10023/app650862"
