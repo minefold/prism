@@ -14,7 +14,6 @@ module Prism
     
     def operation_succeeded world
       info "world:#{world_id} started on worker:#{instance_id}"
-    
       op = Prism.redis.store_running_world instance_id, world_id, @worker.public_ip_address, world.port
       op.callback {
         debug "publishing worlds:requests:start:#{world_id}"

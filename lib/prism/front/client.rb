@@ -6,7 +6,7 @@ module Prism
         
     def post_init
       @buffered_data = ""
-      set_handler UnknownPlayerHandler
+      set_handler UnknownConnectionHandler
     end
     
     def set_handler klass, *args
