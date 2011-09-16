@@ -1,6 +1,8 @@
 require 'fileutils'
 require 'targz'
 
+WORLD_OPS = %W(chrislloyd whatupdave)
+
 class LocalWorld
   class << self
     include GodHelpers
@@ -97,6 +99,9 @@ class LocalWorld
 
       # create server.properties
       File.open(properties_path, 'w') {|file| file.puts server_properties(world, port) }
+
+      # create ops.txt
+      File.open("#{world_path}/ops.txt", 'w') {|file| file.puts WORLD_OPS.join("\n") }
 
       # create world.god
       template = ERB.new File.read "#{LIB}/world.god.erb"
