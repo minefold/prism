@@ -27,6 +27,7 @@ module Prism
             end
           else
             puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} <not responding>"
+            
           end
         else
           puts "worker:#{worker.instance_id} sleeping"

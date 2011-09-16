@@ -39,7 +39,7 @@ module Prism
       end
       
       listen_once("players:disconnect:#{username}") { exit }
-      
+      Resque.push 'high', class: 'PlayerConnectedJob', args: [username, Time.now.utc]
     end
     
     def exit
