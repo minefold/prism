@@ -34,8 +34,10 @@ class LocalWorld
         "allow-nether"     => true,
         "level-name"       => world['_id'].to_s,
         "level-seed"       => world['seed'].to_s,
-        "max-players"      => 255,
+        "max-players"      => 1000,
         "online-mode"      => true,
+        "difficulty"       => world['difficulty'],
+        "gamemode"         => world['game_mode']
         "pvp"              => world['pvp'].to_s,
         "server-ip"        => "0.0.0.0",
         "server-port"      => port,
@@ -198,7 +200,7 @@ class LocalWorld
   def backup_in_progress?
     File.exists? "#{ROOT}/backups/#{id}.tar.gz"
   end
-  
+
   def cancel_backup
     FileUtils.rm "#{ROOT}/backups/#{id}.tar.gz"
   end
