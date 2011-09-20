@@ -24,6 +24,26 @@ God.watch do |w|
 end
 
 God.watch do |w|
+  w.name = "prism_back"
+  w.interval = 5.seconds
+
+  w.uid = 'ubuntu'
+  w.env = {'FOLD_ENV' => fold_env }
+  
+  w.start = "bundle exec #{ROOT}/bin/prism_back"
+  w.log_cmd = "/usr/bin/logger -t '#{fold_env[0..2]}|#{w.name}'"
+  w.dir = ROOT
+  
+  w.behavior(:clean_pid_file)
+
+  w.start_if do |start|
+    start.condition(:process_running) do |c|
+      c.running = false
+    end
+  end
+end
+
+God.watch do |w|
   w.name = "statsd"
   w.interval = 5.seconds
 
