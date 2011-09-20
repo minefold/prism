@@ -18,7 +18,7 @@ module Prism
     end
     
     def send_world_player_message world_id, username, body
-      redis.publish "world.#{world_id}.input", "tell #{username} #{body}"
+      redis.publish "worlds:#{world_id}:stdin", "tell #{username} #{body}"
     end
   end
 end

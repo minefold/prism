@@ -23,7 +23,7 @@ class LogLine
     @timestamp = Time.parse $1
     @level = $2
     @message = $3
-
+    
     message =~ /^\<(\w+)\> (.*)/
     @chat_user = $1
     @chat_message = $2
@@ -64,7 +64,7 @@ EM.epoll
 EM.run do
   @local_world = LocalWorld.new world_id
   
-  input_channel = "world.#{world_id}.input"
+  input_channel = "worlds:#{world_id}:stdin"
   puts "[#{Fold.env}] online subscribed:#{input_channel} tailing:#{@local_world.server_log}"
   
   subscription = Prism::PrismRedis.connect
