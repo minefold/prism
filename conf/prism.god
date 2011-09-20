@@ -1,4 +1,4 @@
-ROOT = File.expand_path '../../', File.dirname(__FILE__)
+ROOT = File.expand_path '../', File.dirname(__FILE__)
 
 fold_env = 'production'
 God.pid_file_directory = "#{ROOT}/tmp/pids"
