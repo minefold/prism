@@ -10,8 +10,11 @@ module Prism
         username = data[3..-1].force_encoding('UTF-16BE').encode('UTF-8')
         new_handler KnownPlayerHandler, username
       elsif header == 0xFE
-        connection.send_data MinecraftPackets.create_server 0xFF, :reason => "Minefold!§555§1337"
-        connection.close_connection_after_writing
+        op = redis.hlen "players:playing"
+        op.callback do |player_count|
+          connection.send_data MinecraftPackets.create_server 0xFF, :reason => "Minefold!§#{player_count}§100000"
+          connection.close_connection_after_writing
+        end
       else
         connection.close_connection
         StatsD.increment 'connections.unknown_client'
