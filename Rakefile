@@ -1,18 +1,37 @@
-$:.unshift File.join File.dirname(__FILE__), 'lib'
+require 'bundler/setup'
+Bundler.require :default
+require 'rake'
 require 'rake/clean'
 
 CLEAN.add 'tmp'
 
+$:.unshift File.join File.dirname(__FILE__), 'lib'
+require 'minefold'
+Dir[File.expand_path('../lib/tasks/*.rb', __FILE__)].each { |f| require f }
+
 # RSpec
 begin
   require "rspec/core/rake_task"
+  require 'launchy'
   
   RSpec::Core::RakeTask.new(:spec) do |t|
     t.pattern = 'spec/**/*_spec.rb'
     t.rspec_opts = ["-c", "-f progress", "-r ./spec/spec_helper.rb"]
   end
+  
+  desc "Run tests with coverage"
+  task :coverage do
+    ENV['COVERAGE'] = 'true'
+    Rake::Task["spec"].execute
+    Launchy.open("file://" + File.expand_path("../coverage/index.html", __FILE__))
+  end
 rescue LoadError
   # no rspec
+end
+
+def redis_connect
+  uri = URI.parse(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
+  Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
 end
 
 require 'resque'
@@ -24,8 +43,7 @@ task "resque:setup" do
   require 'minefold'
 
   if REDISTOGO_URL
-    uri = URI.parse(REDISTOGO_URL)
-    Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
+    Resque.redis = redis_connect
   end
 end
 

@@ -14,7 +14,7 @@ module Prism
     end
 
     def send_delayed_message delay, message
-      EM.add_timer(delay) { EM.defer { send_world_player_message @world_id, @username, message }}
+      EM.add_timer(delay) { send_world_player_message world_id, username, message }
     end
     
     def send_world_player_message world_id, username, body

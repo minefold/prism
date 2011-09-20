@@ -1,6 +1,8 @@
 require 'fileutils'
 require 'targz'
 
+WORLD_OPS = %W(chrislloyd whatupdave)
+
 class LocalWorld
   class << self
     include GodHelpers
@@ -27,22 +29,21 @@ class LocalWorld
       end
     end
 
-    def server_properties world_id, options, port
-      options.merge({
-        "allow-flight"     => false,
+    def server_properties world, port
+      { "allow-flight"     => false,
         "allow-nether"     => true,
-        "level-name"       => world_id,
-        "level-seed"       => '',
+        "level-name"       => world['_id'].to_s,
+        "level-seed"       => world['seed'].to_s,
         "max-players"      => 255,
         "online-mode"      => true,
-        # "pvp"              => true,
+        "pvp"              => world['pvp'].to_s,
         "server-ip"        => "0.0.0.0",
         "server-port"      => port,
-        "spawn-animals"    => true,
-        # "spawn-monsters"   => true,
+        "spawn-animals"    => world['spawn_animals'].to_s,
+        "spawn-monsters"   => world['spawn_monsters'].to_s,
         "view-distance"    => 10,
         "white-list"       => false
-      }).map {|values| values.join('=')}.join("\n")
+      }.map {|values| values.join('=')}.join("\n")
     end
 
     def find id
@@ -69,7 +70,7 @@ class LocalWorld
 
       # create world path if it aint there
       FileUtils.mkdir_p world_path
-      
+
       # get world from db
       worlds = MinefoldDb.connection['worlds']
       world = worlds.find_one({'_id' => BSON::ObjectId(world_id)})
@@ -97,7 +98,10 @@ class LocalWorld
       port = LocalWorld.next_available_port
 
       # create server.properties
-      File.open(properties_path, 'w') {|file| file.puts server_properties(world_id, world['options'], port) }
+      File.open(properties_path, 'w') {|file| file.puts server_properties(world, port) }
+
+      # create ops.txt
+      File.open("#{world_path}/ops.txt", 'w') {|file| file.puts WORLD_OPS.join("\n") }
 
       # create world.god
       template = ERB.new File.read "#{LIB}/world.god.erb"
@@ -191,6 +195,13 @@ class LocalWorld
     while state == :running; end
   end
 
+  def backup_in_progress?
+    File.exists? "#{ROOT}/backups/#{id}.tar.gz"
+  end
+  
+  def cancel_backup
+    FileUtils.rm "#{ROOT}/backups/#{id}.tar.gz"
+  end
 
   def backup!
     puts "Starting backup"

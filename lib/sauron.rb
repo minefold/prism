@@ -16,4 +16,3 @@ class SupervisedWorld
     "#<#{self.class} supervised_worker:#{supervised_worker.inspect} state:#{state}>"
   end
 end
-

@@ -18,8 +18,12 @@ module Worker
       server.public_ip_address
     end
     
+    def started_at
+      server.created_at
+    end
+    
     def uptime_minutes
-      ((Time.now - server.created_at) / 60).floor
+      ((Time.now - started_at) / 60).floor
     end
     
     def start_world world_id, min_heap_size, max_heap_size
@@ -30,11 +34,19 @@ module Worker
     end
 
     def stop_world world_id
-      get "/worlds/#{world_id}/destroy"
+      get "/worlds/#{world_id}/destroy", timeout:180
     end
     
     def responding?
       get("/", timeout:10).body rescue false
+    end
+    
+    def state
+      server.state
+    end
+    
+    def running?
+      state == 'running'
     end
     
     def url

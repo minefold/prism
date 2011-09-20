@@ -1,0 +1,67 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+require 'bundler/setup'
+Bundler.require :default, :proxy
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'minefold'
+require 'prism/back'
+
+STDOUT.sync = true
+EM.epoll
+
+module Prism
+  extend Sweeper
+  
+  EM.run do
+    
+    puts "Gathering state"
+    redis = Prism.redis
+    %w[players:connection_request
+       players:disconnection_request
+       players:world_request
+       worlds:requests:start
+       worlds:requests:stop
+       worlds:running 
+       worlds:busy 
+       workers:requests:start
+       workers:requests:stop
+       workers:requests:create
+       workers:running 
+       workers:busy].each{|key| redis.del key }
+    op = redis.del("workers:sleeping")
+    op.callback do
+      op = perform_sweep
+      op.callback do
+        
+        puts "Ready"
+
+        subscription = PrismRedis.connect
+        subscription.psubscribe "worlds:requests:*"
+        subscription.psubscribe "workers:requests:*"
+        subscription.on :pmessage do |key, channel, message|
+          puts " • [#{channel}] #{message}"
+          Prism::Messaging.deliver_message channel, message
+        end
+
+        [ PlayerConnectionRequest, 
+          PlayerDisconnectionEvent, 
+          PlayerMinutePlayedEvent, 
+          PlayerWorldRequest, 
+          WorldStartRequest,
+          WorldStopRequest,
+          WorkerStartRequest, 
+          WorkerStopRequest, 
+          WorkerCreateRequest].each do |klass|
+            QueueProcessor.new klass
+        end
+        
+        EM::PeriodicTimer.new(3 * 60) { perform_sweep }
+
+        puts "Started. #{Fold.env} mode"
+        
+      end
+    end
+  end
+  # EM.add_periodic_timer(1) { puts "." }
+end
