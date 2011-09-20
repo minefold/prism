@@ -21,7 +21,7 @@ module Prism
     end
     
     def recognised_player_connecting user
-      user_id, world_id = "#{user['_id']}", "#{user['world_id']}"
+      user_id, world_id = "#{user['_id']}", "#{user['current_world_id']}"
       debug "found user:#{user_id} world:#{world_id}"
       
       redis.hset "usernames", username, user_id
