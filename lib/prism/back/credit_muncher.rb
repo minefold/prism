@@ -4,13 +4,15 @@ module Prism
       return unless @client_connected
 
       EM.defer do
-        user = DB['users'].find_and_modify({ 
+        user = DB['users'].find_and_modify({
                       query: {"_id"  => @user_objectid},
-                      update:{"$inc" => {"credits" => -amount, "minutes_played" => amount }}
+                      # update:{"$inc" => {"credits" => -amount, "minutes_played" => amount }}
+                      update: {'$inc' => {'minutes_played' => amount}}
                     })
-        
-        credits = user['credits'] - amount
-        info "deducting 1 credit. #{credits} remaining. Played:#{user['minutes_played']} minutes"
+
+        # credits = user['credits'] - amount
+        # info "deducting 1 credit. #{credits} remaining. Played:#{user['minutes_played']} minutes"
+        info "Freetime, no credits deducted. Played:#{user['minutes_played']} minutes"
 
         EM.next_tick { minutes_updated credits }
 
