@@ -36,8 +36,8 @@ class LocalWorld
         "level-seed"       => world['seed'].to_s,
         "max-players"      => 1000,
         "online-mode"      => true,
-        "difficulty"       => world['difficulty'],
-        "gamemode"         => world['game_mode']
+        "difficulty"       => world['difficulty'].to_s,
+        "gamemode"         => world['game_mode'].to_s,
         "pvp"              => world['pvp'].to_s,
         "server-ip"        => "0.0.0.0",
         "server-port"      => port,
