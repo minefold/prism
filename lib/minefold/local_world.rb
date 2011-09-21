@@ -38,11 +38,11 @@ class LocalWorld
         "online-mode"      => true,
         "difficulty"       => world['difficulty'].to_s,
         "gamemode"         => world['game_mode'].to_s,
-        "pvp"              => world['pvp'].to_s,
+        "pvp"              => (world['pvp'] || false).to_s,
         "server-ip"        => "0.0.0.0",
         "server-port"      => port,
-        "spawn-animals"    => world['spawn_animals'].to_s,
-        "spawn-monsters"   => world['spawn_monsters'].to_s,
+        "spawn-animals"    => (world['spawn_animals'] || false).to_s,
+        "spawn-monsters"   => (world['spawn_monsters'] || false).to_s,
         "view-distance"    => 10,
         "white-list"       => false
       }.map {|values| values.join('=')}.join("\n")
