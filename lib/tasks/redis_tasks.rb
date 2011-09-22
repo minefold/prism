@@ -21,8 +21,15 @@ namespace "redis" do
        p redis.hgetall(hash)
        puts
     end
-
-    ["players:minute_played", "players:requesting_connection", "players:disconnection_request"].each do |list|
+    
+    %w[players:connection_request
+       players:disconnection_request
+       players:world_request
+       worlds:requests:start
+       worlds:requests:stop
+       workers:requests:start
+       workers:requests:stop
+       workers:requests:create].each do |list|
       length = redis.llen list
       puts list
       p redis.lrange(list, 0, length)
