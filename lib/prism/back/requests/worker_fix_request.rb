@@ -7,7 +7,7 @@ module Prism
     end
     
     def perform_operation
-      info "stopping worker:#{instance_id}"
+      info "repairing worker:#{instance_id}"
       worker = Worker.find instance_id
       
       worker.prepare_for_minefold

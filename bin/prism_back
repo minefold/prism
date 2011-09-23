@@ -55,6 +55,7 @@ module Prism
           WorldStopRequest,
           WorkerStartRequest, 
           WorkerStopRequest, 
+          WorkerFixRequest, 
           WorkerCreateRequest].each do |klass|
             QueueProcessor.new klass
         end

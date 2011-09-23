@@ -27,7 +27,7 @@ module Prism
             end
           else
             puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} <not responding>"
-            
+            redis.lpush "workers:requests:fix", worker.instance_id
           end
         end
       end
