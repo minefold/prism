@@ -3,11 +3,14 @@ module Prism
     process "players:disconnection_request", :username
     
     def run
-        op = Prism.redis.hget "players:playing", username
-        op.callback do |world_id|
-          debug "removing player:#{username} from world:#{world_id}"
-          Prism.redis.hdel "players:playing", username
-          op = Prism.redis.srem "worlds:#{world_id}:connected_players", username
+      op = Prism.redis.hget "players:playing", username
+      op.callback do |world_id|
+        debug "removing player:#{username} from world:#{world_id}"
+        Prism.redis.hdel "players:playing", username
+        
+        op = redis.hget "usernames", username
+        op.callback do |user_id|
+          op = Prism.redis.srem "worlds:#{world_id}:connected_players", user_id
           op.callback do
             op = Prism.redis.scard "worlds:#{world_id}:connected_players"
             op.callback do |player_count|
@@ -15,7 +18,7 @@ module Prism
             end
           end
         end
-
+      end
     end
     
     def stop_world world_id
