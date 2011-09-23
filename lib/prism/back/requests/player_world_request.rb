@@ -116,12 +116,16 @@ module Prism
       redis.hset "players:playing", username, world_id
       redis.publish_json "players:connection_request:#{username}", host:host, port:port
       
-      redis.sadd "worlds:#{world_id}:connected_players", username
-      op = redis.scard "worlds:#{world_id}:connected_players"
-      op.callback do |player_count|
-        send_delayed_message 7, "Hi #{username} welcome to minefold!"
-        send_delayed_message 13, "You have #{time_in_words credits} of play remaining"
-        send_delayed_message 17, "There #{player_count == 1 ? 'is' : 'are'} #{pluralize player_count, "player"} in this world"
+      op = redis.hget "usernames", username
+      op.callback do |user_id| 
+        redis.sadd "worlds:#{world_id}:connected_players", user_id
+      
+        op = redis.scard "worlds:#{world_id}:connected_players"
+        op.callback do |player_count|
+          send_delayed_message 7, "Hi #{username} welcome to minefold!"
+          send_delayed_message 13, "You have #{time_in_words credits} of play remaining"
+          send_delayed_message 17, "There #{player_count == 1 ? 'is' : 'are'} #{pluralize player_count, "player"} in this world"
+        end
       end
     end
   end

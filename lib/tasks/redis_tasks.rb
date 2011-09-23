@@ -28,5 +28,6 @@ namespace "redis" do
       p redis.lrange(list, 0, length)
       puts
     end
+    
   end
 end

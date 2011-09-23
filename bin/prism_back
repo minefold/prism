@@ -17,6 +17,9 @@ module Prism
     
     puts "Gathering state"
     redis = Prism.redis
+    op = redis.keys("worlds:*:connected_players")
+    op.callback {|key| redis.del key }
+    
     %w[players:connection_request
        players:disconnection_request
        players:world_request
