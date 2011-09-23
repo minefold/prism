@@ -1,11 +1,13 @@
 module Prism
   module MinecraftKeepalive
+    include Minecraft::Packets::Server
+    
     extend Debugger
     
     def start_keepalive
       @keepalive = EM::PeriodicTimer.new 15 do
         debug "ping"
-        connection.send_data MinecraftPackets.create_server 0x00, :keepalive_id => 1337
+        connection.send_data server_packet 0x00, :keepalive_id => 1337
       end
     end
     

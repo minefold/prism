@@ -14,6 +14,8 @@ module Prism
 
     def update_state_sync
       redis = Prism.redis
+      # op = redis.hgetall "workers:running" TODO: remove workers that aren't running any more
+
       Worker.all.each do |worker|
         if worker.running?
           if worker.responding?
@@ -27,7 +29,7 @@ module Prism
             end
           else
             puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} <not responding>"
-            
+          
           end
         else
           puts "worker:#{worker.instance_id} sleeping"

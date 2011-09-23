@@ -2,8 +2,16 @@ module Prism
   class KnownPlayerHandler < Handler
     include MinecraftKeepalive
     include Messaging
-    
+    include Minecraft::Packets::Server
+
     attr_reader :username
+    
+    def friendly_kick_messages
+      {
+        'unrecognised_player' => %Q{Sign up at http://minefold.com},
+        'no_credit' => %Q{Sorry you need to top up your account at http://minefold.com}
+      }.freeze
+    end
     
     def log_tag; username; end
     
@@ -21,6 +29,7 @@ module Prism
           StatsD.increment_and_measure_from started_connection, "players.connection_request.successful"
           new_handler ConnectedPlayerHandler, username, response["host"], response["port"]
         else
+          connection.send_data server_packet(0xFF, :reason => friendly_kick_messages[response['rejected']])
           connection.close_connection_after_writing
           exit
           StatsD.increment_and_measure_from started_connection, "players.connection_request.failed"
