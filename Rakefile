@@ -56,6 +56,10 @@ namespace :prism do
   task :deploy do
     puts `ssh -i .ssh/minefold.pem ubuntu@pluto.minefold.com "cd ~/minefold && GIT_SSH=~/deploy-ssh-wrapper git pull origin master && bundle --binstubs --without test chatty cli worker && sudo bin/god load conf/prism.god && sudo bin/god restart prism_back"`
   end
+  
+  task :kick do
+    puts `ssh -i .ssh/minefold.pem ubuntu@pluto.minefold.com "cd ~/minefold && sudo bin/god restart prism_back && sudo bin/god restart prism"`
+  end
 end
 
 namespace :graphite do

@@ -13,7 +13,7 @@ namespace "redis" do
   task "state" do
     redis = redis_connect
     puts "clients: #{redis.info['connected_clients']}"
-    ["players:playing",
+    ["players:playing", "usernames",
      "prism:active_connections",
      "worlds:running", "worlds:busy",
      "workers:running", "workers:busy"].each do |hash|
@@ -27,6 +27,10 @@ namespace "redis" do
       puts list
       p redis.lrange(list, 0, length)
       puts
+    end
+    
+    redis.keys("worlds:*:connected_players").each do |key|
+      puts "#{key} #{redis.smembers key}"
     end
     
   end
