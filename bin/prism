@@ -23,6 +23,9 @@ module Prism
       Prism::Messaging.deliver_message channel, message
     end
     
+    op = redis.keys("worlds:*:connected_players")
+    op.callback {|key| redis.del key }
+    
     redis.del("players:playing") do
       redis.del("prism:active_connections") do
 
