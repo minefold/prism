@@ -15,7 +15,7 @@ module Prism
     end
     
     def listen
-      @pop = @redis.blpop @queue, 15
+      @pop = @redis.blpop @queue, 30
       @pop.callback do |channel, item|
         if item
           debug "recv #{@queue} #{item}"
