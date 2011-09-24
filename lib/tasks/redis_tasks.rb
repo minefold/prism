@@ -29,6 +29,8 @@ namespace "redis" do
     %W[players:minute_played 
        players:requesting_connection 
        players:disconnection_request
+       worlds:requests:start
+       worlds:requests:stop
        workers:requests:create
        workers:requests:fix
        workers:requests:start

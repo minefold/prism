@@ -7,4 +7,11 @@ $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'irb'
 
+def redis
+  @redis ||= begin
+    uri = URI.parse(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
+    Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
+  end
+end
+
 IRB.start
