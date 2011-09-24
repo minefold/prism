@@ -13,9 +13,8 @@ namespace "redis" do
   task "state" do
     redis = redis_connect
     puts "clients: #{redis.info['connected_clients']}"
-    %W[players:playing 
-       usernames 
-       prism:active_connections
+    %W[players:playing
+       usernames
        worlds:running
        worlds:busy
        workers:running
@@ -26,16 +25,15 @@ namespace "redis" do
       puts
     end
     
-    %W[players:minute_played 
-       players:requesting_connection 
+    %w[players:connection_request
        players:disconnection_request
+       players:world_request
        worlds:requests:start
        worlds:requests:stop
-       workers:requests:create
        workers:requests:fix
        workers:requests:start
        workers:requests:stop
-      ].each do |list|
+       workers:requests:create].each do |list|
       length = redis.llen list
       puts list
       p redis.lrange(list, 0, length)

@@ -37,19 +37,17 @@ module Prism
     end
     
     def hget_json key, field
-      op = redis.hget key, field
-      op.errback {|e| handle_error e }
+      op = hget key, field
       op.callback {|data| yield data ? JSON.parse(data) : nil }
-    end
-    
-    def hset_hash channel, key, value
-      op = redis.hset channel, key, value.to_json
-      op.errback {|e| handle_error e }
       op
     end
     
+    def hset_hash channel, key, value
+      hset channel, key, value.to_json
+    end
+    
     def lpush_hash list, value
-      redis.lpush list, value.to_json
+      lpush list, value.to_json
     end
     
     def publish_json channel, hash
@@ -60,8 +58,16 @@ module Prism
       redis.send sym, *args, &blk
     end
     
+    %w[blpop hget hgetall hset lpush publish scard sadd srem].each do |cmd|
+      define_method(:"#{cmd}") do |*args| 
+        op = redis.send cmd, *args
+        op.errback {|e| handle_error e }
+        op
+      end
+    end
+    
     def handle_error e
-      error "REDIS ERROR: #{e}"
+      error "REDIS: #{e}"
     end
     
     

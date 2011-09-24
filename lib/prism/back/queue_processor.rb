@@ -15,12 +15,14 @@ module Prism
     end
     
     def listen
-      @pop = @redis.blpop @queue, 0
+      @pop = @redis.blpop @queue, 15
       @pop.callback do |channel, item|
-        debug "recv #{@queue} #{item}"
-        @klass.new.process item
-
-        listen
+        if item
+          debug "recv #{@queue} #{item}"
+          @klass.new.process item
+        end
+        
+        EM.next_tick { listen }
       end
     end
   end
