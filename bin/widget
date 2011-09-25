@@ -22,10 +22,13 @@ RUNNING_WORLDS = {}
 class WorldWatcher < EventMachine::Connection  
   attr_reader :world_id, :instance_id, :host, :port, :redis
   
-  def initialize world_id, instance_id, host, port
+  def initialize world_id, instance_id, host, port, stdin_queue, stop_queue
     @world_id, @instance_id, @host, @port = world_id, instance_id, host, port
     @world_ready = false
     @redis = Prism.redis
+    
+    stdin_queue.pop { |message| send_data message }
+    stop_queue.pop { stop_world }
   end
   
   def post_init
@@ -33,7 +36,6 @@ class WorldWatcher < EventMachine::Connection
   end
   
   def receive_stderr data 
-    puts data
     data.split("\n").map{|l| LogLine.new l }.each do |line|
       if !@world_ready && line.world_started?
         @world_ready = true
@@ -56,6 +58,10 @@ class WorldWatcher < EventMachine::Connection
     puts "[#{line.chat_user}] #{line.chat_message}"
   end
   
+  def stop_world
+    send_data "stop\n"
+  end
+  
   def unbind
     puts "world:#{world_id} quit"
     RUNNING_WORLDS.delete world_id
@@ -65,26 +71,51 @@ end
 
 EM.run do
   redis = Prism.redis
+
+  stdin_queues = {}
+  stop_queues = {}
   
-  start_popper = Prism::QueuePopper.new "workers:#{instance_id}:worlds:requests:start"
+  subscription = Prism::PrismRedis.connect
+  subscription.psubscribe "workers:#{instance_id}:worlds:*:stdin"
+  subscription.on :pmessage do |key, channel, message|
+    puts " • [#{channel}] #{message}"
+    stdin_queues[channel].push message
+  end
+  
+  requests = "workers:#{instance_id}:worlds:requests"
+  
+  start_popper = Prism::QueuePopper.new "#{requests}:start"
   start_popper.on_pop do |request|
     world = JSON.parse request
+    world_id = world['id']
     port = INITIAL_PORT + RUNNING_WORLDS.size
     EM.defer(
-      proc { LocalWorld.prepare world['id'], port },
+      proc { LocalWorld.prepare world_id, port },
       proc {
-        Dir.chdir("worlds/#{world['id']}") do
+        stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
+        stop_queue = stop_queues[world_id] = EM::Queue.new
+        
+        Dir.chdir("worlds/#{world_id}") do
           EM.popen3 "java -Xmx#{world['max_heap_size']}M -Xms#{world['min_heap_size']}M -jar server.jar nogui", WorldWatcher, 
-            world['id'], instance_id, host, port
+            world_id, instance_id, host, port, stdin_queue, stop_queue
         end
         start_popper.listen
     })
+  end  
+  
+  stop_popper = Prism::QueuePopper.new "#{requests}:stop"
+  stop_popper.on_pop do |world_id|
+    stop_queues[world_id].push "stop"
   end
   
   %W[INT TERM].each do |sig| 
     Signal.trap(sig) { EM.stop }
   end
-    
-  redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", id:'4e7be5c82013df44e7000002', min_heap_size:512, max_heap_size:2048
-  redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", id:'4e7882ca2013df199c000002', min_heap_size:512, max_heap_size:2048
+  
+  # tests
+  EM.add_periodic_timer(1) { p RUNNING_WORLDS }
+  redis.lpush_hash "#{requests}:start", id:'4e7be5c82013df44e7000002', min_heap_size:512, max_heap_size:2048
+  redis.lpush_hash "#{requests}:start", id:'4e7882ca2013df199c000002', min_heap_size:512, max_heap_size:2048
+  
+  EM.add_timer(10) { redis.lpush "#{requests}:stop", "4e7be5c82013df44e7000002" }
 end
