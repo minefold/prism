@@ -32,13 +32,13 @@ module Prism
           if worker.responding?
             worlds = worker.worlds
             responding_workers << worker
-            running_worlds.merge worlds.each_with_object({}) {|world, hash| hash[world.id] = world }
+            running_worlds.merge! worlds.each_with_object({}) {|world, hash| hash[world.id] = world }
           else
             broken_workers << worker
           end
         end
       end
-      
+            
       lost_worker_ids = redis_workers.keys - running_workers.map(&:instance_id)
       lost_worker_ids.each do |instance_id|
         debug "lost worker:#{instance_id}"
@@ -57,22 +57,22 @@ module Prism
         redis.hset_hash "workers:running", worker.instance_id, instance_id:worker.instance_id, host:worker.public_ip_address, started_at:worker.started_at
       end
       
-      lost_world_ids = redis_worlds.keys - running_worlds.map(&:id)
+      lost_world_ids = redis_worlds.keys - running_worlds.keys
       lost_world_ids.each do |world_id|
         debug "lost world:#{world_id}"
         redis.hdel "worlds:running", world_id
       end
       
-      lost_busy_world_ids = redis_busy_worlds.keys - running_worlds.map(&:id)
+      lost_busy_world_ids = redis_busy_worlds.keys - running_worlds.keys
       lost_busy_world_ids.each do |world_id|
         debug "lost busy world:#{world_id}"
         redis.hdel "worlds:busy", world_id
       end
       
-      new_worlds = running_worlds.reject{|w| redis_worlds.keys.include? w.id }
-      new_worlds.each do |world|
-        debug "found world:#{world.id}"
-        redis.hset_hash "worlds:running", world.id, instance_id:world.worker.instance_id, host:worker.public_ip_address, port:world.port
+      new_worlds = running_worlds.reject{|world_id, world| redis_worlds.keys.include? world_id }
+      new_worlds.each do |world_id, world|
+        debug "found world:#{world_id}"
+        redis.hset_hash "worlds:running", world.id, instance_id:world.worker.instance_id, host:world.worker.public_ip_address, port:world.port
       end
       
       broken_workers.each do |worker|
@@ -84,9 +84,9 @@ module Prism
         uptime_minutes = ((Time.now - worker.started_at) / 60).to_i
         close_to_end_of_hour = uptime_minutes % 60 > 55
   
-        world_count = running_worlds.count{|w| w.worker.instance_id == worker.instance_id }
+        world_count = running_worlds.count{|world_id, w| w.worker.instance_id == worker.instance_id }
       
-        worker_not_busy = redis_busy_workers.count {|busy_worker_id, data| busy_worker_id == worker.instance_id } == 0
+        worker_not_busy = redis_busy_workers.count {|busy_worker_id, world| busy_worker_id == worker.instance_id } == 0
        
         world_not_busy = redis_busy_worlds.count {|busy_world_id, data| data['instance_id'] == worker.instance_id } == 0
   
