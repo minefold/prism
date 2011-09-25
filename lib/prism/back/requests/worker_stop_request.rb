@@ -16,8 +16,8 @@ module Prism
     def operation_succeeded worker
       info "stopped worker:#{instance_id}"
 
-      set = Prism.redis.store_running_worker instance_id, worker.public_ip_address, Time.now.utc
-      set.callback {
+      op = redis.hdel "workers:running", instance_id
+      op.callback {
         Prism.redis.publish "workers:requests:stop:#{instance_id}", worker.public_ip_address
       }
     end
