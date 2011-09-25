@@ -19,7 +19,9 @@ EM.epoll
 INITIAL_PORT = 4000
 RUNNING_WORLDS = {}
 
-class WorldWatcher < EventMachine::Connection  
+class WorldWatcher < EventMachine::Connection 
+  include Resque::Helpers
+  
   attr_reader :world_id, :instance_id, :host, :port, :redis
   
   def initialize world_id, instance_id, host, port, stdin_queue, stop_queue
@@ -52,8 +54,12 @@ class WorldWatcher < EventMachine::Connection
     redis.publish_json "workers:#{instance_id}:worlds:requests:start:#{world_id}", host:host, port:port
   end
   
-  def world_chat
-    # Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_objectid}", line.chat_user, line.chat_message ])
+  def world_objectid
+    BSON::ObjectId(world_id)
+  end
+  
+  def world_chat line
+    Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_objectid}", line.chat_user, line.chat_message ])
     
     puts "[#{line.chat_user}] #{line.chat_message}"
   end
@@ -119,6 +125,4 @@ EM.run do
   redis.lpush_hash "#{requests}:start", id:'4e7882ca2013df199c000002', min_heap_size:512, max_heap_size:2048
   
   EM.add_timer(10) { redis.lpush "#{requests}:stop", "4e7be5c82013df44e7000002" }
-  
-  EM.add_timer(11) { redis.publish "workers:#{instance_id}:worlds:4e7882ca2013df199c000002:stdin", "stop" }
 end
