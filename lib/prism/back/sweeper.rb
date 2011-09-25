@@ -53,8 +53,8 @@ module Prism
       
       new_workers = running_workers.reject{|w| redis_workers.keys.include? w.instance_id }
       new_workers.each do |worker|
-        debug "found worker:#{world_id}"
-        redis.hset_hash "workers:running", instance_id, instance_id:worker.instance_id, host:worker.public_ip_address, started_at:worker.started_at
+        debug "found worker:#{worker.instance_id}"
+        redis.hset_hash "workers:running", worker.instance_id, instance_id:worker.instance_id, host:worker.public_ip_address, started_at:worker.started_at
       end
       
       lost_world_ids = redis_worlds.keys - running_worlds.map(&:id)
