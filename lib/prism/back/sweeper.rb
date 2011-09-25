@@ -1,80 +1,98 @@
 module Prism
   module Sweeper 
-    extend Debugger
+    include Debugger
     
     def perform_sweep
       deferred = EM::DefaultDeferrable.new
       
-      EM.defer(proc { 
-          update_state_sync
-          shutdown_idle_workers
-        }, proc { deferred.succeed })
-      deferred
-    end
-
-    def update_state_sync
       redis = Prism.redis
-      # op = redis.hgetall "workers:running" TODO: remove workers that aren't running any more
-
-      Worker.all.each do |worker|
-        if worker.running?
-          if worker.responding?
-            puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} worlds:#{worker.worlds.size}"
-            redis.store_running_worker worker.instance_id, worker.public_ip_address, worker.started_at
-            worlds = worker.worlds
-            worlds.each do |world|
-              puts "  #{world.id} > #{worker.public_ip_address}:#{world.port}"
-
-              redis.store_running_world worker.instance_id, world.id, worker.public_ip_address, world.port
+      redis.hgetall_json 'workers:running' do |running_workers|
+        redis.hgetall_json 'workers:busy' do |busy_workers|
+          redis.hgetall_json 'worlds:running' do |running_worlds|
+            redis.hgetall_json 'worlds:busy' do |busy_worlds|
+              EM.defer(proc { 
+                  update_state_sync running_workers, busy_workers, running_worlds, busy_worlds
+                }, proc { deferred.succeed })
             end
-          else
-            puts "worker:#{worker.instance_id} uptime_minutes:#{worker.uptime_minutes} <not responding>"
-            redis.lpush "workers:requests:fix", worker.instance_id
           end
         end
       end
+      
+      deferred
     end
-    
-    def json_array_to_hash json_array
-      Hash[*json_array].each_with_object({}) {|(k,v), hash| hash[k] = JSON.parse v }
-    end
-    
-    def shutdown_idle_workers
-      op = Prism.redis.hgetall "workers:running"
-      op.callback do |worker_data|
-        workers = json_array_to_hash worker_data
-        
-        op = Prism.redis.hgetall "worlds:running"
-        op.callback do |world_data|
-          worlds = json_array_to_hash world_data
-          
-          op = Prism.redis.hgetall "workers:busy"
-          op.callback do |busy_worker_data|
-            busy_workers = json_array_to_hash busy_worker_data
-            
-            op = Prism.redis.hgetall "worlds:busy"
-            op.callback do |busy_world_data|
-              busy_worlds = json_array_to_hash busy_world_data
-              
-              
-              workers.each do |instance_id, worker|
-                started_at = Time.parse worker['started_at']
-                uptime_minutes = ((Time.now - started_at) / 60).to_i
-                close_to_end_of_hour = uptime_minutes % 60 > 55
-            
-                worker_worlds = worlds.select {|world_id, world| world['instance_id'] == instance_id }
-                
-                worker_not_busy = busy_workers.count {|busy_worker_id, data| busy_worker_id == instance_id } == 0
-                 
-                world_not_busy = busy_worlds.count {|busy_world_id, data| data['instance_id'] == instance_id } == 0
-            
-                if close_to_end_of_hour and worker_worlds.size == 0 and worker_not_busy and world_not_busy and
-                  puts "worker:#{instance_id} terminating idle"
-                  Prism.redis.lpush "workers:requests:stop", instance_id
-                end
-              end
-            end
+
+    def update_state_sync redis_workers, redis_busy_workers, redis_worlds, redis_busy_worlds
+      redis = Prism.redis
+      
+      running_workers, responding_workers, broken_workers, running_worlds = [], [], [], {}
+
+      Worker.all.each do |worker|
+        if worker.running?
+          running_workers << worker
+          if worker.responding?
+            worlds = worker.worlds
+            responding_workers << worker
+            running_worlds.merge worlds.each_with_object({}) {|world, hash| hash[world.id] = world }
+          else
+            broken_workers << worker
           end
+        end
+      end
+      
+      lost_worker_ids = redis_workers.keys - running_workers.map(&:instance_id)
+      lost_worker_ids.each do |instance_id|
+        debug "lost worker:#{instance_id}"
+        redis.hdel "workers:running", instance_id
+      end
+      
+      lost_busy_worker_ids = redis_busy_workers.keys - running_workers.map(&:instance_id)
+      lost_busy_worker_ids.each do |instance_id|
+        debug "lost busy worker:#{instance_id}"
+        redis.hdel "workers:busy", instance_id
+      end
+      
+      new_workers = running_workers.reject{|w| redis_workers.keys.include? w.instance_id }
+      new_workers.each do |worker|
+        debug "found worker:#{world_id}"
+        redis.hset_hash "workers:running", instance_id, instance_id:worker.instance_id, host:worker.public_ip_address, started_at:worker.started_at
+      end
+      
+      lost_world_ids = redis_worlds.keys - running_worlds.map(&:id)
+      lost_world_ids.each do |world_id|
+        debug "lost world:#{world_id}"
+        redis.hdel "worlds:running", world_id
+      end
+      
+      lost_busy_world_ids = redis_busy_worlds.keys - running_worlds.map(&:id)
+      lost_busy_world_ids.each do |world_id|
+        debug "lost busy world:#{world_id}"
+        redis.hdel "worlds:busy", world_id
+      end
+      
+      new_worlds = running_worlds.reject{|w| redis_worlds.keys.include? w.id }
+      new_worlds.each do |world|
+        debug "found world:#{world.id}"
+        redis.hset_hash "worlds:running", world.id, instance_id:world.worker.instance_id, host:worker.public_ip_address, port:world.port
+      end
+      
+      broken_workers.each do |worker|
+        debug "fixing broken worker:#{worker.instance_id}"
+        redis.lpush "workers:requests:fix", worker.instance_id
+      end
+
+      running_workers.each do |worker|
+        uptime_minutes = ((Time.now - worker.started_at) / 60).to_i
+        close_to_end_of_hour = uptime_minutes % 60 > 55
+  
+        world_count = running_worlds.count{|w| w.worker.instance_id == worker.instance_id }
+      
+        worker_not_busy = redis_busy_workers.count {|busy_worker_id, data| busy_worker_id == worker.instance_id } == 0
+       
+        world_not_busy = redis_busy_worlds.count {|busy_world_id, data| data['instance_id'] == worker.instance_id } == 0
+  
+        if close_to_end_of_hour and world_count == 0 and worker_not_busy and world_not_busy
+          puts "worker:#{worker.instance_id} terminating idle"
+          redis.lpush "workers:requests:stop", worker.instance_id
         end
       end
     end

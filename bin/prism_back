@@ -18,51 +18,35 @@ module Prism
     puts "Gathering state"
     redis = Prism.redis
     
-    %w[players:connection_request
-       players:disconnection_request
-       players:world_request
-       worlds:requests:start
-       worlds:requests:stop
-       worlds:running 
-       worlds:busy 
-       workers:requests:start
-       workers:requests:stop
-       workers:requests:create
-       workers:running 
-       workers:busy].each{|key| redis.del key }
-    op = redis.del("workers:sleeping")
+    op = perform_sweep
     op.callback do
-      op = perform_sweep
-      op.callback do
-        
-        puts "Ready"
+      puts "Ready"
 
-        subscription = PrismRedis.connect
-        subscription.psubscribe "worlds:requests:*"
-        subscription.psubscribe "workers:requests:*"
-        subscription.on :pmessage do |key, channel, message|
-          puts " • [#{channel}] #{message}"
-          Prism::Messaging.deliver_message channel, message
-        end
-
-        [ PlayerConnectionRequest, 
-          PlayerDisconnectionEvent, 
-          PlayerMinutePlayedEvent, 
-          PlayerWorldRequest, 
-          WorldStartRequest,
-          WorldStopRequest,
-          WorkerStartRequest, 
-          WorkerStopRequest, 
-          WorkerFixRequest, 
-          WorkerCreateRequest].each do |klass|
-            QueueProcessor.new klass
-        end
-        
-        EM::PeriodicTimer.new(3 * 60) { perform_sweep }
-
-        puts "Started. #{Fold.env} mode"
-        
+      subscription = PrismRedis.connect
+      subscription.psubscribe "worlds:requests:*"
+      subscription.psubscribe "workers:requests:*"
+      subscription.on :pmessage do |key, channel, message|
+        puts " • [#{channel}] #{message}"
+        Prism::Messaging.deliver_message channel, message
       end
+
+      [ PlayerConnectionRequest, 
+        PlayerDisconnectionEvent, 
+        PlayerMinutePlayedEvent, 
+        PlayerWorldRequest, 
+        WorldStartRequest,
+        WorldStopRequest,
+        WorkerStartRequest, 
+        WorkerStopRequest, 
+        WorkerFixRequest, 
+        WorkerCreateRequest].each do |klass|
+          QueueProcessor.new klass
+      end
+      
+      EM::PeriodicTimer.new(3 * 60) { perform_sweep }
+
+      puts "Started. #{Fold.env} mode"
+      
     end
   end
   # EM.add_periodic_timer(1) { puts "." }

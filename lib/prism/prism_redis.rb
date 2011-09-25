@@ -42,6 +42,12 @@ module Prism
       op
     end
     
+    def hgetall_json key
+      op = hgetall key
+      op.callback {|data| yield data.each_slice(2).each_with_object({}) {|w, hash| hash[w[0]] = JSON.parse w[1] } }
+      op
+    end
+    
     def hset_hash channel, key, value
       hset channel, key, value.to_json
     end
