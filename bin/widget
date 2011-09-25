@@ -1,0 +1,90 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+require 'bundler/setup'
+Bundler.require :default
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'minefold'
+require 'widget'
+require 'eventmachine/popen3'
+require 'prism/back'
+
+abort "Usage: widget instance_id" unless ARGV.length == 1
+instance_id = ARGV.shift
+host = ARGV.shift || "0.0.0.0"
+
+STDOUT.sync = true
+EM.epoll
+
+INITIAL_PORT = 4000
+RUNNING_WORLDS = {}
+
+class WorldWatcher < EventMachine::Connection  
+  attr_reader :world_id, :instance_id, :host, :port, :redis
+  
+  def initialize world_id, instance_id, host, port
+    @world_id, @instance_id, @host, @port = world_id, instance_id, host, port
+    @world_ready = false
+    @redis = Prism.redis
+  end
+  
+  def post_init
+    RUNNING_WORLDS[world_id] = 0
+  end
+  
+  def receive_stderr data 
+    puts data
+    data.split("\n").map{|l| LogLine.new l }.each do |line|
+      if !@world_ready && line.world_started?
+        @world_ready = true
+        world_ready 
+      end
+      
+      world_chat line if line.chat_user
+    end
+  end
+  
+  def world_ready
+    puts "world:#{world_id} ready"
+    redis.hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
+    redis.publish_json "workers:#{instance_id}:worlds:requests:start:#{world_id}", host:host, port:port
+  end
+  
+  def world_chat
+    # Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_objectid}", line.chat_user, line.chat_message ])
+    
+    puts "[#{line.chat_user}] #{line.chat_message}"
+  end
+  
+  def unbind
+    puts "world:#{world_id} quit"
+    RUNNING_WORLDS.delete world_id
+    redis.hdel "worlds:running", world_id
+  end
+end
+
+EM.run do
+  redis = Prism.redis
+  
+  start_popper = Prism::QueuePopper.new "workers:#{instance_id}:worlds:requests:start"
+  start_popper.on_pop do |request|
+    world = JSON.parse request
+    port = INITIAL_PORT + RUNNING_WORLDS.size
+    EM.defer(
+      proc { LocalWorld.prepare world['id'], port },
+      proc {
+        Dir.chdir("worlds/#{world['id']}") do
+          EM.popen3 "java -Xmx#{world['max_heap_size']}M -Xms#{world['min_heap_size']}M -jar server.jar nogui", WorldWatcher, 
+            world['id'], instance_id, host, port
+        end
+        start_popper.listen
+    })
+  end
+  
+  %W[INT TERM].each do |sig| 
+    Signal.trap(sig) { EM.stop }
+  end
+    
+  redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", id:'4e7be5c82013df44e7000002', min_heap_size:512, max_heap_size:2048
+  redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", id:'4e7882ca2013df199c000002', min_heap_size:512, max_heap_size:2048
+end

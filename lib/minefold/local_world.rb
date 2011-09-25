@@ -55,16 +55,8 @@ class LocalWorld
       end
     end
 
-    def start world_id, min_heap_size = 512, max_heap_size = 2048
-      # TODO: this is inefficient
-      if running.any? {|w| w.id == world_id }
-        puts "World already running"
-        return
-      end
-
+    def prepare world_id, port
       `#{BIN}/download-server` unless File.exists? JAR
-
-      puts "Starting world #{world_id}"
 
       world_path = "#{WORLDS}/#{world_id}"
       properties_path = "#{world_path}/server.properties"
@@ -96,46 +88,15 @@ class LocalWorld
       # symlink server
       FileUtils.ln_s JAR, world_path unless File.exist? "#{world_path}/server.jar"
 
-      # get a port number to use
-      port = LocalWorld.next_available_port
-
       # create server.properties
       File.open(properties_path, 'w') {|file| file.puts server_properties(world, port) }
 
       # create ops.txt
       File.open("#{world_path}/ops.txt", 'w') {|file| file.puts WORLD_OPS.join("\n") }
 
-      # create world.god
-      template = ERB.new File.read "#{LIB}/world.god.erb"
-      File.open(god_config, 'w') {|file| file.puts template.result(binding) }
-
       # clear server log
       server_log = File.join(world_path, "server.log")
       File.open(server_log, "w") {|file| file.print }
-
-      puts "starting server on port #{port}"
-      god_start god_config, world_id
-
-      local_world = LocalWorld.new world_id
-      puts "Waiting for server init"
-      Timeout::timeout(10) do
-        until local_world.state == :running
-          sleep 1
-        end
-      end
-
-      puts "Waiting for server ready"
-      begin
-        Timeout::timeout(4 * 60) do
-          File::Tail::Logfile.open(server_log) do |log|
-            log.max_interval = 0.1
-            log.interval = 0.1
-
-            log.tail { |line| puts line; raise File::Tail::BreakException if line =~ /Done/ }
-          end
-        end
-      rescue File::Tail::BreakException
-      end
     end
   end
 
