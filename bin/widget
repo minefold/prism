@@ -114,8 +114,11 @@ EM.run do
   
   # tests
   EM.add_periodic_timer(1) { p RUNNING_WORLDS }
+  
   redis.lpush_hash "#{requests}:start", id:'4e7be5c82013df44e7000002', min_heap_size:512, max_heap_size:2048
   redis.lpush_hash "#{requests}:start", id:'4e7882ca2013df199c000002', min_heap_size:512, max_heap_size:2048
   
   EM.add_timer(10) { redis.lpush "#{requests}:stop", "4e7be5c82013df44e7000002" }
+  
+  EM.add_timer(11) { redis.publish "workers:#{instance_id}:worlds:4e7882ca2013df199c000002:stdin", "stop" }
 end
