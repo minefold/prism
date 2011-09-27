@@ -1,5 +1,5 @@
 module Prism
-  class WorkerStartRequest < DeferredOperationRequest
+  class WorkerStartRequest < BusyOperationRequest
     process "workers:requests:start", :instance_id
 
     def busy_hash

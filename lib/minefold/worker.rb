@@ -1,7 +1,6 @@
 module Worker
+  
   class Base
-    include HTTParty
-    
     def self.running
       all.select {|w| w.server.state == 'running' }
     end
@@ -25,18 +24,7 @@ module Worker
     def uptime_minutes
       ((Time.now - started_at) / 60).floor
     end
-    
-    def start_world world_id, min_heap_size, max_heap_size
-      response = get("/worlds/create?id=#{world_id}&min_heap_size=#{min_heap_size}&max_heap_size=#{max_heap_size}", timeout:4 * 60)
-      puts response.body unless response.code == "200"
-   
-      world world_id
-    end
-
-    def stop_world world_id
-      get "/worlds/#{world_id}/destroy", timeout:180
-    end
-    
+        
     def responding?
       get("/", timeout:10).body rescue false
     end
@@ -47,32 +35,6 @@ module Worker
     
     def running?
       state == 'running'
-    end
-    
-    def url
-      "http://#{public_ip_address}:3000"
-    end
-    
-    def worlds
-      return [] unless public_ip_address
- 
-      begin
-        server_info = JSON.parse get("/worlds", timeout:20).body
-        Worlds.new self, server_info.map {|h| World.new self, h["id"], h["port"]}
-      rescue => e
-        puts e.inspect
-        []
-      end
-    end
-
-    def world world_id
-      begin
-        server_info = JSON.parse get("/worlds/#{world_id}").body
-        World.new self, server_info["id"], server_info["port"]
-      rescue => e
-        puts "#{e.inspect}\n#{e.backtrace}"
-        nil
-      end
     end
     
     def wait_for_worker_ready

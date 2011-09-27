@@ -1,5 +1,5 @@
 module Prism
-  class WorldStopRequest < DeferredOperationRequest
+  class WorldStopRequest < BusyOperationRequest
     
     process "worlds:requests:stop", :instance_id, :world_id
     

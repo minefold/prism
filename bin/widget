@@ -51,7 +51,7 @@ class WorldWatcher < EventMachine::Connection
   def world_ready
     puts "world:#{world_id} ready"
     redis.hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
-    redis.publish_json "workers:#{instance_id}:worlds:requests:start:#{world_id}", host:host, port:port
+    redis.publish_json "worlds:requests:start:#{world_id}", host:host, port:port
   end
   
   def world_objectid
@@ -75,6 +75,18 @@ class WorldWatcher < EventMachine::Connection
   end
 end
 
+module StatusHandler
+  def receive_data data
+    case data
+    when "ping"
+      send_data "pong"
+    when "worlds"
+      send_data RUNNING_WORLDS.to_json
+    end
+  end
+end
+
+
 EM.run do
   redis = Prism.redis
 
@@ -92,9 +104,11 @@ EM.run do
   
   start_popper = Prism::QueuePopper.new "#{requests}:start"
   start_popper.on_pop do |request|
-    world = JSON.parse request
-    world_id = world['id']
+    world_start = JSON.parse request
+    world_id = world_start['world_id']
     port = INITIAL_PORT + RUNNING_WORLDS.size
+    puts "starting world:#{world_id} on port:#{port}"
+    
     EM.defer(
       proc { LocalWorld.prepare world_id, port },
       proc {
@@ -102,7 +116,7 @@ EM.run do
         stop_queue = stop_queues[world_id] = EM::Queue.new
         
         Dir.chdir("worlds/#{world_id}") do
-          EM.popen3 "java -Xmx#{world['max_heap_size']}M -Xms#{world['min_heap_size']}M -jar server.jar nogui", WorldWatcher, 
+          EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui", WorldWatcher, 
             world_id, instance_id, host, port, stdin_queue, stop_queue
         end
         start_popper.listen
@@ -114,15 +128,9 @@ EM.run do
     stop_queues[world_id].push "stop"
   end
   
+  EM.start_server '0.0.0.0', 3000, StatusHandler
+  
   %W[INT TERM].each do |sig| 
     Signal.trap(sig) { EM.stop }
   end
-  
-  # tests
-  EM.add_periodic_timer(1) { p RUNNING_WORLDS }
-  
-  redis.lpush_hash "#{requests}:start", id:'4e7be5c82013df44e7000002', min_heap_size:512, max_heap_size:2048
-  redis.lpush_hash "#{requests}:start", id:'4e7882ca2013df199c000002', min_heap_size:512, max_heap_size:2048
-  
-  EM.add_timer(10) { redis.lpush "#{requests}:stop", "4e7be5c82013df44e7000002" }
 end

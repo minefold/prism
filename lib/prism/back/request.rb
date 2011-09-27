@@ -23,5 +23,9 @@ module Prism
       
       run
     end
+    
+    def statsd_key
+      "#{self.class.queue.gsub(':', '.')}"
+    end
   end
 end

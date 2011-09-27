@@ -1,5 +1,5 @@
 module Prism
-  class WorldStartRequest < DeferredOperationRequest
+  class WorldStartRequest < BusyOperationRequest
     process "worlds:requests:start", :instance_id, :world_id, :min_heap_size, :max_heap_size
     
     def busy_hash

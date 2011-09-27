@@ -3,16 +3,16 @@ module Prism
     process "players:disconnection_request", :username
     
     def run
-      op = Prism.redis.hget "players:playing", username
+      op = redis.hget "players:playing", username
       op.callback do |world_id|
         debug "removing player:#{username} from world:#{world_id}"
-        Prism.redis.hdel "players:playing", username
+        redis.hdel "players:playing", username
         
         op = redis.hget "usernames", username
         op.callback do |user_id|
-          op = Prism.redis.srem "worlds:#{world_id}:connected_players", user_id
+          op = redis.srem "worlds:#{world_id}:connected_players", user_id
           op.callback do
-            op = Prism.redis.scard "worlds:#{world_id}:connected_players"
+            op = redis.scard "worlds:#{world_id}:connected_players"
             op.callback do |player_count|
               stop_world world_id if player_count == 0
             end
@@ -22,11 +22,10 @@ module Prism
     end
     
     def stop_world world_id
-      op = Prism.redis.hget "worlds:running", world_id
-      op.callback do |message|
-        if message
-          world_data = JSON.parse message
-          Prism.redis.lpush "worlds:requests:stop", {instance_id:world_data['instance_id'], world_id:world_id}.to_json
+      redis.hget_json "worlds:running", world_id do |world_data|
+        if world_data
+          instance_id = world_data['instance_id']
+          redis.lpush "workers:#{instance_id}:worlds:requests:stop", world_id
         else
           debug "world:#{world_id} not running. No stop required"
         end

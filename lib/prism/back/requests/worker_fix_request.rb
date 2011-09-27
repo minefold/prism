@@ -1,5 +1,5 @@
 module Prism
-  class WorkerFixRequest < DeferredOperationRequest
+  class WorkerFixRequest < BusyOperationRequest
     process "workers:requests:fix", :instance_id
 
     def busy_hash
