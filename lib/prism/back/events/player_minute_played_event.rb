@@ -1,14 +1,14 @@
 module Prism
   class PlayerMinutePlayedEvent < Request
     include ChatMessaging
-    
+
     process "players:minute_played", :username, :timestamp
-    
+
     def run
       op = redis.hget "usernames", username
       op.callback do |user_id|
         EM.defer(proc {
-          mongo_connect.collection('users').find_and_modify({ 
+          mongo_connect.collection('users').find_and_modify({
               query: {"_id"  => BSON::ObjectId(user_id) },
               update:{
                 '$push' => {'credit_events' => { 'created_at' => Time.now.utc, 'delta' => -1 } },
@@ -20,10 +20,10 @@ module Prism
           info "deducting 1 credit. #{credits} remaining. Played:#{user['minutes_played']} minutes"
           credits_updated user_id, credits
         })
-        
+
       end
     end
-    
+
     def credits_updated user_id, credits_remaining
       messages = {
         30 => "30 minefold minutes left",
@@ -44,7 +44,9 @@ module Prism
         end
       end
 
-      EM.defer { CreditMailer.send_low_credit "#{user_id}" } if credits_remaining == 30
+      EM.defer do
+        UserMailer.send_reminder(user_id.to_s) } if credits_remaining == 30
+      end
     end
   end
 end
