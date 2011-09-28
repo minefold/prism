@@ -187,9 +187,6 @@ EM.run do
         })
       end
     end
-    
-    op.errback { puts "ERRORD" }
-
   end  
   
   stop_popper = Prism::QueuePopper.new "#{requests}:stop"
@@ -211,4 +208,6 @@ EM.run do
   %W[INT TERM].each do |sig| 
     Signal.trap(sig) { EM.stop }
   end
+  
+  puts "started #{Fold.env} mode"
 end

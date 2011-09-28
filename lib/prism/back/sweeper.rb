@@ -31,16 +31,19 @@ module Prism
     def query_boxes boxes
       @boxes = boxes
       EM::Iterator.new(boxes).each(proc{ |box,iter|
-        if box.running?
-          @running_boxes << box
-          op = box.query_worlds
-          op.callback do |worlds|
-            @working_boxes << box
-            @running_worlds.merge! worlds
-            iter.next
-          end
-          op.errback do
-            @broken_boxes << box
+        
+        box.query_state do |state|
+          if state == 'running'
+            @running_boxes << box
+            op = box.query_worlds
+            op.callback do |worlds|
+              @working_boxes << box
+              @running_worlds.merge! worlds
+              iter.next
+            end
+            op.errback do
+              @broken_boxes << box
+            end
           end
         end
       }, method(:update_state))

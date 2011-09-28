@@ -5,30 +5,6 @@ WORLD_OPS = %W(chrislloyd whatupdave)
 
 class LocalWorld
   class << self
-    include GodHelpers
-
-    def present
-      Dir["#{PIDS}/minecraft-*.pid"].map do |pid_file|
-        pid_file =~ /minecraft-(\w+)/
-        world_id = $1
-
-        LocalWorld.new world_id
-      end
-    end
-
-    def running
-      present.select {|w| w.state == :running }
-    end
-
-    def next_available_port
-      running_world_with_highest_port = running.sort_by{|w| w.port }.last
-      if running_world_with_highest_port
-        running_world_with_highest_port.port + 1
-      else
-        4000
-      end
-    end
-
     def server_properties world, port
       { "allow-flight"     => false,
         "allow-nether"     => true,
@@ -46,13 +22,6 @@ class LocalWorld
         "view-distance"    => 10,
         "white-list"       => false
       }.map {|values| values.join('=')}.join("\n")
-    end
-
-    def find id
-      pid_file = "#{PIDS}/minecraft-#{id}.pid"
-      if File.exists? pid_file
-        LocalWorld.new id
-      end
     end
 
     def prepare world_id, port
@@ -102,8 +71,6 @@ class LocalWorld
     end
   end
 
-  include GodHelpers
-
   attr_reader :id
 
   def initialize id
@@ -112,52 +79,6 @@ class LocalWorld
 
   def world_path
     "#{WORLDS}/#{id}"
-  end
-
-  def stdin
-    "#{world_path}/world.stdin"
-  end
-
-  def server_log
-    "#{world_path}/server.log"
-  end
-
-  def pid_file
-    "#{PIDS}/minecraft-#{id}.pid"
-  end
-
-  def pid
-    File.read(pid_file) if File.exists? pid_file
-  end
-
-  def state
-    if pid
-      begin
-        Process.getpgid pid.to_i
-        :running
-      rescue Errno::ESRCH
-        :stopped
-      end
-    else
-      :stopped
-    end
-  end
-
-  def port
-    properties_file = "#{WORLDS}/#{id}/server.properties"
-    if File.exists? properties_file
-      server_properties = File.read properties_file
-      server_properties =~ /port\=(\d+)/
-      ($1).to_i
-    end
-  end
-
-  def stop!
-    puts "stopping #{id}"
-    god_stop id
-
-    puts "Waiting for world to stop"
-    while state == :running; end
   end
 
   def backup_in_progress?
@@ -195,20 +116,6 @@ class LocalWorld
     )
 
     FileUtils.rm world_archive
-  end
-
-  def to_hash
-    {
-      pid_file: pid_file,
-      pid: pid,
-      id: id,
-      running: state == :running,
-      port: port
-    }
-  end
-
-  def to_json
-    to_hash.to_json
   end
 
 end
