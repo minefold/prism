@@ -31,7 +31,7 @@ class WorldWatcher < EventMachine::Connection
     @redis = Prism.redis
     @line_channel = EM::Channel.new
     
-    stdin_queue.pop { |message| send_data message }
+    stdin_queue.pop { |message| send_line message }
     stop_queue.pop { stop_world }
   end
   
@@ -57,8 +57,9 @@ class WorldWatcher < EventMachine::Connection
   
   def world_ready
     puts "world:#{world_id} ready"
+    redis.hdel "worlds:busy", world_id
     redis.hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
-    redis.publish_json "worlds:requests:start:#{world_id}", host:host, port:port
+    redis.publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:port
   end
   
   def world_objectid
@@ -80,20 +81,34 @@ class WorldWatcher < EventMachine::Connection
   end
   
   def unbind
-    puts "world:#{world_id} quit"
+    puts "world:#{world_id} quit. Starting backup"
     RUNNING_WORLDS.delete world_id
-    redis.hdel "worlds:running", world_id
+    
+    @backup_waiter = EM.add_periodic_timer(1) do
+      unless @backup_in_progress
+        @backup_waiter.cancel
+        EM.defer(proc { LocalWorld.new(world_id).backup! }, 
+          proc { 
+            redis.hdel "worlds:busy", world_id
+            redis.del "worlds:#{world_id}:connected_players"
+            redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
+          })
+      end 
+    end
   end
   
   def backup_world
+    @backup_in_progress = true
     puts "starting backup:#{world_id}"
     send_line "save-off"
     send_line "save-all"
     EM.add_timer 3 do
       EM.defer(
         proc { LocalWorld.new(world_id).backup! }, 
-        proc { send_line "save-on" }
-      )
+        proc { 
+          send_line "save-on"
+          @backup_in_progress = false
+        })
     end
   end
 end
@@ -129,26 +144,42 @@ EM.run do
   start_popper.on_pop do |request|
     world_start = JSON.parse request
     world_id = world_start['world_id']
-    port = INITIAL_PORT + RUNNING_WORLDS.size
-    puts "starting world:#{world_id} on port:#{port}"
     
-    EM.defer(
-      proc { LocalWorld.prepare world_id, port },
-      proc {
-        stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
-        stop_queue = stop_queues[world_id] = EM::Queue.new
-        
-        Dir.chdir("worlds/#{world_id}") do
-          EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui", WorldWatcher, 
-            world_id, instance_id, host, port, stdin_queue, stop_queue
-        end
-        start_popper.listen
-    })
+    puts "checking busy"
+    op = redis.hexists "worlds:busy", world_id
+    op.callback do |busy|
+      if busy == 1
+        puts "world:#{world_id} is busy ignoring start request"
+      else
+        redis.hset_hash "worlds:busy", world_id, state:'starting'
+
+        port = INITIAL_PORT + RUNNING_WORLDS.size
+        puts "starting world:#{world_id} on port:#{port}"
+
+        EM.defer(
+          proc { LocalWorld.prepare world_id, port },
+          proc {
+            stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
+            stop_queue = stop_queues[world_id] = EM::Queue.new
+
+            Dir.chdir("worlds/#{world_id}") do
+              EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui",
+                        WorldWatcher, world_id, instance_id, host, port, stdin_queue, stop_queue
+            end
+            start_popper.listen
+        })
+      end
+    end
+    
+    op.errback { puts "ERRORD" }
+
   end  
   
   stop_popper = Prism::QueuePopper.new "#{requests}:stop"
   stop_popper.on_pop do |world_id|
     if stop_queue = stop_queues[world_id]
+      redis.hset_hash "worlds:busy", world_id, state:'stopping'
+      redis.hdel "worlds:running", world_id
       stop_queue.push "stop"
     else
       puts "world:#{world_id} stop request recieved but world is not running here"

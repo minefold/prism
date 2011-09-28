@@ -5,6 +5,8 @@ module Prism
     
     process "players:world_request", :username, :user_id, :world_id, :credits
     
+    attr_reader :instance_id
+    
     def run
       redis.hget_json "worlds:busy", world_id do |busy_world|
         if busy_world
@@ -19,7 +21,7 @@ module Prism
       redis.hget_json "worlds:running", world_id do |world|
         if world
           debug "world:#{world_id} is already running"
-          connect_player_to_world world['host'], world['port']
+          connect_player_to_world world['instance_id'], world['host'], world['port']
         else
           debug "world:#{world_id} is not running"
           start_world
@@ -32,7 +34,7 @@ module Prism
       if busy_world['state'].include? 'starting'
         debug "world:#{world_id} start already requested"
         listen_once_json "worlds:requests:start:#{world_id}" do |world|
-          connect_player_to_world world['host'], world['port']
+          connect_player_to_world world['instance_id'], world['host'], world['port']
         end
       else
         debug "world:#{world_id} is stopping. will request start when stopped"
@@ -85,7 +87,7 @@ module Prism
       }.to_json 
       
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
-          connect_player_to_world world["host"], world["port"]
+        connect_player_to_world world['instance_id'], world["host"], world["port"]
       end
     end
     
@@ -123,7 +125,7 @@ module Prism
       end
     end
     
-    def connect_player_to_world  host, port
+    def connect_player_to_world instance_id, host, port
       puts "connecting to #{host}:#{port}"
       redis.publish_json "players:connection_request:#{username}", host:host, port:port
       
@@ -133,6 +135,7 @@ module Prism
       
         op = redis.scard "worlds:#{world_id}:connected_players"
         op.callback do |player_count|
+          @instance_id = instance_id
           send_delayed_message 7, "Hi #{username} welcome to minefold!"
           send_delayed_message 13, "You have #{time_in_words credits} of play remaining"
           send_delayed_message 17, "There #{player_count == 1 ? 'is' : 'are'} #{pluralize player_count, "player"} in this world"

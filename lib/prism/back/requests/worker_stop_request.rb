@@ -18,7 +18,7 @@ module Prism
 
       op = redis.hdel "workers:running", instance_id
       op.callback {
-        Prism.redis.publish "workers:requests:stop:#{instance_id}", worker.public_ip_address
+        redis.publish "workers:requests:stop:#{instance_id}", worker.public_ip_address
       }
     end
     

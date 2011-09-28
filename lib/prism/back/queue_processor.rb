@@ -22,7 +22,7 @@ module Prism
           @message_handler.call item
         end
         
-        EM.next_tick { listen }
+        EM.add_timer(0.5) { listen }
       end
     end
     
