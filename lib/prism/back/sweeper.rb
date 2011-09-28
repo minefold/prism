@@ -36,7 +36,7 @@ module Prism
           op = box.query_worlds
           op.callback do |worlds|
             @working_boxes << box
-            @running_worlds.merge! worlds.each_with_object({}) {|world, hash| hash[world.id] = world }
+            @running_worlds.merge! worlds
             iter.next
           end
           op.errback do
@@ -59,7 +59,7 @@ module Prism
         redis.hdel "workers:busy", instance_id
       end
       
-      new_boxes = running_boxes.reject{|w| redis_boxes.keys.include? w.instance_id }
+      new_boxes = running_boxes.reject{|w| redis_running_boxes.keys.include? w.instance_id }
       new_boxes.each do |box|
         debug "found box:#{box.instance_id}"
         redis.hset_hash "workers:running", box.instance_id, instance_id:box.instance_id, host:box.host, started_at:box.started_at
@@ -80,7 +80,7 @@ module Prism
       new_worlds = running_worlds.reject{|world_id, world| redis_running_worlds.keys.include? world_id }
       new_worlds.each do |world_id, world|
         debug "found world:#{world_id}"
-        redis.hset_hash "worlds:running", world.id, instance_id:world.worker.instance_id, host:world.worker.host, port:world.port
+        redis.hset_hash "worlds:running", world_id, instance_id:world['instance_id'], host:world['host'], port:world['port']
       end
       
       broken_boxes.each do |box|
@@ -92,7 +92,7 @@ module Prism
         uptime_minutes = ((Time.now - box.started_at) / 60).to_i
         close_to_end_of_hour = uptime_minutes % 60 > 55
   
-        world_count = running_worlds.count{|world_id, w| w.worker.instance_id == box.instance_id }
+        world_count = running_worlds.count{|world_id, w| w['instance_id'] == box.instance_id }
       
         box_not_busy = redis_busy_boxes.count {|busy_box_id, world| busy_box_id == box.instance_id } == 0
        

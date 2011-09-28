@@ -9,9 +9,10 @@ require 'widget'
 require 'eventmachine/popen3'
 require 'prism/back'
 
-abort "Usage: widget instance_id" unless ARGV.length == 1
-instance_id = ARGV.shift
-host = ARGV.shift || "0.0.0.0"
+# Usage: widget instance_id host
+
+instance_id = ARGV.shift || `curl -s http://169.254.169.254/latest/meta-data/instance-id`.strip
+       host = ARGV.shift || `curl -s http://169.254.169.254/latest/meta-data/public-ipv4`.strip
 
 STDOUT.sync = true
 EM.epoll
@@ -28,13 +29,16 @@ class WorldWatcher < EventMachine::Connection
     @world_id, @instance_id, @host, @port = world_id, instance_id, host, port
     @world_ready = false
     @redis = Prism.redis
+    @line_channel = EM::Channel.new
     
     stdin_queue.pop { |message| send_data message }
     stop_queue.pop { stop_world }
   end
   
   def post_init
-    RUNNING_WORLDS[world_id] = 0
+    RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
+    
+    EM.add_periodic_timer(10 * 60) { backup_world }
   end
   
   def receive_stderr data 
@@ -45,6 +49,8 @@ class WorldWatcher < EventMachine::Connection
       end
       
       world_chat line if line.chat_user
+      
+      @line_channel.push line
     end
   end
   
@@ -65,13 +71,29 @@ class WorldWatcher < EventMachine::Connection
   end
   
   def stop_world
-    send_data "stop\n"
+    send_line "stop"
+  end
+  
+  def send_line line
+    send_data "#{line}\n"
   end
   
   def unbind
     puts "world:#{world_id} quit"
     RUNNING_WORLDS.delete world_id
     redis.hdel "worlds:running", world_id
+  end
+  
+  def backup_world
+    puts "starting backup:#{world_id}"
+    send_line "save-off"
+    send_line "save-all"
+    EM.add_timer 3 do
+      EM.defer(
+        proc { LocalWorld.new(world_id).backup! }, 
+        proc { send_line "save-on" }
+      )
+    end
   end
 end
 
@@ -125,8 +147,16 @@ EM.run do
   
   stop_popper = Prism::QueuePopper.new "#{requests}:stop"
   stop_popper.on_pop do |world_id|
-    stop_queues[world_id].push "stop"
+    if stop_queue = stop_queues[world_id]
+      stop_queue.push "stop"
+    else
+      puts "world:#{world_id} stop request recieved but world is not running here"
+    end
   end
+
+  # EM::PeriodicTimer.new(5 * 60) do
+  #   Resque.enqueue(Job::MapWorld, world_id)
+  # end
   
   EM.start_server '0.0.0.0', 3000, StatusHandler
   

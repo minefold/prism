@@ -14,6 +14,7 @@ module Prism
           op.callback do
             op = redis.scard "worlds:#{world_id}:connected_players"
             op.callback do |player_count|
+              debug "world:#{world_id} players:#{player_count}"
               stop_world world_id if player_count == 0
             end
           end

@@ -16,4 +16,8 @@ class LogLine
   def world_started?
     message =~ /^Done/
   end
+  
+  def save_complete?
+    message =~ /^CONSOLE: Save complete/i
+  end
 end

@@ -21,6 +21,8 @@ module Prism
           debug "recv #{@queue} #{item}"
           @message_handler.call item
         end
+        
+        EM.next_tick { listen }
       end
     end
     

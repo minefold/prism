@@ -195,18 +195,6 @@ class LocalWorld
     FileUtils.rm world_archive
   end
 
-  def console_message message
-    File.open(stdin, "a") {|f| f.puts message }
-  end
-
-  def disable_world_saving
-    console_message "save-off"
-  end
-
-  def enable_world_saving
-    console_message "save-on"
-  end
-
   def to_hash
     {
       pid_file: pid_file,

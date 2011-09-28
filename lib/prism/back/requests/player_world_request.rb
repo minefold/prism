@@ -52,12 +52,14 @@ module Prism
         if workers.any?
           # get worker with most minutes remaining
           # TODO make sure to create new worker if worker is at capacity
-          worker = workers.sort_by do |instance_id, w| 
+          sorted_workers = workers.sort_by do |instance_id, w| 
             uptime_minutes = (Time.now - Time.parse(w['started_at'])).to_i / 60
             uptime_minutes % 60
-          end.first
+          end
           
-          start_world_on_running_worker worker['instance_id']
+          instance_id = sorted_workers.first[0]
+          
+          start_world_on_running_worker instance_id
         else
           
           op = redis.smembers "workers:sleeping"

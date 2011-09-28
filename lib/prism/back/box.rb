@@ -1,14 +1,21 @@
 module Prism
   module WorldCollector
-    def initalize callback
-      @callback = callback
+    def initialize df
+      @df = df
     end
+    
     def post_init
       send_data "worlds"
     end
     
     def receive_data data
-      @callback.call JSON.parse data
+      @world_data = JSON.parse data
+      @df.succeed @world_data
+      close_connection
+    end
+    
+    def unbind
+      @df.fail unless @world_data
     end
   end
   
@@ -38,15 +45,25 @@ module Prism
         state == 'running'
       end
       
-      def query_worlds *c, &b
-        handler = EM::Callback(*c, &b)
-        EM.connect host, 3000, WorldCollector, handler
+      def query_worlds
+        df = EM::DefaultDeferrable.new
+        begin
+          c = EM.connect host, 3000, WorldCollector, df
+          c.pending_connect_timeout = 2
+        rescue => e
+          df.fail e
+        end
+        df
       end
     end
     
     module LocalWidgetHandler
       def receive_data data
         puts "local: #{data}"
+      end
+      
+      def receive_stderr data
+        puts "local err: #{data}"
       end
     end
     
@@ -58,9 +75,9 @@ module Prism
           @deferrable.succeed @local_box
         else
           @deferrable.succeed @local_box = begin
-            local_instance_id = 'i-local'
+            local_instance_id = `hostname`.strip
             puts "starting local box"
-            EM.popen "#{BIN}/widget #{local_instance_id}", LocalWidgetHandler
+            EM.popen "#{BIN}/widget '#{local_instance_id}' '0.0.0.0'", LocalWidgetHandler
           
             Local.new local_instance_id
           end
@@ -78,11 +95,6 @@ module Prism
         @state = 'running'
         @started_at = Time.now
       end
-      
-      def responding?
-        true
-      end
-      
     end
     
     
