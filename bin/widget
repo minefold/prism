@@ -39,6 +39,7 @@ class WorldWatcher < EventMachine::Connection
     RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
     
     EM.add_periodic_timer(10 * 60) { backup_world }
+    EM.add_periodic_timer(10 * 60) { Resque.enqueue(Job::MapWorld, world_id) }
   end
   
   def receive_stderr data 
@@ -154,10 +155,6 @@ EM.run do
     end
   end
 
-  # EM::PeriodicTimer.new(5 * 60) do
-  #   Resque.enqueue(Job::MapWorld, world_id)
-  # end
-  
   EM.start_server '0.0.0.0', 3000, StatusHandler
   
   %W[INT TERM].each do |sig| 
