@@ -20,7 +20,7 @@ module Prism
       end
       
       deferrable.errback do |error|
-        error "operation failed", e
+        error "operation failed", error
         operation_failed
         StatsD.increment_and_measure_from start_time, "#{statsd_key}.failed"
         yield

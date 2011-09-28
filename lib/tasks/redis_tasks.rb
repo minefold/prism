@@ -25,6 +25,8 @@ namespace "redis" do
         length = redis.llen key
         puts key
         p redis.lrange(key, 0, length)
+      when 'set'
+        p redis.smembers key
       end
       puts
     end

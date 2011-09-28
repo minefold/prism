@@ -29,14 +29,19 @@ module Prism
         Cloud
       end
     end
+
+    def self.all *c, &b
+      box_class.all *c, &b
+    end
+    
+    def self.find *c, &b
+      box_class.find *c, &b
+    end
     
     def self.create options = {}
       box_class.create options
     end
     
-    def self.all *c, &b
-      box_class.all *c, &b
-    end
     
     class Base
       attr_reader :instance_id, :host, :started_at

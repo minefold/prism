@@ -8,7 +8,9 @@ module Prism
     attr_reader :instance_id
     
     def run
+      puts "world request"
       redis.hget_json "worlds:busy", world_id do |busy_world|
+        puts "world reply"
         if busy_world
           start_busy_world busy_world
         else

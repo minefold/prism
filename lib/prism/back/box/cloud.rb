@@ -10,16 +10,27 @@ module Prism
       end
       
       def self.all *c, &b
-        handler = EM::Callback(*c, &b)
+        cb = EM::Callback(*c, &b)
         EM.defer( proc { 
             compute_cloud.servers.select {|s| tags.all? {|k,v| s.tags[k.to_s] == v.to_s} }.map {|s| Cloud.new s }
           }, proc{ |cloud_boxes| 
-            handler.call cloud_boxes 
+            cb.call cloud_boxes 
           })
+        cb
+      end
+      
+      def self.find instance_id, *c, &b
+        cb = EM::Callback(*c, &b)
+        EM.defer(proc {
+            compute_cloud.servers.get(instance_id)
+          }, proc { |vm| 
+            cb.call Cloud.new(vm) 
+          })
+        cb
       end
       
       def self.create options = {}
-        @deferrable = EM::DefaultDeferrable.newc
+        @deferrable = EM::DefaultDeferrable.new
         
         EM.defer( proc {
             begin
@@ -57,9 +68,35 @@ module Prism
         @vm = vm
         vm.private_key_path = SSH_PRIVATE_KEY_PATH
         
-        @instance_id, @host = vm.instance_id, vm.public_ip_address
+        @instance_id, @host = vm.id, vm.public_ip_address
         @started_at = Time.now
       end
+      
+      def start
+        df = EM::DefaultDeferrable.new
+        
+        cb = EM::Callback(*c, &b)
+        EM.defer(proc {
+            begin
+              vm.start
+              server.wait_for { ready? }
+              wait_for_ssh
+              true
+            rescue => e
+              puts "start box:#{instance_id} failed: #{e}"
+              df.fail e
+              false
+            end
+          }, proc { |succeeded|
+            if succeeded
+              op = prepare_for_minefold
+              op.callback { df.succeed cloud_box }
+              op.errback  { df.fail }
+            end
+          })
+        df
+      end
+      
       
       def query_state *c,&b
         cb = EM::Callback(*c,&b)
@@ -110,6 +147,30 @@ module Prism
         })
         @deferrable
       end
+      
+      
+      
+      def wait_for_ssh options={}
+        puts "Waiting for ssh access"
+        timeout = options[:timeout] || 180
+
+        # we need to wait for the server to do all its bootup stuff
+        Timeout::timeout(timeout) do
+          begin
+            Timeout::timeout(8) do 
+              puts "checking ssh..."
+              server.ssh "pwd"
+            end
+          rescue Errno::ECONNREFUSED, Net::SSH::AuthenticationFailed, Timeout::Error => e
+            sleep 5
+            retry
+          end
+        end
+      end
+    
+    
     end
+    
+    
   end
 end
