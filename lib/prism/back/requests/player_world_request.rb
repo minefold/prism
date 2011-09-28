@@ -87,7 +87,11 @@ module Prism
       }.to_json 
       
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
-        connect_player_to_world world['instance_id'], world["host"], world["port"]
+        if world['failed']
+          run # try again
+        else
+          connect_player_to_world world['instance_id'], world["host"], world["port"]
+        end
       end
     end
     

@@ -13,7 +13,7 @@ namespace "redis" do
   task "state" do
     redis = redis_connect
     puts "clients: #{redis.info['connected_clients']}"
-    redis.keys.sort.each do |key|
+    redis.keys.reject {|key| key =~ /resque/ }.sort.each do |key|
       type = redis.type key
       
       puts "#{key} [#{type}]"

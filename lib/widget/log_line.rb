@@ -4,7 +4,7 @@ class LogLine
   def initialize line
     @line = line
     line =~ /(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\s\[(\w+)\]\s(.*)/
-    @timestamp = Time.parse $1
+    @timestamp = Time.parse $1 if $1
     @level = $2
     @message = $3
     

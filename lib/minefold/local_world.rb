@@ -56,6 +56,7 @@ class LocalWorld
     end
 
     def prepare world_id, port
+      puts "preparing local world:#{world_id}"
       `#{BIN}/download-server` unless File.exists? JAR
 
       world_path = "#{WORLDS}/#{world_id}"
@@ -74,7 +75,6 @@ class LocalWorld
       if archived_world
         FileUtils.mkdir_p "#{ROOT}/backups"
         archive = "#{ROOT}/backups/#{world_id}.tar.gz"
-        puts "Retrieved world"
         File.open(archive, "w") do |tar|
           tar.write archived_world.body
         end
@@ -97,6 +97,8 @@ class LocalWorld
       # clear server log
       server_log = File.join(world_path, "server.log")
       File.open(server_log, "w") {|file| file.print }
+      
+      puts "finished preparing local world:#{world_id}"
     end
   end
 
