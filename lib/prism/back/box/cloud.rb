@@ -97,6 +97,14 @@ module Prism
         df
       end
       
+      def stop
+        df = EM::DefaultDeferrable.new
+        
+        EM.defer(proc { vm.destroy rescue df.fail }, proc { df.succeed })
+        
+        df
+      end
+      
       
       def query_state *c,&b
         cb = EM::Callback(*c,&b)
