@@ -37,7 +37,7 @@ module Prism
               options = {
                 :private_key_path => SSH_PRIVATE_KEY_PATH,
                 :username => 'ubuntu',
-                :image_id => 'ami-6f864706',
+                :image_id => 'ami-41d61b28',
                 :groups => %W{default proxy},
                 :flavor_id => 'm1.large'
               }.merge(options)
@@ -128,9 +128,9 @@ module Prism
           ]
 
           commands.each do |cmd|
-            log cmd
+            puts cmd
             results = server.ssh cmd
-            log results
+            puts results
           end
         }, proc {
           puts "Waiting for worker to respond"

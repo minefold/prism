@@ -11,8 +11,8 @@ require 'prism/back'
 
 # Usage: widget instance_id host
 
-instance_id = ARGV.shift || `curl -s http://169.254.169.254/latest/meta-data/instance-id`.strip
-       host = ARGV.shift || `curl -s http://169.254.169.254/latest/meta-data/public-ipv4`.strip
+instance_id = ARGV.shift || ENV['INSTANCE_ID']
+       host = ARGV.shift || ENV['INSTANCE_IP']
 
 STDOUT.sync = true
 EM.epoll

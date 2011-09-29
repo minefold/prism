@@ -2,7 +2,7 @@ ENV['FOLD_ENV'] ||= 'development'
 
 module Fold
   class << self
-    attr_accessor :workers, :worker_tags, :worker_git_branch, :worker_user
+    attr_accessor :workers, :worker_tags, :worker_user
     
     def env
       ENV['FOLD_ENV'].to_sym
