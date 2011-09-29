@@ -32,7 +32,7 @@ class WorkerCommand
   end
   
   def repair
-    worker.prepare_for_minefold
+    # worker.prepare_for_minefold
   end
   
   private

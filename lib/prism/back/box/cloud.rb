@@ -51,9 +51,7 @@ module Prism
             end
           }, proc{ |cloud_box| 
             if cloud_box
-              op = cloud_box.prepare_for_minefold
-              op.callback { @deferrable.succeed cloud_box }
-              op.errback  { @deferrable.fail }
+              @deferrable.succeed cloud_box
             else
               @deferrable.fail
             end
@@ -89,9 +87,9 @@ module Prism
             end
           }, proc { |succeeded|
             if succeeded
-              op = prepare_for_minefold
-              op.callback { df.succeed cloud_box }
-              op.errback  { df.fail }
+              df.succeed cloud_box
+            else
+              df.fail
             end
           })
         df
@@ -115,48 +113,6 @@ module Prism
         "sudo kill -9 $(ps -eF | grep '#{matcher}' | awk '{print $2}') &> /dev/null"
       end
 
-      def prepare_for_minefold
-        @deferrable = EM::DefaultDeferrable.new
-        EM.defer(proc {
-          puts "preparing box:#{instance_id} for minefold"
-
-          write_out_env_vars = "echo #{Fold.env} > ~/FOLD_ENV && echo #{Fold.worker_user} > ~/FOLD_WORKER_USER"
-          clone_repo = "cd ~ && sudo rm -rf minefold && sudo rm -rf ~/.bundler && GIT_SSH=~/deploy-ssh-wrapper git clone -q --depth 1 -b #{Fold.worker_git_branch} #{WORKER_GIT_REPO} minefold"
-          bundle_install = "cd ~/minefold && bundle install --path ~/bundle --deployment --quiet --binstubs --without proxy:development:test"
-          start_widget = "FOLD_ENV=#{Fold.env} upstart start widget"
-
-          commands = [
-            [ kill_process_command('[r]esque'),
-              kill_process_command('[j]ava'),
-              kill_process_command('[r]ava'),
-              write_out_env_vars
-              ].join(";"),
-            "#{clone_repo} && #{bundle_install}",
-            "#{start_widget}"
-          ]
-
-          commands.each do |cmd|
-            puts cmd
-            results = server.ssh cmd
-            puts results
-          end
-        }, proc {
-          puts "Waiting for worker to respond"
-          n = 0
-          @timer = EM.add_periodic_timer(1) do
-            op = query_worlds
-            op.callback { @timer.cancel; @deferrable.succeed }
-
-            if (n+=1) > 20
-              @deferrable.fail
-              timer.cancel
-            end
-          end
-        })
-        @deferrable
-      end
-      
-      
       
       def wait_for_ssh options={}
         puts "Waiting for ssh access"
