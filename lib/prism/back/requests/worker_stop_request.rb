@@ -13,7 +13,9 @@ module Prism
       
       Box.find instance_id do |box|
         if box
-          df.succeed box
+          op = box.stop
+          op.callback { df.succeed box }
+          op.errback  { df.fail }
         else
           error "failed to find box:#{instance_id}"
           df.fail

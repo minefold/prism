@@ -37,7 +37,7 @@ module Prism
               options = {
                 :private_key_path => SSH_PRIVATE_KEY_PATH,
                 :username => 'ubuntu',
-                :image_id => 'ami-41d61b28',
+                :image_id => 'ami-11d11c78',
                 :groups => %W{default proxy},
                 :flavor_id => 'm1.large'
               }.merge(options)
@@ -67,7 +67,7 @@ module Prism
         vm.private_key_path = SSH_PRIVATE_KEY_PATH
         
         @instance_id, @host = vm.id, vm.public_ip_address
-        @started_at = Time.now
+        @started_at = vm.created_at
       end
       
       def start

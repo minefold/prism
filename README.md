@@ -62,3 +62,7 @@ workers:not_responding
   recover from failures to start world, worker
   recover from timeouts
   regularly sweep workers
+
+
+# mapper
+worker: bundle exec rake resque:work QUEUE=worlds_to_map

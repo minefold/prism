@@ -131,8 +131,10 @@ module Prism
         world_not_busy = redis_busy_worlds.count {|busy_world_id, data| data['instance_id'] == box.instance_id } == 0
   
         if close_to_end_of_hour and world_count == 0 and box_not_busy and world_not_busy
-          puts "box:#{box.instance_id} terminating idle"
+          puts "box:#{box.instance_id} worlds:#{world_count} uptime_minutes:#{uptime_minutes} terminating idle"
           redis.lpush "workers:requests:stop", box.instance_id
+        else
+          puts "box:#{box.instance_id} worlds:#{world_count} uptime_minutes:#{uptime_minutes}"
         end
       end
       @deferred_sweep.succeed
