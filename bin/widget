@@ -38,8 +38,8 @@ class WorldWatcher < EventMachine::Connection
   def post_init
     RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
     
-    EM.add_periodic_timer(10 * 60) { backup_world }
-    EM.add_periodic_timer(10 * 60) { Resque.enqueue(Job::MapWorld, world_id) }
+    @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
+    @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue(Job::MapWorld, world_id) }
   end
   
   def receive_data data
@@ -88,6 +88,8 @@ class WorldWatcher < EventMachine::Connection
   def unbind
     puts "world:#{world_id} quit. Starting backup"
     RUNNING_WORLDS.delete world_id
+    @backup_timer.cancel if @backup_timer
+    @map_timer.cancel if @map_timer
     
     @backup_waiter = EM.add_periodic_timer(1) do
       unless @backup_in_progress
