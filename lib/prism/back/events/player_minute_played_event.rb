@@ -48,7 +48,7 @@ module Prism
       end
 
       EM.defer do
-        UserMailer.send_reminder(user_id.to_s) } if credits_remaining == 30
+        UserMailer.send_reminder(user_id.to_s) if credits_remaining == 30
       end
     end
   end
