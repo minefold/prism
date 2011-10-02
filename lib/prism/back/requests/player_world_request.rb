@@ -71,7 +71,7 @@ module Prism
             if sleeping_workers.any?
               start_world_on_sleeping_worker sleeping_workers.first
             else
-              start_world_on_new_worker
+              start_world_on_new_worker 'm1.large' # TODO work out what instance type is best
             end
           end
         end
@@ -106,10 +106,10 @@ module Prism
       end
     end
 
-    def start_world_on_new_worker
+    def start_world_on_new_worker instance_type
       request_id = `uuidgen`.strip
       debug "starting world:#{world_id} on new worker"
-      redis.lpush "workers:requests:create", request_id
+      redis.lpush "workers:requests:create", request_id, instance_type
       listen_once_json "workers:requests:create:#{request_id}" do |worker|
         debug "created new worker:#{worker['instance_id']}"
         
