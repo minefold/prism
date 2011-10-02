@@ -73,8 +73,8 @@ class WorldWatcher < EventMachine::Connection
   
   def world_ready
     puts "world:#{world_id} ready"
-    redis.hdel "worlds:busy", world_id
     redis.hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
+    redis.hdel "worlds:busy", world_id
     redis.publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:port
   end
   
@@ -164,48 +164,38 @@ EM.run do
     world_start = JSON.parse request
     world_id = world_start['world_id']
     
-    op = redis.hexists "worlds:busy", world_id
-    op.callback do |busy|
-      if busy == 1
-        puts "world:#{world_id} is busy ignoring start request"
-      else
-        redis.hset_hash "worlds:busy", world_id, state:'starting'
+    port = INITIAL_PORT + RUNNING_WORLDS.size
+    puts "starting world:#{world_id} on port:#{port}"
 
-        port = INITIAL_PORT + RUNNING_WORLDS.size
-        puts "starting world:#{world_id} on port:#{port}"
+    EM.defer(
+      proc { 
+        begin
+          LocalWorld.prepare world_id, port
+          true
+        rescue => e
+          puts "ERROR: failed to prepare:#{world_id}"
+          false
+        end
+      },
+      proc { |succeeded|
+        if succeeded
+          stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
+          stop_queue = stop_queues[world_id] = EM::Queue.new
 
-        EM.defer(
-          proc { 
-            begin
-              LocalWorld.prepare world_id, port
-              true
-            rescue => e
-              puts "ERROR: failed to prepare:#{world_id}"
-              false
-            end
-          },
-          proc { |succeeded|
-            if succeeded
-              stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
-              stop_queue = stop_queues[world_id] = EM::Queue.new
-
-              Dir.chdir("worlds/#{world_id}") do
-                EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui",
-                          WorldWatcher, world_id, instance_id, host, port, stdin_queue, stop_queue
-              end
-              start_popper.listen
-            else
-              redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
-            end
-        })
-      end
-    end
+          Dir.chdir("worlds/#{world_id}") do
+            EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui",
+                      WorldWatcher, world_id, instance_id, host, port, stdin_queue, stop_queue
+          end
+          start_popper.listen
+        else
+          redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
+        end
+    })
   end  
   
   stop_popper = Prism::QueuePopper.new "#{requests}:stop"
   stop_popper.on_pop do |world_id|
     if stop_queue = stop_queues[world_id]
-      redis.hset_hash "worlds:busy", world_id, state:'stopping'
       redis.hdel "worlds:running", world_id
       stop_queue.push "stop"
       

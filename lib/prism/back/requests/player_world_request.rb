@@ -89,7 +89,7 @@ module Prism
             
               instance_id = sorted_workers.first[0]
             
-              start_world_on_running_worker instance_id
+              start_world_on_started_worker instance_id
             else
               op = redis.smembers "workers:sleeping"
               op.callback do |sleeping_workers|
@@ -108,6 +108,9 @@ module Prism
     
     def start_world_on_running_worker instance_id
       debug "starting world:#{world_id} on running worker:#{instance_id}"
+      
+      redis.hset_hash "worlds:busy", world_id, state:'starting'
+      
       redis.lpush "workers:#{instance_id}:worlds:requests:start", {
         instance_id:instance_id, 
         world_id:world_id, 

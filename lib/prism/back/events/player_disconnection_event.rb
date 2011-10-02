@@ -32,6 +32,7 @@ module Prism
           redis.hget_json "worlds:running", world_id do |world_data|
             if world_data
               instance_id = world_data['instance_id']
+              redis.hset_hash "worlds:busy", world_id, state:'stopping'
               redis.lpush "workers:#{instance_id}:worlds:requests:stop", world_id
             else
               redis
