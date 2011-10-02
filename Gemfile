@@ -19,12 +19,7 @@ gem "resque-loner"
 gem "em-mongo"
 gem 'hirb'
 gem 'statsd-instrument', git:'https://github.com/Shopify/statsd-instrument.git'
-
-group :worker do
-  gem 'sinatra'
-  gem 'sinatra-reloader', :require => 'sinatra/reloader'
-  gem 'thin'
-end
+gem 'pusher'
 
 group :test do
   gem "autotest-fsevent"
@@ -39,9 +34,4 @@ group :test do
   gem "virtualbox"
   gem "ZenTest", "~> 4.4.2"
   gem 'em-spec', git:'https://github.com/joshbuddy/em-spec.git', require:'em-spec/rspec'
-end
-
-group :chatty do
-  gem 'eventmachine-tail', '~> 0.6.1'
-  gem 'pusher'
 end

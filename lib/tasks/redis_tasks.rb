@@ -13,36 +13,23 @@ namespace "redis" do
   task "state" do
     redis = redis_connect
     puts "clients: #{redis.info['connected_clients']}"
-    %W[players:playing
-       usernames
-       worlds:running
-       worlds:busy
-       workers:running
-       workers:busy
-    ].each do |hash|
-      puts hash
-      p redis.hgetall(hash)
+    redis.keys.reject {|key| key =~ /resque/ }.sort.each do |key|
+      type = redis.type key
+      
+      puts "#{key} [#{type}]"
+      
+      case type
+      when 'hash'
+        p redis.hgetall(key)
+      when 'list'
+        length = redis.llen key
+        puts key
+        p redis.lrange(key, 0, length)
+      when 'set'
+        p redis.smembers key
+      end
       puts
     end
-    
-    %w[players:connection_request
-       players:disconnection_request
-       players:world_request
-       worlds:requests:start
-       worlds:requests:stop
-       workers:requests:fix
-       workers:requests:start
-       workers:requests:stop
-       workers:requests:create].each do |list|
-      length = redis.llen list
-      puts list
-      p redis.lrange(list, 0, length)
-      puts
-    end
-    
-    redis.keys("worlds:*:connected_players").each do |key|
-      puts "#{key} #{redis.smembers key}"
-    end
-    
+
   end
 end

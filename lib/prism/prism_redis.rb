@@ -42,7 +42,7 @@ module Prism
       op
     end
     
-    def hgetall_json key
+    def hgetall_json key, &blk
       op = hgetall key
       op.callback {|data| yield data.each_slice(2).each_with_object({}) {|w, hash| hash[w[0]] = JSON.parse w[1] } }
       op
@@ -64,7 +64,7 @@ module Prism
       redis.send sym, *args, &blk
     end
     
-    %w[blpop hget hgetall hset lpush publish scard sadd srem].each do |cmd|
+    %w[blpop hexists hget hgetall hset lpush publish scard sadd srem].each do |cmd|
       define_method(:"#{cmd}") do |*args| 
         op = redis.send cmd, *args
         op.errback {|e| handle_error e }

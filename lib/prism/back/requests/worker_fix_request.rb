@@ -1,5 +1,5 @@
 module Prism
-  class WorkerFixRequest < DeferredOperationRequest
+  class WorkerFixRequest < BusyOperationRequest
     process "workers:requests:fix", :instance_id
 
     def busy_hash
@@ -8,15 +8,18 @@ module Prism
     
     def perform_operation
       info "repairing worker:#{instance_id}"
-      worker = Worker.find instance_id
-      
-      worker.prepare_for_minefold
+      # worker = Worker.find instance_id
+      # 
+      # worker.prepare_for_minefold
+      df = EM::DefaultDeferrable.new
+      df.fail
+      df
     end
     
     def operation_succeeded worker
       info "fixed worker:#{instance_id}"
 
-      Prism.redis.publish "workers:requests:fix:#{instance_id}", instance_id
+      redis.publish "workers:requests:fix:#{instance_id}", instance_id
     end
     
     def operation_failed

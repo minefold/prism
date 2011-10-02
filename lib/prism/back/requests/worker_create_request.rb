@@ -1,5 +1,6 @@
 module Prism
-  class WorkerCreateRequest < DeferredOperationRequest
+  class WorkerCreateRequest < BusyOperationRequest
+    
     attr_reader :instance_type
     
     process "workers:requests:create", :request_id
@@ -9,17 +10,18 @@ module Prism
     end
     
     def perform_operation
-      @instance_type = 'm1.large'
+      @instance_type = 'm1.large' # TODO: work out which instance type to create
+      
       info "creating new worker type:#{instance_type} req:#{request_id}"
-      Worker.create flavor_id:instance_type
+      Box.create flavor_id:instance_type
     end
     
     def operation_succeeded worker
       info "worker:#{worker.instance_id} created"
-      op = Prism.redis.store_running_worker worker.instance_id, worker.public_ip_address, Time.now.utc
+      op = redis.hset_hash "workers:running", worker.instance_id, instance_id:worker.instance_id, host:worker.host, started_at:Time.now.utc
       op.callback {
         debug "publish workers:requests:create:#{request_id}"
-        Prism.redis.publish_json "workers:requests:create:#{request_id}", instance_id:worker.instance_id, host:worker.public_ip_address
+        redis.publish_json "workers:requests:create:#{request_id}", instance_id:worker.instance_id, host:worker.host
       }
     end
     

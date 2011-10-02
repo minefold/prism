@@ -34,8 +34,6 @@ module Prism
         PlayerDisconnectionEvent, 
         PlayerMinutePlayedEvent, 
         PlayerWorldRequest, 
-        WorldStartRequest,
-        WorldStopRequest,
         WorkerStartRequest, 
         WorkerStopRequest, 
         WorkerFixRequest, 

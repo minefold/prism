@@ -14,11 +14,12 @@ module Prism
     end
 
     def send_delayed_message delay, message
-      EM.add_timer(delay) { send_world_player_message world_id, username, message }
+      EM.add_timer(delay) { send_world_player_message instance_id, world_id, username, message }
     end
     
-    def send_world_player_message world_id, username, body
-      redis.publish "worlds:#{world_id}:stdin", "tell #{username} #{body}"
+    def send_world_player_message instance_id, world_id, username, body
+      world_stdin = "workers:#{instance_id}:worlds:#{world_id}:stdin"
+      redis.publish world_stdin, "tell #{username} #{body}"
     end
   end
 end

@@ -13,20 +13,12 @@ usernames (HASH)
   whatupdave => '91823746'
   chrislloyd => '89337893'
   willrax    => '89437832'
-
-players:world_id (HASH)
-  whatupdave => '91823746'
-  chrislloyd => '89337893'
-  willrax    => '89437832'
   
 players:playing (HASH)
   whatupdave => '91823746'
   
 worlds:91823746:connected_players (SET)
   whatupdave
-
-prism:active_connections (SET)
-  willrax
   
 worlds:busy (HASH)
   world2 => i-1234, state:starting, next_state:
@@ -70,3 +62,7 @@ workers:not_responding
   recover from failures to start world, worker
   recover from timeouts
   regularly sweep workers
+
+
+# mapper
+worker: bundle exec rake resque:work QUEUE=worlds_to_map

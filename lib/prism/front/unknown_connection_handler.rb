@@ -13,7 +13,7 @@ module Prism
       elsif header == 0xFE
         op = redis.hlen "players:playing"
         op.callback do |player_count|
-          connection.send_data server_packet 0xFF, :reason => "Minefold!§#{player_count}§100000"
+          connection.send_data server_packet 0xFF, :reason => "Change worlds at minefold.com§#{player_count}§100000"
           connection.close_connection_after_writing
         end
       else

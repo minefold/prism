@@ -2,7 +2,7 @@ ENV['FOLD_ENV'] ||= 'development'
 
 module Fold
   class << self
-    attr_accessor :workers, :worker_tags, :worker_git_branch, :worker_user
+    attr_accessor :workers, :worker_tags, :worker_user
     
     def env
       ENV['FOLD_ENV'].to_sym
@@ -27,10 +27,8 @@ $:.unshift File.join File.dirname(__FILE__), '../config'
 require 'debugger'
 require 'minefold/minefold_db'
 require 'minefold/redis'
-require 'minefold/god_helpers'
 require 'minefold/local_world'
 require 'minefold/storage'
-require 'minefold/worker'
 require 'minefold/worlds'
 require 'minefold/world'
 require 'jobs'

@@ -25,6 +25,8 @@ module Prism
       debug "found user:#{user_id} world:#{world_id}"
       
       redis.hset "usernames", username, user_id
+      redis.hset "players:playing", username, world_id
+      
       redis.lpush_hash "players:world_request", username:username, user_id:user_id, world_id:world_id, credits:user['credits']
     end
     

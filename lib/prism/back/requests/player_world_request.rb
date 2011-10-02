@@ -5,10 +5,9 @@ module Prism
     
     process "players:world_request", :username, :user_id, :world_id, :credits
     
-    attr_reader :redis
+    attr_reader :instance_id
     
     def run
-      @redis = Prism.redis
       redis.hget_json "worlds:busy", world_id do |busy_world|
         if busy_world
           start_busy_world busy_world
@@ -22,7 +21,7 @@ module Prism
       redis.hget_json "worlds:running", world_id do |world|
         if world
           debug "world:#{world_id} is already running"
-          connect_player_to_world world['host'], world['port']
+          connect_player_to_world world['instance_id'], world['host'], world['port']
         else
           debug "world:#{world_id} is not running"
           start_world
@@ -35,7 +34,7 @@ module Prism
       if busy_world['state'].include? 'starting'
         debug "world:#{world_id} start already requested"
         listen_once_json "worlds:requests:start:#{world_id}" do |world|
-          connect_player_to_world world['host'], world['port']
+          connect_player_to_world world['instance_id'], world['host'], world['port']
         end
       else
         debug "world:#{world_id} is stopping. will request start when stopped"
@@ -51,17 +50,18 @@ module Prism
       debug "getting world:#{world_id} started"
       
       # any free workers?
-      resp = redis.hgetall "workers:running"
-      resp.callback do |workers|
+      redis.hgetall_json("workers:running") do |workers|
         if workers.any?
-          # [ "i-5678", {}, "i-6352", {}] etc
           # get worker with most minutes remaining
-          worker = workers.each_slice(2).map{|w| JSON.parse w[1] }.sort_by do |w| 
+          # TODO make sure to create new worker if worker is at capacity
+          sorted_workers = workers.sort_by do |instance_id, w| 
             uptime_minutes = (Time.now - Time.parse(w['started_at'])).to_i / 60
             uptime_minutes % 60
-          end.first
+          end
           
-          start_world_on_running_worker worker['instance_id']
+          instance_id = sorted_workers.first[0]
+          
+          start_world_on_running_worker instance_id
         else
           
           op = redis.smembers "workers:sleeping"
@@ -80,14 +80,18 @@ module Prism
     
     def start_world_on_running_worker instance_id
       debug "starting world:#{world_id} on running worker:#{instance_id}"
-      redis.lpush "worlds:requests:start", {
+      redis.lpush "workers:#{instance_id}:worlds:requests:start", {
         instance_id:instance_id, 
         world_id:world_id, 
         min_heap_size:512, max_heap_size:2048 
       }.to_json 
       
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
-          connect_player_to_world world["host"], world["port"]
+        if world['failed']
+          redis.publish_json "players:connection_request:#{username}", rejected:'500'
+        else
+          connect_player_to_world world['instance_id'], world["host"], world["port"]
+        end
       end
     end
     
@@ -98,7 +102,7 @@ module Prism
       listen_once "workers:requests:start:#{instance_id}" do
         debug "started sleeping worker:#{instance_id}"
         
-        start_world_on_running_worker instance_id
+        start_world_on_started_worker instance_id
       end
     end
 
@@ -107,13 +111,26 @@ module Prism
       debug "starting world:#{world_id} on new worker"
       redis.lpush "workers:requests:create", request_id
       listen_once_json "workers:requests:create:#{request_id}" do |worker|
-        start_world_on_running_worker worker['instance_id']
+        debug "created new worker:#{worker['instance_id']}"
+        
+        start_world_on_started_worker worker['instance_id']
       end
     end
     
-    def connect_player_to_world  host, port
+    def start_world_on_started_worker instance_id
+      # player still around?
+      op = redis.hexists "players:playing", username
+      op.callback do |player_connected|
+        if player_connected
+          start_world_on_running_worker instance_id 
+        else
+          debug "player:#{username} has disconnected wont start world:#{world_id} on worker:#{instance_id}"
+        end
+      end
+    end
+    
+    def connect_player_to_world instance_id, host, port
       puts "connecting to #{host}:#{port}"
-      redis.hset "players:playing", username, world_id
       redis.publish_json "players:connection_request:#{username}", host:host, port:port
       
       op = redis.hget "usernames", username
@@ -122,6 +139,7 @@ module Prism
       
         op = redis.scard "worlds:#{world_id}:connected_players"
         op.callback do |player_count|
+          @instance_id = instance_id
           send_delayed_message 7, "Hi #{username} welcome to minefold!"
           send_delayed_message 13, "You have #{time_in_words credits} of play remaining"
           send_delayed_message 17, "There #{player_count == 1 ? 'is' : 'are'} #{pluralize player_count, "player"} in this world"

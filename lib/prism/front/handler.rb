@@ -2,15 +2,15 @@ module Prism
   class Handler
     include Debugger
     
-    attr_reader :connection, :buffered_data, :connection_active, :redis
+    attr_reader :connection, :buffered_data, :redis
 
     def init; end
     def exit; end
     def receive_data data; end
+    def disconnected; end
 
     def initialize connection, *args
       @connection = connection
-      @connection_active = true
       @redis = Prism.redis
       init *args
     end
@@ -26,7 +26,7 @@ module Prism
     
     def unbind
       debug "client disconnected"
-      @connection_active = false
+      disconnected
       exit
     end    
   end
