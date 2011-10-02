@@ -22,7 +22,6 @@ module Prism
               @redis_running_worlds = redis_running_worlds
               redis.hgetall_json 'worlds:busy' do |redis_busy_worlds|
                 @redis_busy_worlds = redis_busy_worlds
-                puts "sweeping..."
                 Box.all method(:query_boxes)
               end
             end
@@ -36,7 +35,6 @@ module Prism
     def query_boxes boxes
       @boxes = boxes
       EM::Iterator.new(boxes).each(proc{ |box,iter|
-        
         box.query_state do |state|
           if state == 'running'
             @running_boxes << box
@@ -52,13 +50,15 @@ module Prism
             end
           elsif state == 'stopped'
             @sleeping_boxes << box
+            iter.next
+          else
+            iter.next
           end
         end
       }, method(:update_state))
     end
 
     def update_state
-      puts "updating state..."
       # found boxes
       new_boxes = running_boxes.reject{|w| redis_running_boxes.keys.include? w.instance_id }
       new_boxes.each do |box|
