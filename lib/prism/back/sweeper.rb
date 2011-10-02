@@ -22,6 +22,7 @@ module Prism
               @redis_running_worlds = redis_running_worlds
               redis.hgetall_json 'worlds:busy' do |redis_busy_worlds|
                 @redis_busy_worlds = redis_busy_worlds
+                puts "sweeping..."
                 Box.all method(:query_boxes)
               end
             end
@@ -57,6 +58,7 @@ module Prism
     end
 
     def update_state
+      puts "updating state..."
       # found boxes
       new_boxes = running_boxes.reject{|w| redis_running_boxes.keys.include? w.instance_id }
       new_boxes.each do |box|
@@ -125,17 +127,19 @@ module Prism
           uptime_minutes = ((Time.now - box.started_at) / 60).to_i
           close_to_end_of_hour = uptime_minutes % 60 > 55
   
-          world_count = running_worlds.count{|world_id, w| w['instance_id'] == box.instance_id }
+          world_count = running_worlds.values.count{|w| w['instance_id'] == box.instance_id }
+          player_count = running_worlds.values.inject(0) {|sum, w| sum + w['players'].size }
       
           box_not_busy = redis_busy_boxes.count {|busy_box_id, world| busy_box_id == box.instance_id } == 0
        
           world_not_busy = redis_busy_worlds.count {|busy_world_id, data| data['instance_id'] == box.instance_id } == 0
   
+          message = "box:#{box.instance_id} worlds:#{world_count} players:#{player_count} uptime_minutes:#{uptime_minutes}"
           if close_to_end_of_hour and world_count == 0 and box_not_busy and world_not_busy
-            puts "box:#{box.instance_id} worlds:#{world_count} uptime_minutes:#{uptime_minutes} terminating idle"
+            puts "#{message} terminating idle"
             redis.lpush "workers:requests:stop", box.instance_id
           else
-            puts "box:#{box.instance_id} worlds:#{world_count} uptime_minutes:#{uptime_minutes}"
+            puts message
           end
         end
       else

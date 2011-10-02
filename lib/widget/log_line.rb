@@ -1,5 +1,5 @@
 class LogLine
-  attr_reader :line, :timestamp, :level, :message, :chat_user, :chat_message
+  attr_reader :line, :timestamp, :level, :message, :user, :chat_message, :type
 
   def initialize line
     @line = line
@@ -8,16 +8,24 @@ class LogLine
     @level = $2
     @message = $3
     
-    message =~ /^\<(\w+)\> (.*)/
-    @chat_user = $1
-    @chat_message = $2
+    if message =~ /^\<(\w+)\> (.*)/
+      @type = :chat_message
+      @user = $1
+      @chat_message = $2
+    elsif message =~ /^(\S*) .* logged in/
+      @type = :player_connected
+      @user = $1
+      puts "#{@user} connected"
+    elsif message =~ /^(\S*) lost connection/
+      @type = :player_disconnected
+      @user = $1
+      puts "#{@user} disconnected"
+    elsif message =~ /^Done/
+      @type = :world_started
+    end
   end
   
-  def world_started?
-    message =~ /^Done/
-  end
-  
-  def save_complete?
-    message =~ /^CONSOLE: Save complete/i
+  def chat_user
+    @user
   end
 end

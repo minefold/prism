@@ -23,21 +23,23 @@ RUNNING_WORLDS = {}
 class WorldWatcher < EventMachine::Connection 
   include Resque::Helpers
   
-  attr_reader :world_id, :instance_id, :host, :port, :redis
+  attr_reader :world_id, :instance_id, :host, :port, :redis, :state
   
   def initialize world_id, instance_id, host, port, stdin_queue, stop_queue
     @world_id, @instance_id, @host, @port = world_id, instance_id, host, port
     @world_ready = false
     @redis = Prism.redis
     @line_channel = EM::Channel.new
+    @state = state
+
+    RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port, players:[] }
+    @world_state = RUNNING_WORLDS[world_id]
     
     stdin_queue.pop { |message| send_line message }
     stop_queue.pop { stop_world }
   end
   
   def post_init
-    RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
-    
     @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
     @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue(Job::MapWorld, world_id) }
   end
@@ -49,12 +51,21 @@ class WorldWatcher < EventMachine::Connection
   def receive_stderr data 
     puts data
     data.split("\n").map{|l| LogLine.new l }.each do |line|
-      if !@world_ready && line.world_started?
+      if !@world_ready && line.type == :world_started
         @world_ready = true
         world_ready 
       end
       
-      world_chat line if line.chat_user
+      case line.type
+      when :chat_message
+        world_chat line
+      when :player_connected
+        @world_state[:players] = @world_state[:players] | [line.user]
+        puts "players: #{@world_state[:players]}"
+      when :player_disconnected
+        @world_state[:players] = @world_state[:players] - [line.user]
+        puts "players: #{@world_state[:players]}"
+      end
       
       @line_channel.push line
     end
