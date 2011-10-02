@@ -14,10 +14,12 @@ module Prism
       
       redis.hgetall_json 'workers:running' do |redis_running_boxes|
         @redis_running_boxes = redis_running_boxes
-        redis.smembers 'workers:sleeping' do |redis_sleeping_boxes|
+        op = redis.smembers 'workers:sleeping'
+        op.callback do |redis_sleeping_boxes|
           @redis_sleeping_boxes = redis_sleeping_boxes
           redis.hgetall_json 'workers:busy' do |redis_busy_boxes|
             @redis_busy_boxes = redis_busy_boxes
+            
             redis.hgetall_json 'worlds:running' do |redis_running_worlds|
               @redis_running_worlds = redis_running_worlds
               redis.hgetall_json 'worlds:busy' do |redis_busy_worlds|

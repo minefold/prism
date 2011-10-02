@@ -7,6 +7,15 @@ module Prism
     
     attr_reader :instance_id
     
+    INSTANCE_PLAYER_CAPACITY = { 
+      'm1.large'   => 50,
+      'm2.xlarge'  => 130,
+      'm2.2xlarge' => 260,
+      'm2.4xlarge' => 530
+    }.freeze
+    
+    INSTANCE_PLAYER_BUFFER = 10 # needs to be space for 10 players to start a world
+    
     def run
       redis.hget_json "worlds:busy", world_id do |busy_world|
         if busy_world
@@ -49,32 +58,51 @@ module Prism
     def start_world
       debug "getting world:#{world_id} started"
       
-      # any free workers?
-      redis.hgetall_json("workers:running") do |workers|
-        if workers.any?
-          # get worker with most minutes remaining
-          # TODO make sure to create new worker if worker is at capacity
-          sorted_workers = workers.sort_by do |instance_id, w| 
-            uptime_minutes = (Time.now - Time.parse(w['started_at'])).to_i / 60
-            uptime_minutes % 60
-          end
-          
-          instance_id = sorted_workers.first[0]
-          
-          start_world_on_running_worker instance_id
-        else
-          
-          op = redis.smembers "workers:sleeping"
-          op.callback do |sleeping_workers|
-            debug "workers:sleeping #{sleeping_workers.size}"
+      # any free boxes?
+      redis.hgetall_json("workers:running") do |boxes|
+        EM::Iterator.new(boxes).inject({}, proc{ |hash, (instance_id, box), iter|
+            instance_capacity = INSTANCE_PLAYER_CAPACITY[box['instance_type']]
             
-            if sleeping_workers.any?
-              start_world_on_sleeping_worker sleeping_workers.first
-            else
-              start_world_on_new_worker 'm1.large' # TODO work out what instance type is best
+            op = redis.smembers "workers:#{instance_id}:worlds" 
+            op.callback do |worlds|
+              world_sets = worlds.map {|world_id| "worlds:#{world_id}:connected_players"}
+              if world_sets.any?
+                redis.sunion world_sets do |connected_players|
+                  puts "box:#{instance_id} player_count:#{connected_players.size} capacity:#{instance_capacity}"
+                  if instance_capacity - connected_players.size > INSTANCE_PLAYER_BUFFER
+                    hash[instance_id] = box
+                  end
+                  iter.return hash
+                end
+              else
+                puts "box:#{instance_id} player_count:0 capacity:#{instance_capacity}"
+                hash[instance_id] = box
+                iter.return hash
+              end
             end
-          end
-        end
+          }, proc { |workers_with_capacity|
+            if workers_with_capacity.any?
+              sorted_workers = workers_with_capacity.sort_by do |instance_id, w| 
+                uptime_minutes = (Time.now - Time.parse(w['started_at'])).to_i / 60
+                uptime_minutes % 60
+              end
+            
+              instance_id = sorted_workers.first[0]
+            
+              start_world_on_running_worker instance_id
+            else
+              op = redis.smembers "workers:sleeping"
+              op.callback do |sleeping_workers|
+                debug "workers:sleeping #{sleeping_workers.size}"
+            
+                if sleeping_workers.any?
+                  start_world_on_sleeping_worker sleeping_workers.first
+                else
+                  start_world_on_new_worker 'm1.large' # TODO work out what instance type is best
+                end
+              end
+            end
+          })
       end
     end
     

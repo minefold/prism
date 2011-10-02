@@ -1,5 +1,7 @@
 module Prism
   class PlayerDisconnectionEvent < Request
+    include Messaging
+    
     process "players:disconnection_request", :username
     
     def run
@@ -23,14 +25,35 @@ module Prism
     end
     
     def stop_world world_id
-      redis.hget_json "worlds:running", world_id do |world_data|
-        if world_data
-          instance_id = world_data['instance_id']
-          redis.lpush "workers:#{instance_id}:worlds:requests:stop", world_id
+      redis.hget_json "worlds:busy", world_id do |busy_world|
+        if busy_world
+          stop_busy_world world_id, busy_world
         else
-          debug "world:#{world_id} not running. No stop required"
+          redis.hget_json "worlds:running", world_id do |world_data|
+            if world_data
+              instance_id = world_data['instance_id']
+              redis.lpush "workers:#{instance_id}:worlds:requests:stop", world_id
+            else
+              redis
+              debug "world:#{world_id} not running. No stop required"
+            end
+          end
         end
       end
+    end
+    
+    def stop_busy_world world_id, busy_world
+      if busy_world['state'].include? 'starting'
+        debug "world:#{world_id} is starting. Will request stop when started"
+        redis.hset_hash "worlds:busy", world_id, state:'starting => stopping'
+        listen_once "worlds:requests:start:#{world_id}" do
+          debug "world:#{world_id} started. Requesting stop"
+          stop_world world_id
+        end
+      else
+        debug "world:#{world_id} is already stopping."
+      end
+      
     end
   end
 end
