@@ -89,7 +89,7 @@ class WorldWatcher < EventMachine::Connection
     puts "world:#{world_id} quit. Starting backup"
     RUNNING_WORLDS.delete world_id
     @backup_timer.cancel if @backup_timer
-    @map_timer.cancel if @map_timer
+    @map_timer.cancel if @map_timer 
     
     @backup_waiter = EM.add_periodic_timer(1) do
       unless @backup_in_progress

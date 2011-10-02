@@ -36,7 +36,7 @@ module Prism
     end
     
     def operation_failed
-      error "failed to start worker:#{instance_id}"      
+      error "failed to start worker:#{instance_id}"
     end
   end
 end
