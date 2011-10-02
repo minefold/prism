@@ -14,7 +14,7 @@ module Prism
     
     def operation_succeeded worker
       info "worker:#{worker.instance_id} created"
-      op = redis.hset_hash "workers:running", worker.instance_id, instance_id:worker.instance_id, host:worker.host, started_at:Time.now.utc
+      op = redis.hset_hash "workers:running", worker.instance_id, instance_id:worker.instance_id, host:worker.host, started_at:Time.now.utc, instance_type:instance_type
       op.callback {
         debug "publish workers:requests:create:#{request_id}"
         redis.publish_json "workers:requests:create:#{request_id}", instance_id:worker.instance_id, host:worker.host

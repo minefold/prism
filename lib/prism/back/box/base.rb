@@ -44,7 +44,7 @@ module Prism
     
     
     class Base
-      attr_reader :instance_id, :host, :started_at
+      attr_reader :instance_id, :instance_type, :host, :started_at
       
       def query_worlds
         df = EM::DefaultDeferrable.new

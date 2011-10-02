@@ -109,7 +109,7 @@ module Prism
     def start_world_on_new_worker instance_type
       request_id = `uuidgen`.strip
       debug "starting world:#{world_id} on new worker"
-      redis.lpush "workers:requests:create", request_id, instance_type
+      redis.lpush_hash "workers:requests:create", request_id:request_id, instance_type:instance_type
       listen_once_json "workers:requests:create:#{request_id}" do |worker|
         debug "created new worker:#{worker['instance_id']}"
         

@@ -66,7 +66,7 @@ module Prism
         @vm = vm
         vm.private_key_path = SSH_PRIVATE_KEY_PATH
         
-        @instance_id, @host = vm.id, vm.public_ip_address
+        @instance_id, @instance_type, @host = vm.id, vm.flavor_id, vm.public_ip_address
         @started_at = vm.created_at
       end
       

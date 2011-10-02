@@ -34,7 +34,7 @@ module Prism
       end
   
       def initialize instance_id
-        @instance_id, @host = instance_id, '0.0.0.0'
+        @instance_id, @instance_type, @host = instance_id, 'm1.large', '0.0.0.0'
         @state = 'running'
         @started_at = Time.now
       end
