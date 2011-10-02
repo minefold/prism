@@ -120,22 +120,26 @@ module Prism
       end
 
       # shutdown idle boxes
-      running_boxes.each do |box|
-        uptime_minutes = ((Time.now - box.started_at) / 60).to_i
-        close_to_end_of_hour = uptime_minutes % 60 > 55
+      if running_boxes.size > 0
+        running_boxes.each do |box|
+          uptime_minutes = ((Time.now - box.started_at) / 60).to_i
+          close_to_end_of_hour = uptime_minutes % 60 > 55
   
-        world_count = running_worlds.count{|world_id, w| w['instance_id'] == box.instance_id }
+          world_count = running_worlds.count{|world_id, w| w['instance_id'] == box.instance_id }
       
-        box_not_busy = redis_busy_boxes.count {|busy_box_id, world| busy_box_id == box.instance_id } == 0
+          box_not_busy = redis_busy_boxes.count {|busy_box_id, world| busy_box_id == box.instance_id } == 0
        
-        world_not_busy = redis_busy_worlds.count {|busy_world_id, data| data['instance_id'] == box.instance_id } == 0
+          world_not_busy = redis_busy_worlds.count {|busy_world_id, data| data['instance_id'] == box.instance_id } == 0
   
-        if close_to_end_of_hour and world_count == 0 and box_not_busy and world_not_busy
-          puts "box:#{box.instance_id} worlds:#{world_count} uptime_minutes:#{uptime_minutes} terminating idle"
-          redis.lpush "workers:requests:stop", box.instance_id
-        else
-          puts "box:#{box.instance_id} worlds:#{world_count} uptime_minutes:#{uptime_minutes}"
+          if close_to_end_of_hour and world_count == 0 and box_not_busy and world_not_busy
+            puts "box:#{box.instance_id} worlds:#{world_count} uptime_minutes:#{uptime_minutes} terminating idle"
+            redis.lpush "workers:requests:stop", box.instance_id
+          else
+            puts "box:#{box.instance_id} worlds:#{world_count} uptime_minutes:#{uptime_minutes}"
+          end
         end
+      else
+        puts "No boxes running"
       end
       @deferred_sweep.succeed
     end
