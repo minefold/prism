@@ -7,27 +7,36 @@ module Prism
     def run
       op = redis.hget "usernames", username
       op.callback do |user_id|
-        EM.defer(proc {
-          mongo_connect.collection('users').find_and_modify({
-              query: {"_id"  => BSON::ObjectId(user_id) },
-              update:{
+        EM.defer(proc { 
+            mongo_connect.collection('users').find_one({"_id"  => BSON::ObjectId(user_id) }) 
+          }, proc { |user| 
+            EM.defer(proc {
+              update = { 
                 '$push' => {'credit_events' => { 'created_at' => Time.now.utc, 'delta' => -1 } },
-                '$inc'  => {'credits' => -1, 'minutes_played' => 1 }
+                '$inc'  => {'minutes_played' => 1 }
               }
-            })
-        }, proc { |user|
-          credits = user['credits'] - 1
-          info "deducting 1 credit. #{credits} remaining. Played:#{user['minutes_played']} minutes"
-          credits_updated user_id, credits
-        })
 
+              unless user['plan'] && user['plan'] == 'pro'
+                update.merge!({'$inc'  => {'credits' => -1 }})
+              end
+              
+              mongo_connect.collection('users').find_and_modify({ query: {"_id"  => BSON::ObjectId(user_id) }, update:update })
+            }, proc { |user|
+              credits = user['credits']
+              if user['plan'] && user['plan'] == 'pro'
+                info "played:#{user['minutes_played']} minutes [PRO ACCOUNT]"
+              else
+                info "deducting 1 credit. #{credits} remaining. Played:#{user['minutes_played']} minutes"
+                credits_updated user_id, credits
+              end
+            })
+          })
       end
     end
 
     def credits_updated user_id, credits_remaining
       messages = {
-        30 => "30 minefold minutes left",
-        10 => "10 minefold minutes left",
+        15 => "15 minefold minutes left",
         5  =>  "5 minefold minutes left!",
         1  =>  "1 minefold minutes left!"
       }.freeze

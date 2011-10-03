@@ -9,7 +9,7 @@ module Prism
 
       EM.defer(proc { mongo_connect.collection('users').find_one(:username => /#{username}/i) }, proc { |user|
         if user
-          if user['credits'] > 0
+          if (user['plan'] && user['plan'] == 'pro') || user['credits'] > 0
             recognised_player_connecting user
           else
             no_credit_player_connecting
