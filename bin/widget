@@ -23,7 +23,7 @@ RUNNING_WORLDS = {}
 class WorldWatcher < EventMachine::Connection 
   include Resque::Helpers
   
-  attr_reader :world_id, :instance_id, :host, :port, :redis, :state
+  attr_reader :world_id, :instance_id, :host, :port, :redis, :state, :stdin_queue
   
   def initialize world_id, instance_id, host, port, stdin_queue, stop_queue
     @world_id, @instance_id, @host, @port = world_id, instance_id, host, port
@@ -31,17 +31,18 @@ class WorldWatcher < EventMachine::Connection
     @redis = Prism.redis
     @line_channel = EM::Channel.new
     @state = state
+    @stdin_queue = stdin_queue
 
     RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port, players:[] }
     @world_state = RUNNING_WORLDS[world_id]
     
-    stdin_queue.pop { |message| send_line message }
+    process_stdin
     stop_queue.pop { stop_world }
   end
   
   def post_init
     @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
-    @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue(Job::MapWorld, world_id) }
+       @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue Job::MapWorld, world_id }
   end
   
   def receive_data data
@@ -100,12 +101,12 @@ class WorldWatcher < EventMachine::Connection
     puts "world:#{world_id} quit. Starting backup"
     RUNNING_WORLDS.delete world_id
     @backup_timer.cancel if @backup_timer
-    @map_timer.cancel if @map_timer 
+    @map_timer.cancel if @map_timer
     
     @backup_waiter = EM.add_periodic_timer(1) do
       unless @backup_in_progress
         @backup_waiter.cancel
-        EM.defer(proc { LocalWorld.new(world_id).backup! }, 
+        EM.defer(proc { LocalWorld.new(world_id).backup! },
           proc { 
             redis.hdel "worlds:busy", world_id
             redis.del "worlds:#{world_id}:connected_players"
@@ -129,6 +130,11 @@ class WorldWatcher < EventMachine::Connection
         })
     end
   end
+  
+  def process_stdin
+    stdin_queue.pop { |message| send_line message; EM.next_tick { process_stdin } }
+  end
+  
 end
 
 module StatusHandler

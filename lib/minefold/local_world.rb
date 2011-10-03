@@ -116,6 +116,7 @@ class LocalWorld
     )
 
     FileUtils.rm world_archive
+    puts "Finished backup"
   end
 
 end
