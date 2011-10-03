@@ -23,7 +23,6 @@ namespace "redis" do
         p redis.hgetall(key)
       when 'list'
         length = redis.llen key
-        puts key
         p redis.lrange(key, 0, length)
       when 'set'
         p redis.smembers key
