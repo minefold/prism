@@ -58,7 +58,7 @@ namespace :prism do
   end
   
   task :kick do
-    puts `ssh -i .ssh/minefold.pem ubuntu@pluto.minefold.com "cd ~/minefold && sudo bin/god restart prism_back && sudo bin/god restart prism"`
+    puts `ssh -i .ssh/minefold2.pem ubuntu@#{ENV['HOST']} "sudo restart prism prism_back"`
   end
 end
 

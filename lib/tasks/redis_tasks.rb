@@ -29,6 +29,5 @@ namespace "redis" do
       end
       puts
     end
-
   end
 end

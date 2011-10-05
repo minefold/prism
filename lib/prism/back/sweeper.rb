@@ -126,9 +126,11 @@ module Prism
         running_boxes.each do |box|
           uptime_minutes = ((Time.now - box.started_at) / 60).to_i
           close_to_end_of_hour = uptime_minutes % 60 > 55
+          
+          box_worlds = running_worlds.select {|world_id, w| w['instance_id'] == box.instance_id }
   
-          world_count = running_worlds.values.count{|w| w['instance_id'] == box.instance_id }
-          player_count = running_worlds.values.inject(0) {|sum, w| sum + w['players'].size }
+          world_count = box_worlds.size
+          player_count = box_worlds.values.inject(0) {|sum, w| sum + w['players'].size }
       
           box_not_busy = redis_universe.boxes[:busy].count {|busy_box_id, world| busy_box_id == box.instance_id } == 0
        
