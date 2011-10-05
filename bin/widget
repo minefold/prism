@@ -182,7 +182,7 @@ EM.run do
     world_start = JSON.parse request
     world_id = world_start['world_id']
     
-    port = INITIAL_PORT + RUNNING_WORLDS.size
+    port = INITIAL_PORT + RUNNING_WORLDS.size + (rand * 100).to_i
     puts "starting world:#{world_id} on port:#{port}"
 
     EM.defer(

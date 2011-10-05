@@ -41,7 +41,7 @@ module Prism
           QueueProcessor.new klass
       end
       
-      EM::PeriodicTimer.new(3 * 60) { perform_sweep }
+      EM::PeriodicTimer.new(1 * 60) { perform_sweep }
 
       puts "Started. #{Fold.env} mode"
       
