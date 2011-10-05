@@ -106,7 +106,13 @@ class WorldWatcher < EventMachine::Connection
     @backup_waiter = EM.add_periodic_timer(1) do
       unless @backup_in_progress
         @backup_waiter.cancel
-        EM.defer(proc { LocalWorld.new(world_id).backup! },
+        EM.defer(proc { 
+          begin
+            LocalWorld.new(world_id).backup! 
+          rescue => e
+            puts "ERROR: backup on world stop failed: #{e}"
+          end
+          },
           proc { 
             redis.hdel "worlds:busy", world_id
             redis.del "worlds:#{world_id}:connected_players"
@@ -123,7 +129,13 @@ class WorldWatcher < EventMachine::Connection
     send_line "save-all"
     EM.add_timer 3 do
       EM.defer(
-        proc { LocalWorld.new(world_id).backup! }, 
+        proc { 
+          begin
+            LocalWorld.new(world_id).backup! 
+          rescue => e
+            puts "ERROR: backup failed: #{e}"
+          end
+          }, 
         proc { 
           send_line "save-on"
           @backup_in_progress = false
