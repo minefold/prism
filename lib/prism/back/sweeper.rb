@@ -136,8 +136,8 @@ module Prism
   
           message = "box:#{box.instance_id} worlds:#{world_count} players:#{player_count} uptime_minutes:#{uptime_minutes}"
           if close_to_end_of_hour and world_count == 0 and box_not_busy and world_not_busy
-            puts "#{message} terminating idle"
-            redis.lpush "workers:requests:stop", box.instance_id
+            puts "#{message} terminating idle [IGNORE]"
+            # redis.lpush "workers:requests:stop", box.instance_id
           else
             puts message
           end
