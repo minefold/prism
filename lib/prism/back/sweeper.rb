@@ -94,6 +94,7 @@ module Prism
       lost_world_ids.each do |world_id|
         debug "lost world:#{world_id}"
         redis.hdel "worlds:running", world_id
+        redis.del "worlds:#{world_id}:connected_players"
       end
       
       # lost busy worlds
