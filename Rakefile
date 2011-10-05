@@ -54,7 +54,7 @@ end
 
 namespace :prism do
   task :deploy do
-    puts `ssh -i .ssh/minefold.pem ubuntu@#{ENV['HOST']} "cd /opt/prism && sudo GIT_SSH=/home/fold/.ssh/deploy-wrapper git pull origin #{ENV['BRANCH']} && sudo bundle --binstubs --without test && sudo chown -R fold . && sudo restart prism_back"`
+    puts `ssh -i .ssh/minefold2.pem ubuntu@#{ENV['HOST']} "cd /opt/prism && sudo GIT_SSH=/home/fold/.ssh/deploy-wrapper git pull origin #{ENV['BRANCH']} && sudo bundle --binstubs --without test && sudo chown -R fold . && sudo restart prism_back"`
   end
   
   task :kick do

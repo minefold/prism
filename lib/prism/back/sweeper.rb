@@ -110,6 +110,10 @@ module Prism
         # redis.lpush "workers:requests:fix", box.instance_id
       end
       
+      # lost players
+      # lost_players = running_boxes.values.flatten - redis_universe.players.keys
+      # p lost_players
+      
       # shutdown idle worlds
       running_worlds.select {|world_id, world| world['players'].size == 0 }.each do |world_id, world|
         unless redis_universe.worlds[:busy].keys.include? world_id

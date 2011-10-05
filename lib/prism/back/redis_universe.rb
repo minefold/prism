@@ -36,14 +36,18 @@ module Prism
            busy: results[:busy_worlds]
       }
 
+      @players = {}
+      
       world_players = results.each_with_object({}) do |(key, player_ids), hash| 
         key =~ /worlds:(.*):connected_players/
-        if $1
-          hash[$1] ||= []
-          hash[$1] += player_ids 
+        if world_id = $1
+          hash[world_id] ||= []
+          hash[world_id] += player_ids
+
+          @players.merge! player_ids.each_with_object({}) {|player_id, hash| hash[player_id] = world_id  }
         end
       end
-
+      
       @worlds[:running].each do |world_id, world|
         @worlds[:running][world_id][:players] = world_players[world_id]
       end

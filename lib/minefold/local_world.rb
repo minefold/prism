@@ -90,33 +90,38 @@ class LocalWorld
   end
 
   def backup!
-    puts "Starting backup"
-    FileUtils.mkdir_p "#{ROOT}/backups"
+    begin
+      puts "Starting backup"
+      FileUtils.mkdir_p "#{ROOT}/backups"
 
-    world_archive = "#{ROOT}/backups/#{id}.tar.gz"
+      world_archive = "#{ROOT}/backups/#{id}.tar.gz"
 
-    # having this file present lets others know there is a backup in process
-    FileUtils.touch world_archive
+      # having this file present lets others know there is a backup in process
+      FileUtils.touch world_archive
 
-    # tar gz world
-    Dir.chdir "#{ROOT}/worlds" do
-      puts "Archiving #{ROOT}/worlds/#{id} to #{world_archive}"
-      result = TarGz.new.archive id, world_archive, exclude:'server.jar'
-      puts result unless $?.exitstatus == 0
+      # tar gz world
+      Dir.chdir "#{ROOT}/worlds" do
+        puts "Archiving #{ROOT}/worlds/#{id} to #{world_archive}"
+        result = TarGz.new.archive id, world_archive, exclude:'server.jar'
+        puts result unless $?.exitstatus == 0
+      end
+      raise "error archiving world" unless $?.exitstatus == 0
+
+      directory = Storage.new.worlds
+
+      puts "Uploading"
+      file = directory.files.create(
+        :key    => "#{id}.tar.gz",
+        :body   => File.open(world_archive),
+        :public => false
+      )
+
+      puts "Finished backup"
+    rescue => error
+      puts "BACKUP ERROR: #{error}"
+    ensure
+      FileUtils.rm_f world_archive
     end
-    raise "error archiving world" unless $?.exitstatus == 0
-
-    directory = Storage.new.worlds
-
-    puts "Uploading"
-    file = directory.files.create(
-      :key    => "#{id}.tar.gz",
-      :body   => File.open(world_archive),
-      :public => false
-    )
-
-    FileUtils.rm world_archive
-    puts "Finished backup"
   end
 
 end
