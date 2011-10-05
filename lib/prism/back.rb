@@ -6,7 +6,6 @@ require 'prism/back/box'
 require 'prism/back/queue_processor'
 require 'prism/back/request'
 require 'prism/back/busy_operation_request'
-require 'prism/back/credit_muncher'
 require 'prism/back/chat_messaging'
 require 'prism/back/sweeper'
 
