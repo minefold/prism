@@ -10,7 +10,7 @@ module Prism
     end
     
     def set_handler klass, *args
-      debug "handler > #{klass} #{args.join(', ')}"
+      # debug "handler > #{klass} #{args.join(', ')}"
       
       @handler = klass.new self, *args
       handler.change_handler { |klass, *args| set_handler klass, *args }

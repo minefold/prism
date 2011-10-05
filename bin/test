@@ -7,8 +7,13 @@ $:.unshift File.join File.dirname(__FILE__), '..', 'lib'
 require 'minefold'
 require 'prism/back'
 
+username = ARGV.shift
+
 EM.run do
-  Prism::RedisUniverse.collect {|universe| p universe.boxes, universe.worlds; EM.stop }
+  # Prism::RedisUniverse.collect {|universe| p universe.boxes, universe.worlds; EM.stop }
+  
+  Prism.redis.publish_json "players:connection_request:#{username}", rejected:'500'
+  
   # op = Prism.redis.keys("worlds:*:connected_players")
   # op.callback do |keys| 
   #   EM::Iterator.new(keys).map(proc { |key, iter|
