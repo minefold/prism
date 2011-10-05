@@ -109,6 +109,13 @@ module Prism
         debug "ignoring broken box:#{box.instance_id}"
         # redis.lpush "workers:requests:fix", box.instance_id
       end
+      
+      # shutdown idle worlds
+      running_worlds.select {|world_id, world| world['players'].size == 0 }.each do |world_id, world|
+        unless redis_universe.worlds[:busy].keys.include? world_id
+          redis.lpush "workers:#{world['instance_id']}:worlds:requests:stop", world_id
+        end
+      end
 
       # shutdown idle boxes
       if running_boxes.size > 0
