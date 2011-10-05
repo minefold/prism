@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+Bundler.require :default, :chatty, :proxy
+
+$:.unshift File.join File.dirname(__FILE__), '..', 'lib'
+require 'minefold'
+require 'prism/back'
+
+EM.run do
+  Prism::RedisUniverse.collect {|universe| p universe.boxes, universe.worlds; EM.stop }
+  # op = Prism.redis.keys("worlds:*:connected_players")
+  # op.callback do |keys| 
+  #   EM::Iterator.new(keys).map(proc { |key, iter|
+  #     op = Prism.redis.smembers key
+  #     op.callback {|players| iter.return players }
+  #     op.errback { iter.return [] }
+  #   }, proc {|players| p players.flatten })
+  # end
+end

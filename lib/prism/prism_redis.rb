@@ -42,10 +42,13 @@ module Prism
       op
     end
     
-    def hgetall_json key, &blk
+    def hgetall_json key
+      df = EM::DefaultDeferrable.new
+      
       op = hgetall key
-      op.callback {|data| yield data.each_slice(2).each_with_object({}) {|w, hash| hash[w[0]] = JSON.parse w[1] } }
-      op
+      op.callback {|data| df.succeed data.each_slice(2).each_with_object({}) {|w, hash| hash[w[0]] = JSON.parse w[1] } }
+      op.errback  { df.errback }
+      df
     end
     
     def hset_hash channel, key, value

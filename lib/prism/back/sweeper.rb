@@ -1,41 +1,27 @@
 module Prism
+  
   module Sweeper 
     include Debugger
     
-    attr_reader :redis_running_boxes, :redis_busy_boxes, :redis_sleeping_boxes, :redis_running_worlds, :redis_busy_worlds, 
+    attr_reader :redis_universe, 
                 :boxes, :running_boxes, :working_boxes, :broken_boxes, :sleeping_boxes,
                 :running_worlds
     
     def redis; Prism.redis; end
     
     def perform_sweep
-      @boxes, @running_boxes, @working_boxes, @broken_boxes, @sleeping_boxes = [], [], [], [], []
-      @running_worlds = {}
-      
-      redis.hgetall_json 'workers:running' do |redis_running_boxes|
-        @redis_running_boxes = redis_running_boxes
-        op = redis.smembers 'workers:sleeping'
-        op.callback do |redis_sleeping_boxes|
-          @redis_sleeping_boxes = redis_sleeping_boxes
-          redis.hgetall_json 'workers:busy' do |redis_busy_boxes|
-            @redis_busy_boxes = redis_busy_boxes
-            
-            redis.hgetall_json 'worlds:running' do |redis_running_worlds|
-              @redis_running_worlds = redis_running_worlds
-              redis.hgetall_json 'worlds:busy' do |redis_busy_worlds|
-                @redis_busy_worlds = redis_busy_worlds
-                Box.all method(:query_boxes)
-              end
-            end
-          end
-        end
+      Prism::RedisUniverse.collect do |universe|
+        @redis_universe = universe
+        Box.all method(:query_boxes)
       end
-      
+
       @deferred_sweep = EM::DefaultDeferrable.new
     end
     
     def query_boxes boxes
       @boxes = boxes
+      
+      @running_boxes, @working_boxes, @broken_boxes, @sleeping_boxes, @running_worlds = [], [], [], [], {}
       EM::Iterator.new(boxes).each(proc{ |box,iter|
         box.query_state do |state|
           if state == 'running'
@@ -62,35 +48,35 @@ module Prism
 
     def update_state
       # found boxes
-      new_boxes = running_boxes.reject{|w| redis_running_boxes.keys.include? w.instance_id }
+      new_boxes = running_boxes.reject{|w| redis_universe.boxes[:running].keys.include? w.instance_id }
       new_boxes.each do |box|
         debug "found box:#{box.instance_id}"
         redis.hset_hash "workers:running", box.instance_id, instance_id:box.instance_id, host:box.host, started_at:box.started_at
       end
       
       # lost boxes
-      lost_box_ids = redis_running_boxes.keys - running_boxes.map(&:instance_id)
+      lost_box_ids = redis_universe.boxes[:running].keys - running_boxes.map(&:instance_id)
       lost_box_ids.each do |instance_id|
         debug "lost box:#{instance_id}"
         redis.hdel "workers:running", instance_id
       end
       
       # lost busy boxes
-      lost_busy_box_ids = redis_busy_boxes.keys - running_boxes.map(&:instance_id)
+      lost_busy_box_ids = redis_universe.boxes[:busy].keys - running_boxes.map(&:instance_id)
       lost_busy_box_ids.each do |instance_id|
         debug "lost busy box:#{instance_id}"
         redis.hdel "workers:busy", instance_id
       end
       
       # found worlds
-      new_worlds = running_worlds.reject{|world_id, world| redis_running_worlds.keys.include? world_id }
+      new_worlds = running_worlds.reject{|world_id, world| redis_universe.worlds[:running].keys.include? world_id }
       new_worlds.each do |world_id, world|
         debug "found world:#{world_id}"
         redis.hset_hash "worlds:running", world_id, instance_id:world['instance_id'], host:world['host'], port:world['port']
       end
       
       # lost worlds
-      lost_world_ids = redis_running_worlds.keys - running_worlds.keys
+      lost_world_ids = redis_universe.worlds[:running].keys - running_worlds.keys
       lost_world_ids.each do |world_id|
         debug "lost world:#{world_id}"
         redis.hdel "worlds:running", world_id
@@ -98,21 +84,21 @@ module Prism
       end
       
       # lost busy worlds
-      lost_busy_world_ids = redis_busy_worlds.keys - running_worlds.keys
+      lost_busy_world_ids = redis_universe.worlds[:busy].keys - running_worlds.keys
       lost_busy_world_ids.each do |world_id|
         debug "lost busy world:#{world_id}"
         redis.hdel "worlds:busy", world_id
       end
       
       # found sleeping boxes
-      new_sleeping_boxes = sleeping_boxes.reject{|instance_id| redis_sleeping_boxes.include? instance_id }
+      new_sleeping_boxes = sleeping_boxes.reject{|instance_id| redis_universe.boxes[:sleeping].include? instance_id }
       new_sleeping_boxes.each do |box|
         debug "found sleeping box:#{box.instance_id}"
         redis.sadd "workers:sleeping", box.instance_id
       end
       
       # lost sleeping boxes
-      lost_sleeping_box_ids = redis_sleeping_boxes - sleeping_boxes
+      lost_sleeping_box_ids = redis_universe.boxes[:sleeping].keys - sleeping_boxes
       lost_sleeping_box_ids.each do |instance_id|
         debug "lost sleeping box:#{instance_id}"
         redis.srem "workers:sleeping", instance_id
@@ -133,9 +119,9 @@ module Prism
           world_count = running_worlds.values.count{|w| w['instance_id'] == box.instance_id }
           player_count = running_worlds.values.inject(0) {|sum, w| sum + w['players'].size }
       
-          box_not_busy = redis_busy_boxes.count {|busy_box_id, world| busy_box_id == box.instance_id } == 0
+          box_not_busy = redis_universe.boxes[:busy].count {|busy_box_id, world| busy_box_id == box.instance_id } == 0
        
-          world_not_busy = redis_busy_worlds.count {|busy_world_id, data| data['instance_id'] == box.instance_id } == 0
+          world_not_busy = redis_universe.worlds[:busy].count {|busy_world_id, data| data['instance_id'] == box.instance_id } == 0
   
           message = "box:#{box.instance_id} worlds:#{world_count} players:#{player_count} uptime_minutes:#{uptime_minutes}"
           if close_to_end_of_hour and world_count == 0 and box_not_busy and world_not_busy

@@ -59,7 +59,8 @@ module Prism
       debug "getting world:#{world_id} started"
       
       # any free boxes?
-      redis.hgetall_json("workers:running") do |boxes|
+      op = redis.hgetall_json("workers:running")
+      op.callback do |boxes|
         EM::Iterator.new(boxes).inject({}, proc{ |hash, (instance_id, box), iter|
             instance_capacity = INSTANCE_PLAYER_CAPACITY[box['instance_type']]
             
