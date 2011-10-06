@@ -213,7 +213,7 @@ def start_processing instance_id, host
             stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
             stop_queue = stop_queues[world_id] = EM::Queue.new
 
-            Dir.chdir("worlds/#{world_id}") do
+            Dir.chdir("#{ROOT}/worlds/#{world_id}") do
               connection = EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui", WorldWatcher, world_id, instance_id, host, port, stdin_queue, stop_queue
             end
             start_popper.listen
