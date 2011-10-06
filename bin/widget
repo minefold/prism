@@ -3,6 +3,8 @@
 require 'bundler/setup'
 Bundler.require :default
 
+require 'tmpdir'
+
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'widget'
@@ -40,7 +42,20 @@ class WorldWatcher < EventMachine::Connection
     stop_queue.pop { stop_world }
   end
   
+  def pid_path
+    "#{Dir.tmpdir}/minecraft-server-pids"
+  end
+  
+  def write_pid
+    FileUtils.mkdir_p pid_path
+    pid_file = "#{pid_path}/#{get_pid}" 
+    File.open(pid_file, "w") {|f| f.print get_pid }
+    pid_file
+  end
+  
   def post_init
+    puts "pid: #{write_pid}"
+    
     @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
        @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue Job::MapWorld, world_id }
   end
@@ -196,31 +211,39 @@ EM.run do
         end
       },
       proc { |succeeded|
-        if succeeded
-          stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
-          stop_queue = stop_queues[world_id] = EM::Queue.new
+        begin
+          if succeeded
+            stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
+            stop_queue = stop_queues[world_id] = EM::Queue.new
 
-          Dir.chdir("worlds/#{world_id}") do
-            EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui",
-                      WorldWatcher, world_id, instance_id, host, port, stdin_queue, stop_queue
+            Dir.chdir("worlds/#{world_id}") do
+              EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui",
+                        WorldWatcher, world_id, instance_id, host, port, stdin_queue, stop_queue
+            end
+            start_popper.listen
+          else
+            redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
           end
-          start_popper.listen
-        else
-          redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
+        rescue => e
+          puts "ERROR: failed to spawn minecraft:#{e}"
         end
     })
   end  
   
   stop_popper = Prism::QueuePopper.new "#{requests}:stop"
   stop_popper.on_pop do |world_id|
-    if stop_queue = stop_queues[world_id]
-      redis.hdel "worlds:running", world_id
-      stop_queue.push "stop"
+    begin
+      if stop_queue = stop_queues[world_id]
+        redis.hdel "worlds:running", world_id
+        stop_queue.push "stop"
       
-      stdin_queues.delete "workers:#{instance_id}:worlds:#{world_id}:stdin"
-      stop_queues.delete world_id
-    else
-      puts "world:#{world_id} stop request recieved but world is not running here"
+        stdin_queues.delete "workers:#{instance_id}:worlds:#{world_id}:stdin"
+        stop_queues.delete world_id
+      else
+        puts "world:#{world_id} stop request recieved but world is not running here"
+      end
+    rescue => e
+      puts "ERROR: failed to stop world:#{e}"
     end
   end
 
