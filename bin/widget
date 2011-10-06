@@ -116,12 +116,12 @@ class WorldWatcher < EventMachine::Connection
     @backup_timer.cancel if @backup_timer
     @map_timer.cancel if @map_timer
     
-    @backup_waiter = EM.add_periodic_timer(1) do
+    @backup_waiter = EM.add_periodic_timer(10) do
       unless @backup_in_progress
         @backup_waiter.cancel
         EM.defer(proc { 
           begin
-            LocalWorld.new(world_id).backup! 
+            LocalWorld.new(world_id).backup!
           rescue => e
             puts "ERROR: backup on world stop failed: #{e}"
           end
@@ -243,6 +243,8 @@ def start_processing instance_id, host
       puts "ERROR: failed to stop world:#{e}"
     end
   end
+  
+  # maintenance_popper = Prism::QueuePopper.new "#{request}"
 
   EM.start_server '0.0.0.0', 3000, StatusHandler
   
@@ -263,6 +265,10 @@ EM.run do
           puts "Killing #{pid}"
           Process.kill "TERM", pid unless pid == 0 rescue nil
           FileUtils.rm_f pid_file
+          
+          # if Dir.exists? 
+          #   LocalWorld.new(world_id).backup!
+          # end
         end
       end
     }, 

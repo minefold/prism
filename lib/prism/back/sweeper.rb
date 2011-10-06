@@ -51,7 +51,7 @@ module Prism
       new_boxes = running_boxes.reject{|w| redis_universe.boxes[:running].keys.include? w.instance_id }
       new_boxes.each do |box|
         debug "found box:#{box.instance_id}"
-        redis.hset_hash "workers:running", box.instance_id, instance_id:box.instance_id, host:box.host, started_at:box.started_at
+        redis.hset_hash "workers:running", box.instance_id, instance_id:box.instance_id, host:box.host, started_at:box.started_at, instance_type:box.instance_type
       end
       
       # lost boxes

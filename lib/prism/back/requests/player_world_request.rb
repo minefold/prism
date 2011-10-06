@@ -7,6 +7,8 @@ module Prism
     
     attr_reader :instance_id
     
+    PLAYER_RAM_SIZE = 128
+    
     INSTANCE_PLAYER_CAPACITY = { 
       'm1.large'   => 50,
       'm2.xlarge'  => 130,
@@ -115,7 +117,7 @@ module Prism
       redis.lpush "workers:#{instance_id}:worlds:requests:start", {
         instance_id:instance_id, 
         world_id:world_id, 
-        min_heap_size:512, max_heap_size:2048 
+        min_heap_size:512, max_heap_size:(4 * 1024) 
       }.to_json 
       
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
