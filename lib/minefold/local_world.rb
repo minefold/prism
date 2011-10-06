@@ -61,8 +61,22 @@ class LocalWorld
       File.open(properties_path, 'w') {|file| file.puts server_properties(world, port) }
 
       # create ops.txt
-      File.open("#{world_path}/ops.txt", 'w') {|file| file.puts WORLD_OPS.join("\n") }
-
+      user = MinefoldDb.connection['users'].find_one({'_id' => world['creator_id']})
+      ops = WORLD_OPS | Array(user['username'])
+      
+      if File.exists? "#{world_path}/ops.txt"
+        File.open("#{world_path}/ops.txt") do |file| 
+          ops = ops | file.read.split("\n")
+        end
+      end
+      
+      p "ops:", ops
+      
+      File.open("#{world_path}/ops.txt", "w") do |file| 
+        file.puts ops.join("\n")
+        file.puts
+      end
+      
       # clear server log
       server_log = File.join(world_path, "server.log")
       File.open(server_log, "w") {|file| file.print }
