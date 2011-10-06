@@ -45,7 +45,11 @@ module Prism
       if busy_world['state'].include? 'starting'
         debug "world:#{world_id} start already requested"
         listen_once_json "worlds:requests:start:#{world_id}" do |world|
-          connect_player_to_world world['instance_id'], world['host'], world['port']
+          if world['failed']
+            redis.publish_json "players:connection_request:#{username}", rejected:'500'
+          else
+            connect_player_to_world world['instance_id'], world['host'], world['port']
+          end
         end
       else
         debug "world:#{world_id} is stopping. will request start when stopped"
