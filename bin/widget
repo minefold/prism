@@ -22,6 +22,8 @@ EM.epoll
 INITIAL_PORT = 4000
 RUNNING_WORLDS = {}
 
+PID_PATH = "#{Dir.tmpdir}/minecraft-server-pids"
+
 class WorldWatcher < EventMachine::Connection 
   include Resque::Helpers
   
@@ -42,13 +44,9 @@ class WorldWatcher < EventMachine::Connection
     stop_queue.pop { stop_world }
   end
   
-  def pid_path
-    "#{Dir.tmpdir}/minecraft-server-pids"
-  end
   
   def write_pid
-    FileUtils.mkdir_p pid_path
-    pid_file = "#{pid_path}/#{get_pid}" 
+    pid_file = "#{PID_PATH}/#{get_pid}" 
     File.open(pid_file, "w") {|f| f.print get_pid }
     pid_file
   end
@@ -175,8 +173,7 @@ module StatusHandler
   end
 end
 
-
-EM.run do
+def start_processing instance_id, host
   redis = Prism.redis
 
   stdin_queues = {}
@@ -217,8 +214,7 @@ EM.run do
             stop_queue = stop_queues[world_id] = EM::Queue.new
 
             Dir.chdir("worlds/#{world_id}") do
-              EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui",
-                        WorldWatcher, world_id, instance_id, host, port, stdin_queue, stop_queue
+              connection = EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui", WorldWatcher, world_id, instance_id, host, port, stdin_queue, stop_queue
             end
             start_popper.listen
           else
@@ -254,4 +250,22 @@ EM.run do
   end
   
   puts "started #{Fold.env} mode"
+end
+
+EM.run do
+  FileUtils.mkdir_p PID_PATH
+  
+  EM.defer(proc {
+      Dir["#{PID_PATH}/*"].each do |pid_file|
+        File.open(pid_file, "r") do |f|
+          pid = f.read.strip.to_i
+          puts "Killing #{pid}"
+          Process.kill "TERM", pid unless pid == 0 rescue nil
+          FileUtils.rm_f pid_file
+        end
+      end
+    }, 
+    proc {
+      start_processing instance_id, host
+    })
 end
