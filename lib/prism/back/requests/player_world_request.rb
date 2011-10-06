@@ -69,14 +69,14 @@ module Prism
               world_sets = worlds.map {|world_id| "worlds:#{world_id}:connected_players"}
               if world_sets.any?
                 redis.sunion world_sets do |connected_players|
-                  puts "box:#{instance_id} player_count:#{connected_players.size} capacity:#{instance_capacity}"
+                  puts "box:#{instance_id} player_count:#{connected_players.size} capacity:#{instance_capacity} (#{box['instance_type']})"
                   if instance_capacity - connected_players.size > INSTANCE_PLAYER_BUFFER
                     hash[instance_id] = box
                   end
                   iter.return hash
                 end
               else
-                puts "box:#{instance_id} player_count:0 capacity:#{instance_capacity}"
+                puts "box:#{instance_id} player_count:0 capacity:#{instance_capacity} (#{box['instance_type']})"
                 hash[instance_id] = box
                 iter.return hash
               end

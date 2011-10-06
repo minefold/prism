@@ -203,7 +203,7 @@ def start_processing instance_id, host
           LocalWorld.prepare world_id, port
           true
         rescue => e
-          puts "ERROR: failed to prepare:#{world_id}"
+          puts "ERROR: failed to prepare:#{world_id} #{e}"
           false
         end
       },

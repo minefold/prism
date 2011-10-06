@@ -6,13 +6,20 @@ Bundler.require :default, :chatty, :proxy
 $:.unshift File.join File.dirname(__FILE__), '..', 'lib'
 require 'minefold'
 require 'prism/back'
+require 'awesome_print'
 
 username = ARGV.shift
 
-EM.run do
-  # Prism::RedisUniverse.collect {|universe| p universe.boxes, universe.worlds; EM.stop }
+class RealUniverse
   
-  Prism.redis.publish_json "players:connection_request:#{username}", rejected:'500'
+end
+
+EM.run do
+  Prism::RedisUniverse.collect {|universe| ap universe.boxes, universe.worlds; EM.stop }
+  
+  
+  
+  # Prism.redis.publish_json "players:connection_request:#{username}", rejected:'500'
   
   # op = Prism.redis.keys("worlds:*:connected_players")
   # op.callback do |keys| 

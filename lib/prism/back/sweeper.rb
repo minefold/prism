@@ -116,7 +116,10 @@ module Prism
       
       # shutdown idle worlds
       running_worlds.select {|world_id, world| world['players'].size == 0 }.each do |world_id, world|
-        unless redis_universe.worlds[:busy].keys.include? world_id
+        if redis_universe.worlds[:busy].keys.include? world_id
+          puts "box:#{world['instance_id']} world:#{world_id} is empty busy:#{redis_universe.worlds[:busy][:world_id]}"
+        else
+          puts "box:#{world['instance_id']} world:#{world_id} stopping empty"
           redis.lpush "workers:#{world['instance_id']}:worlds:requests:stop", world_id
         end
       end
