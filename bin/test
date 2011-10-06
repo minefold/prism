@@ -28,9 +28,9 @@ end
 EM.run do
   # Prism::RedisUniverse.collect {|universe| ap universe.boxes, universe.worlds; EM.stop }
 
-  RealUniverse.collect {|universe| ap universe.boxes; EM.stop }
+  # RealUniverse.collect {|universe| ap universe.boxes; EM.stop }
   
-  # Prism.redis.publish_json "players:connection_request:#{username}", rejected:'500'
+  Prism.redis.publish_json "players:connection_request:#{username}", rejected:'500'
   
   # op = Prism.redis.keys("worlds:*:connected_players")
   # op.callback do |keys| 
