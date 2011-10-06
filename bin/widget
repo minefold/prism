@@ -222,6 +222,7 @@ def start_processing instance_id, host
           end
         rescue => e
           puts "ERROR: failed to spawn minecraft:#{e}"
+          redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
         end
     })
   end  
