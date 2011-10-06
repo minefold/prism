@@ -24,7 +24,7 @@ module Prism
       user_id, world_id = "#{user['_id']}", "#{user['current_world_id']}"
       debug "found user:#{user_id} world:#{world_id}"
       
-      if world_id
+      if world_id && world_id.size > 0
         redis.hset "usernames", username, user_id
         redis.hset "players:playing", username, world_id
       
