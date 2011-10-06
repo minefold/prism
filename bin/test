@@ -11,13 +11,24 @@ require 'awesome_print'
 username = ARGV.shift
 
 class RealUniverse
+  def self.collect *c, &b
+    cb = EM::Callback(*c, &b)
+    Box.all {|boxes| cb.call RealUniverse.new boxes}
+    cb
+  end
+  
+  attr_reader :boxes
+  
+  def initialize boxes
+    @boxes = boxes
+  end
   
 end
 
 EM.run do
-  Prism::RedisUniverse.collect {|universe| ap universe.boxes, universe.worlds; EM.stop }
-  
-  
+  # Prism::RedisUniverse.collect {|universe| ap universe.boxes, universe.worlds; EM.stop }
+
+  Prism::RealUniverse.collect {|universe| ap universe.boxes; EM.stop }
   
   # Prism.redis.publish_json "players:connection_request:#{username}", rejected:'500'
   

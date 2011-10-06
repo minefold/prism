@@ -120,6 +120,7 @@ module Prism
       
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
         if world['failed']
+          redis.hdel "worlds:busy", world_id
           redis.publish_json "players:connection_request:#{username}", rejected:'500'
         else
           connect_player_to_world world['instance_id'], world["host"], world["port"]

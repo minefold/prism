@@ -24,10 +24,15 @@ module Prism
       user_id, world_id = "#{user['_id']}", "#{user['current_world_id']}"
       debug "found user:#{user_id} world:#{world_id}"
       
-      redis.hset "usernames", username, user_id
-      redis.hset "players:playing", username, world_id
+      if world_id
+        redis.hset "usernames", username, user_id
+        redis.hset "players:playing", username, world_id
       
-      redis.lpush_hash "players:world_request", username:username, user_id:user_id, world_id:world_id, credits:user['credits']
+        redis.lpush_hash "players:world_request", username:username, user_id:user_id, world_id:world_id, credits:user['credits']
+      else
+        info "user:#{username} has no world"
+        redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
+      end
     end
     
     def unrecognised_player_connecting

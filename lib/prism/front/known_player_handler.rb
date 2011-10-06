@@ -10,6 +10,7 @@ module Prism
       {
         'unrecognised_player' => %Q{Sign up at http://minefold.com},
         'no_credit' => %Q{Sorry you need to top up your account at http://minefold.com},
+        'no_world' => %Q{You need to create or join a world! Visit http://minefold.com},
         '500' => %Q{Sorry! The gremlins messed something up, try connecting again while we spank them}
       }.freeze
     end
