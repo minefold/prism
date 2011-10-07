@@ -1,3 +1,5 @@
+require 'eventmachine/popen3'
+
 module Prism
   module Box
     module LocalWidgetHandler
@@ -20,7 +22,7 @@ module Prism
           @deferrable.succeed @local_box = begin
             local_instance_id = `hostname`.strip
             puts "starting local box"
-            EM.popen "#{BIN}/widget '#{local_instance_id}' '0.0.0.0'", LocalWidgetHandler
+            EM.popen3 "#{BIN}/widget '#{local_instance_id}' '0.0.0.0'", LocalWidgetHandler
       
             Local.new local_instance_id
           end

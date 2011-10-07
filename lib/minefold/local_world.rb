@@ -95,47 +95,43 @@ class LocalWorld
     "#{WORLDS}/#{id}"
   end
 
-  def backup_in_progress?
-    File.exists? "#{ROOT}/backups/#{id}.tar.gz"
-  end
-
-  def cancel_backup
-    FileUtils.rm "#{ROOT}/backups/#{id}.tar.gz"
-  end
-
   def backup!
-    begin
-      puts "Starting backup"
-      FileUtils.mkdir_p "#{ROOT}/backups"
+    puts "Starting backup"
+    FileUtils.mkdir_p "#{ROOT}/backups"
 
-      world_archive = "#{ROOT}/backups/#{id}.tar.gz"
+    world_archive = "#{ROOT}/backups/#{id}.tar.gz"
 
-      # having this file present lets others know there is a backup in process
-      FileUtils.touch world_archive
+    # having this file present lets others know there is a backup in process
+    FileUtils.touch world_archive
 
-      # tar gz world
-      Dir.chdir WORLDS do
-        puts "Archiving #{WORLDS}/#{id} to #{world_archive}"
-        result = TarGz.new.archive id, world_archive, exclude:'server.jar'
-        puts result unless $?.exitstatus == 0
-      end
-      raise "error archiving world" unless $?.exitstatus == 0
-
-      directory = Storage.new.worlds
-
-      puts "Uploading"
-      file = directory.files.create(
-        :key    => "#{id}.tar.gz",
-        :body   => File.open(world_archive),
-        :public => false
-      )
-
-      puts "Finished backup"
-    rescue => error
-      puts "BACKUP ERROR: #{error}"
-    ensure
-      FileUtils.rm_f world_archive
+    # tar gz world
+    Dir.chdir WORLDS do
+      puts "Archiving #{world_path} to #{world_archive}"
+      result = TarGz.new.archive id, world_archive, exclude:'server.jar'
+      puts result unless $?.exitstatus == 0
     end
+    raise "error archiving world" unless $?.exitstatus == 0
+
+    directory = Storage.new.worlds
+
+    retries = 10
+    begin
+      File.open(world_archive) do |world_archive_file|
+        puts "Uploading #{retries}"
+        file = directory.files.create(
+          :key    => "#{id}.tar.gz",
+          :body   => world_archive_file,
+          :public => false
+        )
+      end
+      FileUtils.rm_f world_archive
+    rescue => e
+      puts "UPLOAD ERROR: #{e.message}\n#{e.backtrace}"
+      retry if (retries -= 1) > 0
+    end
+    
+    
+    puts "Finished backup"
   end
 
 end

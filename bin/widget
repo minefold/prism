@@ -24,6 +24,12 @@ RUNNING_WORLDS = {}
 
 PID_PATH = "#{Dir.tmpdir}/minecraft-server-pids"
 
+module Enumerable
+  def strip_blanks
+    reject {|i| i.nil? || i.empty? }
+  end
+end
+
 class WorldWatcher < EventMachine::Connection 
   include Resque::Helpers
   
@@ -44,6 +50,13 @@ class WorldWatcher < EventMachine::Connection
     stop_queue.pop { stop_world }
   end
   
+  def info tag, message = nil
+    tag_parts = [world_id]
+    tag_parts += Array(tag) if tag
+    tag_string = tag_parts.flatten.strip_blanks.join('|')
+    puts "[#{tag_string}] #{message}"
+  end
+  
   
   def write_pid
     pid_file = "#{PID_PATH}/#{get_pid}" 
@@ -52,41 +65,37 @@ class WorldWatcher < EventMachine::Connection
   end
   
   def post_init
-    puts "pid: #{write_pid}"
-    
     @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
        @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue Job::MapWorld, world_id }
   end
   
   def receive_data data
-    puts data
-  end
-  
-  def receive_stderr data 
-    puts data
     data.split("\n").map{|l| LogLine.new l }.each do |line|
       if !@world_ready && line.type == :world_started
         @world_ready = true
         world_ready 
       end
       
+      info ["mc", line.type], line.log_entry
+      
       case line.type
       when :chat_message
         world_chat line
       when :player_connected
         @world_state[:players] = @world_state[:players] | [line.user]
-        puts "players: #{@world_state[:players]}"
       when :player_disconnected
         @world_state[:players] = @world_state[:players] - [line.user]
-        puts "players: #{@world_state[:players]}"
       end
       
       @line_channel.push line
     end
   end
   
+  def receive_stderr data 
+    receive_data data
+  end
+  
   def world_ready
-    puts "world:#{world_id} ready"
     redis.hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
     redis.hdel "worlds:busy", world_id
     redis.publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:port
@@ -98,8 +107,6 @@ class WorldWatcher < EventMachine::Connection
   
   def world_chat line
     Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_objectid}", line.chat_user, line.chat_message ])
-    
-    puts "[#{line.chat_user}] #{line.chat_message}"
   end
   
   def stop_world
@@ -111,7 +118,7 @@ class WorldWatcher < EventMachine::Connection
   end
   
   def unbind
-    puts "world:#{world_id} quit. Starting backup"
+    info "process exited. Starting backup"
     RUNNING_WORLDS.delete world_id
     @backup_timer.cancel if @backup_timer
     @map_timer.cancel if @map_timer
@@ -123,7 +130,7 @@ class WorldWatcher < EventMachine::Connection
           begin
             LocalWorld.new(world_id).backup!
           rescue => e
-            puts "ERROR: backup on world stop failed: #{e}"
+            info "ERROR: backup on world stop failed: #{e.message}\n#{e.backtrace}"
           end
           },
           proc { 
@@ -137,7 +144,7 @@ class WorldWatcher < EventMachine::Connection
   
   def backup_world
     @backup_in_progress = true
-    puts "starting backup:#{world_id}"
+    info "starting backup"
     send_line "save-off"
     send_line "save-all"
     EM.add_timer 3 do
@@ -146,7 +153,7 @@ class WorldWatcher < EventMachine::Connection
           begin
             LocalWorld.new(world_id).backup! 
           rescue => e
-            puts "ERROR: backup failed: #{e}"
+            info "ERROR: backup failed: #{e.message}\n#{e.backtrace}"
           end
           }, 
         proc { 
@@ -195,7 +202,7 @@ def start_processing instance_id, host
     world_id = world_start['world_id']
     
     port = INITIAL_PORT + RUNNING_WORLDS.size + (rand * 100).to_i
-    puts "starting world:#{world_id} on port:#{port}"
+    puts "starting world:#{world_id} process on port:#{port}"
 
     EM.defer(
       proc { 
