@@ -4,11 +4,11 @@ module Prism
   module Box
     module LocalWidgetHandler
       def receive_data data
-        puts "widget: #{data}"
+        puts "local: #{data}"
       end
   
       def receive_stderr data
-        puts "widget err: #{data}"
+        puts "local err: #{data}"
       end
     end
 

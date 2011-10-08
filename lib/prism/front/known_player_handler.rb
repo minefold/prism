@@ -8,10 +8,10 @@ module Prism
     
     def friendly_kick_messages
       {
-        'unrecognised_player' => %Q{To play here sign up at http://minefold.com, it's free!},
-        'no_credit'           => %Q{No time left. Top up your account at http://minefold.com},
-        'no_world'            => %Q{Pick a world to play in at http://minefold.com},
-        '500'                 => %Q{The gremlins are misbehaving! Try again in 5 mins while we spank them}
+        'unrecognised_player' => %Q{Sign up at http://minefold.com},
+        'no_credit' => %Q{Sorry you need to top up your account at http://minefold.com},
+        'no_world' => %Q{You need to create or join a world! Visit http://minefold.com},
+        '500' => %Q{Sorry! The gremlins messed something up, try connecting again while we spank them}
       }.freeze
     end
     
