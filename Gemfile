@@ -9,7 +9,6 @@ gem 'bson_ext'
 gem 'looksee'
 gem 'parallel'
 gem 'eventmachine', '1.0.0.beta.3'
-gem 'eventmachine-tail', '0.6.3'
 gem 'rake'
 gem "hiredis", "~> 0.3.1"
 gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]

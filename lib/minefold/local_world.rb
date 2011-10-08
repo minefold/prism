@@ -47,7 +47,6 @@ class LocalWorld
         File.open(archive, "w") do |tar|
           tar.write archived_world.body
         end
-        # TODO don't chdir
         Dir.chdir WORLDS do
           TarGz.new.extract archive
         end

@@ -22,24 +22,15 @@ EM.epoll
 INITIAL_PORT = 4000
 RUNNING_WORLDS = {}
 
+PID_PATH = "#{Dir.tmpdir}/minecraft-server-pids"
+
 module Enumerable
   def strip_blanks
     reject {|i| i.nil? || i.empty? }
   end
 end
 
-module Process
-  def self.alive?(pid)
-    begin
-      Process.kill(0, pid)
-      true
-    rescue Errno::ESRCH
-      false
-    end
-  end
-end
-
-module WorldWatcher
+class WorldWatcher < EventMachine::Connection 
   include Resque::Helpers
   
   attr_reader :world_id, :instance_id, :host, :port, :redis, :state, :stdin_queue, :pid_file
@@ -66,11 +57,15 @@ module WorldWatcher
     puts "[#{tag_string}] #{message}"
   end
   
+  def write_pid
+    @pid_file = "#{PID_PATH}/#{get_pid}" 
+    File.open(pid_file, "w") {|f| f.print get_pid }
+    @pid_file
+  end
+  
   def post_init
-    EM.file_tail stdout do |ft, line|
-      receive_data line
-    end
-    
+    write_pid
+    puts "pid:#{pid_file}"
     @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
        @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue Job::MapWorld, world_id }
   end
@@ -95,6 +90,10 @@ module WorldWatcher
       
       @line_channel.push line
     end
+  end
+  
+  def receive_stderr data 
+    receive_data data
   end
   
   def world_ready
@@ -232,7 +231,9 @@ def start_processing instance_id, host
             stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
             stop_queue = stop_queues[world_id] = EM::Queue.new
 
-            spawn_world world_id
+            Dir.chdir("#{ROOT}/worlds/#{world_id}") do
+              connection = EM.popen3 "java -Xmx#{world_start['max_heap_size']}M -Xms#{world_start['min_heap_size']}M -jar server.jar nogui", WorldWatcher, world_id, instance_id, host, port, stdin_queue, stop_queue
+            end
             start_popper.listen
           else
             redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
@@ -261,12 +262,13 @@ def start_processing instance_id, host
     end
   end
   
+  # maintenance_popper = Prism::QueuePopper.new "#{request}"
+
   EM.add_periodic_timer 60 do
     m = memory_usage
-    world_count  = RUNNING_WORLDS.size
     player_count = RUNNING_WORLDS.inject(0) { |sum, (id, w)| sum + w[:players].size }
     
-    puts "worlds:#{world_count} players:#{player_count} mem:#{"%.0f%" % (m[:used]/m[:total].to_f * 100)} total:#{m[:total]} used:#{m[:used]} per_player:#{player_count > 0 ? m[:used]/player_count : 'no_players'} per_world:#{world_count > 0 ? m[:used]/world_count : 'no_worlds'}"
+    puts "players:#{player_count} mem:#{"%.0f%" % (m[:used]/m[:total].to_f * 100)} total:#{m[:total]} used:#{m[:used]} per_player:#{player_count > 0 ? m[:used]/player_count : 'no_players'} per_world:#{RUNNING_WORLDS.size > 0 ? m[:used]/RUNNING_WORLDS.size : 'no_worlds'}"
   end
 
   EM.start_server '0.0.0.0', 3000, StatusHandler
@@ -278,69 +280,24 @@ def start_processing instance_id, host
   puts "started #{Fold.env} mode"
 end
 
-
-
-def spawn_detached dir, cmd
-  process = fork do
-    Dir.chdir dir
-    exec cmd
-  end
-  Process.detach process
-end
-
-def spawn_world world_id
-  world_path = "#{WORLDS}/#{world_id}"
-  pid_file = "#{PID_PATH}/#{world_id}"
-  
-  FileUtils.mkdir_p PID_PATH
-  spawn_detached world_path, "#{BIN}/pot world.stdin world.stdout world.stdout #{pid_file} java -Xmx1024M -Xms512M -jar server.jar nogui"
-  
-  file_wait_timer = EM.add_periodic_timer(0.1) do
-    if File.exist? pid_file
-      file_wait_timer.cancel
-      puts "pot started:#{pid_file}"
-      
-      watch_world pid_file
-    end
-  end
-end
-
-def world_running? world_id
-  pid_file = "#{PID_PATH}/#{world_id}"
-  if File.exists? pid_file
-    pid = File.read(pid_file).strip.to_i
-    Process.alive? pid
-  end
-end
-
-def watch_world pid_file
-  pid = read_pid_file pid_file
-  world_id = File.basename pid_file
-  EM.watch_process pid, WorldWatcher, world_id, "#{WORLDS}/#{world_id}/world.stdout"
-end
-
-def read_pid_file pid_file
-  File.exists?(pid_file) && File.read(pid_file).strip.to_i
-end
-
-PID_PATH = "#{ROOT}/tmp/minecraft-server-pids"
-
-EM.kqueue = true if EM.kqueue?
-
 EM.run do
   FileUtils.mkdir_p PID_PATH
   
   EM.defer(proc {
-    Dir["#{PID_PATH}/*"].each do |pid_file|
-      pid = read_pid_file(pid_file)
-      if Process.alive? pid
-        puts "Found running world:#{pid_file}"
-        watch_world pid_file
-      else
-        puts "Found dead world:#{pid_file}"
-        FileUtils.rm_f pid_file
+      Dir["#{PID_PATH}/*"].each do |pid_file|
+        File.open(pid_file, "r") do |f|
+          pid = f.read.strip.to_i
+          puts "Killing #{pid}"
+          Process.kill "TERM", pid unless pid == 0 rescue nil
+          FileUtils.rm_f pid_file
+          
+          # if Dir.exists? 
+          #   LocalWorld.new(world_id).backup!
+          # end
+        end
       end
-    end
-    
-    }, proc { start_processing instance_id, host })
+    }, 
+    proc {
+      start_processing instance_id, host
+    })
 end
