@@ -295,7 +295,7 @@ def start_processing stdin_queues, stop_queues, instance_id, host
   EM.add_periodic_timer 60 do
     m = memory_usage
     world_count  = RUNNING_WORLDS.size
-    player_count = RUNNING_WORLDS.inject(0) { |sum, (id, w)| sum + w[:players].size }
+    player_count = RUNNING_WORLDS.inject(0) { |sum, (id, w)| sum + (w[:players] || []).size }
     
     puts "worlds:#{world_count} players:#{player_count} mem:#{"%.0f%" % (m[:used]/m[:total].to_f * 100)} total:#{m[:total]} used:#{m[:used]} per_player:#{player_count > 0 ? m[:used]/player_count : 'no_players'} per_world:#{world_count > 0 ? m[:used]/world_count : 'no_worlds'}"
   end
