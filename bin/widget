@@ -322,7 +322,7 @@ def spawn_world world_id, instance_id, host, port, stdin_queue, stop_queue
   spawn_detached world_path, "#{BIN}/pot world.stdin world.stdout world.stdout #{pid_file} java -Xmx1024M -Xms512M -jar server.jar nogui"
   
   file_wait_timer = EM.add_periodic_timer(0.1) do
-    if File.exist? pid_file && File.exist? "#{world_path}/world.stdout"
+    if File.exist?(pid_file) && File.exist?("#{world_path}/world.stdout")
       file_wait_timer.cancel
       puts "pot started:#{pid_file}"
       
