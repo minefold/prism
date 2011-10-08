@@ -346,7 +346,7 @@ def read_pid_file pid_file
   File.exists?(pid_file) && File.read(pid_file).strip.to_i
 end
 
-PID_PATH = "#{ROOT}/tmp/minecraft-server-pids"
+PID_PATH = File.expand_path "~/tmp/minecraft-server-pids"
 
 def world_running? world_id
   pid_file = Dir["#{PID_PATH}/*"].find{|f| File.basename(f.split('.').first) == world_id }
