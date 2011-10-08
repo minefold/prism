@@ -12,23 +12,24 @@ CMD=$*
 
 POT_PID=$$
 
-echo "$POT_PID" > $PID_FILE
+echo "$POT_PID" > "$PID_FILE"
 
-rm -f $STDIN
+rm -f "$STDIN"
 rm -f pipe_in
 
-touch $STDIN
+touch "$STDIN"
 mkfifo pipe_in
 
 # using pipe_in allows us to get the tail pid
 
-tail -fn0 $STDIN > pipe_in &
+tail -fn0 "$STDIN" > pipe_in &
 TAIL_PID=$!
 
-${CMD} < pipe_in 1> $STDOUT 2> $STDERR &
+${CMD} < pipe_in 1> "$STDOUT" 2> "$STDERR" &
 CMD_PID=$!
+
+trap "kill $CMD_PID; kill $TAIL_PID" INT TERM EXIT
 
 echo "pot:$POT_PID CMD:$CMD_PID TAIL:$TAIL_PID > $PID_FILE"
 
 wait $CMD_PID
-kill $TAIL_PID

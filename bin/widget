@@ -3,12 +3,9 @@
 require 'bundler/setup'
 Bundler.require :default
 
-require 'tmpdir'
-
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'widget'
-require 'eventmachine/popen3'
 require 'prism/back'
 
 # Usage: widget instance_id host
@@ -18,6 +15,7 @@ instance_id = ARGV.shift || ENV['INSTANCE_ID']
 
 STDOUT.sync = true
 EM.epoll
+EM.kqueue = true if EM.kqueue?
 
 INITIAL_PORT = 4000
 RUNNING_WORLDS = {}
@@ -39,21 +37,69 @@ module Process
   end
 end
 
+class WorldStdoutReader < EventMachine::FileTail
+  attr_reader :redis
+  attr_accessor :world_id, :world_state, :instance_id, :host, :port
+  
+  def info tag, message = nil
+    tag_parts = [world_id]
+    tag_parts += Array(tag) if tag
+    tag_string = tag_parts.flatten.strip_blanks.join('|')
+    puts "[#{tag_string}] #{message}"
+  end
+  
+  def initialize(path, startpos=-1)
+    super(path, startpos)
+    @redis = Prism.redis
+    yield self if block_given?
+  end
+
+  def receive_data(data)
+    data.split("\n").each {|line| receive_line LogLine.new line }
+  end
+  
+  def receive_line line
+    if !@world_ready && line.type == :world_started
+      @world_ready = true
+      world_ready 
+    end
+    
+    info ["mc", line.type], line.log_entry
+    
+    case line.type
+    when :chat_message
+      world_chat line
+    when :player_connected
+      world_state[:players] = world_state[:players] | [line.user]
+    when :player_disconnected
+      world_state[:players] = world_state[:players] - [line.user]
+    end
+  end
+  
+  def world_ready
+    redis.hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
+    redis.hdel "worlds:busy", world_id
+    redis.publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:port
+  end
+  
+  def world_chat line
+    Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_id}", line.chat_user, line.chat_message ])
+  end
+end
+
 module WorldWatcher
   include Resque::Helpers
   
-  attr_reader :world_id, :instance_id, :host, :port, :redis, :state, :stdin_queue, :pid_file
+  attr_reader :stdin, :stdout, :world_id, :instance_id, :host, :port, :redis, :state, :stdin_queue
   
-  def initialize world_id, instance_id, host, port, stdin_queue, stop_queue
+  def initialize stdin, stdout, world_id, instance_id, host, port, stdin_queue, stop_queue
+    @stdin, @stdout = stdin, stdout
     @world_id, @instance_id, @host, @port = world_id, instance_id, host, port
-    @world_ready = false
     @redis = Prism.redis
-    @line_channel = EM::Channel.new
     @state = state
     @stdin_queue = stdin_queue
 
     RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port, players:[] }
-    @world_state = RUNNING_WORLDS[world_id]
     
     process_stdin
     stop_queue.pop { stop_world }
@@ -67,56 +113,24 @@ module WorldWatcher
   end
   
   def post_init
-    EM.file_tail stdout do |ft, line|
-      receive_data line
+    EM.file_tail(stdout, WorldStdoutReader) do |reader| 
+      reader.world_id = world_id
+      reader.world_state = RUNNING_WORLDS[world_id]
+      reader.instance_id = instance_id
+      reader.host = host
+      reader.port = port
     end
     
     @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
        @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue Job::MapWorld, world_id }
   end
-  
-  def receive_data data
-    data.split("\n").map{|l| LogLine.new l }.each do |line|
-      if !@world_ready && line.type == :world_started
-        @world_ready = true
-        world_ready 
-      end
-      
-      info ["mc", line.type], line.log_entry
-      
-      case line.type
-      when :chat_message
-        world_chat line
-      when :player_connected
-        @world_state[:players] = @world_state[:players] | [line.user]
-      when :player_disconnected
-        @world_state[:players] = @world_state[:players] - [line.user]
-      end
-      
-      @line_channel.push line
-    end
-  end
-  
-  def world_ready
-    redis.hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
-    redis.hdel "worlds:busy", world_id
-    redis.publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:port
-  end
-  
-  def world_objectid
-    BSON::ObjectId(world_id)
-  end
-  
-  def world_chat line
-    Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_objectid}", line.chat_user, line.chat_message ])
-  end
-  
+    
   def stop_world
     send_line "stop"
   end
   
   def send_line line
-    send_data "#{line}\n"
+    File.open(stdin, 'a') {|f| f.puts line }
   end
   
   def unbind
@@ -130,7 +144,8 @@ module WorldWatcher
         @backup_waiter.cancel
         EM.defer(proc { 
           begin
-            LocalWorld.new(world_id).backup!
+            pid = fork { LocalWorld.new(world_id).backup! }
+            Process.waitpid pid
           rescue => e
             info "ERROR: backup on world stop failed: #{e.message}\n#{e.backtrace}"
           end
@@ -192,12 +207,9 @@ def memory_usage
   end
 end
 
-def start_processing instance_id, host
+def start_processing stdin_queues, stop_queues, instance_id, host
   redis = Prism.redis
 
-  stdin_queues = {}
-  stop_queues = {}
-  
   subscription = Prism::PrismRedis.connect
   subscription.psubscribe "workers:#{instance_id}:worlds:*:stdin"
   subscription.on :pmessage do |key, channel, message|
@@ -213,35 +225,43 @@ def start_processing instance_id, host
     world_start = JSON.parse request
     world_id = world_start['world_id']
     
-    port = INITIAL_PORT + RUNNING_WORLDS.size + (rand * 100).to_i
-    puts "starting world:#{world_id} process on port:#{port}"
+    if world = RUNNING_WORLDS[world_id]
+      puts "world:#{world_id} is already running"
+      redis.hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:world[:port]
+      redis.hdel "worlds:busy", world_id
+      redis.publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:world[:port]
+    else
+      port = INITIAL_PORT + RUNNING_WORLDS.size + (rand * 100).to_i
+      puts "starting world:#{world_id} process on port:#{port}"
 
-    EM.defer(
-      proc { 
-        begin
-          LocalWorld.prepare world_id, port
-          true
-        rescue => e
-          puts "ERROR: failed to prepare:#{world_id} #{e}"
-          false
-        end
-      },
-      proc { |succeeded|
-        begin
-          if succeeded
-            stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
-            stop_queue = stop_queues[world_id] = EM::Queue.new
+      EM.defer(
+        proc { 
+          begin
+            pid = fork { LocalWorld.prepare world_id, port }
+            Process.waitpid pid
+            true
+          rescue => e
+            puts "ERROR: failed to prepare:#{world_id} #{e}"
+            false
+          end
+        },
+        proc { |succeeded|
+          begin
+            if succeeded
+              stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
+              stop_queue = stop_queues[world_id] = EM::Queue.new
 
-            spawn_world world_id
-            start_popper.listen
-          else
+              spawn_world world_id, instance_id, host, port, stdin_queue, stop_queue
+              start_popper.listen
+            else
+              redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
+            end
+          rescue => e
+            puts "ERROR: failed to spawn minecraft:#{e}"
             redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
           end
-        rescue => e
-          puts "ERROR: failed to spawn minecraft:#{e}"
-          redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
-        end
-    })
+      })
+    end
   end  
   
   stop_popper = Prism::QueuePopper.new "#{requests}:stop"
@@ -278,8 +298,6 @@ def start_processing instance_id, host
   puts "started #{Fold.env} mode"
 end
 
-
-
 def spawn_detached dir, cmd
   process = fork do
     Dir.chdir dir
@@ -288,9 +306,9 @@ def spawn_detached dir, cmd
   Process.detach process
 end
 
-def spawn_world world_id
+def spawn_world world_id, instance_id, host, port, stdin_queue, stop_queue
   world_path = "#{WORLDS}/#{world_id}"
-  pid_file = "#{PID_PATH}/#{world_id}"
+  pid_file = "#{PID_PATH}/#{world_id}.#{port}"
   
   FileUtils.mkdir_p PID_PATH
   spawn_detached world_path, "#{BIN}/pot world.stdin world.stdout world.stdout #{pid_file} java -Xmx1024M -Xms512M -jar server.jar nogui"
@@ -300,23 +318,17 @@ def spawn_world world_id
       file_wait_timer.cancel
       puts "pot started:#{pid_file}"
       
-      watch_world pid_file
+      watch_world pid_file, instance_id, host, stdin_queue, stop_queue
     end
   end
 end
 
-def world_running? world_id
-  pid_file = "#{PID_PATH}/#{world_id}"
-  if File.exists? pid_file
-    pid = File.read(pid_file).strip.to_i
-    Process.alive? pid
-  end
-end
-
-def watch_world pid_file
+def watch_world pid_file, instance_id, host, stdin_queue, stop_queue
   pid = read_pid_file pid_file
-  world_id = File.basename pid_file
-  EM.watch_process pid, WorldWatcher, world_id, "#{WORLDS}/#{world_id}/world.stdout"
+  world_id, port = File.basename(pid_file).split('.')
+  world_path = "#{WORLDS}/#{world_id}"
+  stdin, stdout = "#{world_path}/world.stdin", "#{world_path}/world.stdout"
+  EM.watch_process pid, WorldWatcher, stdin, stdout, world_id, instance_id, host, port, stdin_queue, stop_queue
 end
 
 def read_pid_file pid_file
@@ -325,7 +337,14 @@ end
 
 PID_PATH = "#{ROOT}/tmp/minecraft-server-pids"
 
-EM.kqueue = true if EM.kqueue?
+def world_running? world_id
+  pid_file = Dir["#{PID_PATH}/*"].find{|f| File.basename(f.split('.').first) == world_id }
+  pid = read_pid_file
+  Process.alive? pid
+end
+
+stdin_queues = {}
+stop_queues = {}
 
 EM.run do
   FileUtils.mkdir_p PID_PATH
@@ -335,12 +354,20 @@ EM.run do
       pid = read_pid_file(pid_file)
       if Process.alive? pid
         puts "Found running world:#{pid_file}"
-        watch_world pid_file
+        world_id, port = File.basename(pid_file).split('.')
+        stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
+        stop_queue = stop_queues[world_id] = EM::Queue.new
+        
+        watch_world pid_file, instance_id, host, stdin_queue, stop_queue
       else
         puts "Found dead world:#{pid_file}"
         FileUtils.rm_f pid_file
       end
     end
     
-    }, proc { start_processing instance_id, host })
+    }, proc { start_processing stdin_queues, stop_queues, instance_id, host })
+    
+  EM.add_timer(5) do
+    Prism.redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", world_id:'4e7d843f9fe7af003e000001'
+  end
 end
