@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 require 'fileutils'
 
-worlds_root = $1
+worlds_root = ARGV.shift
 
 FileUtils.mkdir_p worlds_root
 
