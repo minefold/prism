@@ -264,7 +264,7 @@ def start_processing instance_id, host
   
   # maintenance_popper = Prism::QueuePopper.new "#{request}"
 
-  EM.add_timer 1 do
+  EM.add_periodic_timer 60 do
     m = memory_usage
     player_count = RUNNING_WORLDS.inject(0) { |sum, (id, w)| sum + w[:players].size }
     
