@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 require 'fileutils'
 
-worlds_root = File.expand_path "../../worlds", __FILE__
+worlds_root = $1
 
 FileUtils.mkdir_p worlds_root
 
