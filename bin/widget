@@ -69,10 +69,12 @@ class WorldStdoutReader < EventMachine::FileTail
     case line.type
     when :chat_message
       world_chat line
+    when :connected_players
+      world_state[:players] = Array(line.players)
     when :player_connected
-      world_state[:players] = world_state[:players] | [line.user]
+      world_state[:players] = Array(world_state[:players]) | [line.user]
     when :player_disconnected
-      world_state[:players] = world_state[:players] - [line.user]
+      world_state[:players] = Array(world_state[:players]) - [line.user]
     end
   end
   
@@ -108,9 +110,9 @@ class WorldWatcher
     @redis = Prism.redis
     @state = state
     @stdin_queue = stdin_queue
-
-    RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port, players:[] }
     
+    RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
+
     process_stdin
     stop_queue.pop { stop_world }
     
@@ -122,6 +124,7 @@ class WorldWatcher
       reader.port = port
     end
     
+    @player_check = EM.add_timer(10) { send_line "list" }
     @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
        @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue Job::MapWorld, world_id }
   end
@@ -146,6 +149,7 @@ class WorldWatcher
     RUNNING_WORLDS.delete world_id
     @backup_timer.cancel if @backup_timer
     @map_timer.cancel if @map_timer
+    @player_check.cancel if @player_check
     
     @backup_waiter = EM.add_periodic_timer(10) do
       unless @backup_in_progress

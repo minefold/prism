@@ -115,7 +115,7 @@ module Prism
       # p lost_players
       
       # shutdown idle worlds
-      running_worlds.select {|world_id, world| world['players'].size == 0 }.each do |world_id, world|
+      running_worlds.select {|world_id, world| world['players'] && world['players'].size == 0 }.each do |world_id, world|
         if redis_universe.worlds[:busy].keys.include? world_id
           puts "box:#{world['instance_id']} world:#{world_id} is empty busy:#{redis_universe.worlds[:busy][:world_id]}"
         else
@@ -133,7 +133,7 @@ module Prism
           box_worlds = running_worlds.select {|world_id, w| w['instance_id'] == box.instance_id }
   
           world_count = box_worlds.size
-          player_count = box_worlds.values.inject(0) {|sum, w| sum + w['players'].size }
+          player_count = box_worlds.values.inject(0) {|sum, w| sum + (w['players'] || []).size }
       
           box_not_busy = redis_universe.boxes[:busy].count {|busy_box_id, world| busy_box_id == box.instance_id } == 0
        

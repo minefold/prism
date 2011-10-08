@@ -1,5 +1,5 @@
 class LogLine
-  attr_reader :line, :timestamp, :level, :message, :user, :chat_message, :type, :log_entry
+  attr_reader :line, :timestamp, :level, :message, :user, :chat_message, :type, :log_entry, :players
 
   def initialize line
     @line = line
@@ -15,6 +15,9 @@ class LogLine
       @user = $1
       @chat_message = $2
       @log_entry = "[#{user}] #{chat_message}"
+    elsif message =~ /Connected players: (.*)$/i
+      @type = :connected_players
+      @players = $1.strip.split(', ')
     elsif message =~ /^(\S*) .* logged in/
       @type = :player_connected
       @user = $1
