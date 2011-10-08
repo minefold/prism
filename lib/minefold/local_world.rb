@@ -124,6 +124,16 @@ class LocalWorld
           :public => false
         )
       end
+      
+      File.open(world_archive) do |world_archive_file|
+        puts "Uploading #{retries}"
+        file = directory.files.create(
+          :key    => "#{id}.#{Time.now.to_i}.tar.gz",
+          :body   => world_archive_file,
+          :public => false
+        )
+      end
+      
       FileUtils.rm_f world_archive
     rescue => e
       puts "UPLOAD ERROR: #{e.message}\n#{e.backtrace}"
