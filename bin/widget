@@ -33,7 +33,7 @@ end
 class WorldWatcher < EventMachine::Connection 
   include Resque::Helpers
   
-  attr_reader :world_id, :instance_id, :host, :port, :redis, :state, :stdin_queue
+  attr_reader :world_id, :instance_id, :host, :port, :redis, :state, :stdin_queue, :pid_file
   
   def initialize world_id, instance_id, host, port, stdin_queue, stop_queue
     @world_id, @instance_id, @host, @port = world_id, instance_id, host, port
@@ -57,14 +57,15 @@ class WorldWatcher < EventMachine::Connection
     puts "[#{tag_string}] #{message}"
   end
   
-  
   def write_pid
-    pid_file = "#{PID_PATH}/#{get_pid}" 
+    @pid_file = "#{PID_PATH}/#{get_pid}" 
     File.open(pid_file, "w") {|f| f.print get_pid }
-    pid_file
+    @pid_file
   end
   
   def post_init
+    write_pid
+    puts "pid:#{pid_file}"
     @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
        @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue Job::MapWorld, world_id }
   end
@@ -180,6 +181,16 @@ module StatusHandler
   end
 end
 
+def memory_usage
+  `which free`
+  if $?.exitstatus == 0
+    parts = `free -m`.split
+    { total:mem[7].to_i, used:mem[8].to_i }
+  else
+    { total:4096, used:1024 }
+  end
+end
+
 def start_processing instance_id, host
   redis = Prism.redis
 
@@ -252,6 +263,13 @@ def start_processing instance_id, host
   end
   
   # maintenance_popper = Prism::QueuePopper.new "#{request}"
+
+  EM.add_timer 1 do
+    m = memory_usage
+    player_count = RUNNING_WORLDS.inject(0) { |sum, (id, w)| sum + w[:players].size }
+    
+    puts "players:#{player_count} mem:#{"%.0f%" % (m[:used]/m[:total].to_f * 100)} total:#{m[:total]} used:#{m[:used]} per_player:#{player_count > 0 ? m[:used]/player_count : 'no_players'} per_world:#{RUNNING_WORLDS.size > 0 ? m[:used]/RUNNING_WORLDS.size : 'no_worlds'}"
+  end
 
   EM.start_server '0.0.0.0', 3000, StatusHandler
   
