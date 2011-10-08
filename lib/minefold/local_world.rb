@@ -70,8 +70,6 @@ class LocalWorld
         end
       end
       
-      p "ops:", ops
-      
       File.open("#{world_path}/ops.txt", "w") do |file| 
         file.puts ops.join("\n")
         file.puts
