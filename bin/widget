@@ -97,7 +97,7 @@ class WorldWatcher
     poller = EM.add_periodic_timer(1) do
       unless Process.alive? pid
         poller.cancel
-        ww.unbind 
+        ww.unbind
       end
     end
   end
@@ -161,6 +161,7 @@ class WorldWatcher
     @map_timer.cancel if @map_timer
     stdin_queues.delete world_id
     stop_queues.delete world_id
+    FileUtils.rm_f "#{PID_PATH}/#{world_id}.#{port}"
     
     @backup_waiter = EM.add_periodic_timer(10) do
       unless @backup_in_progress
@@ -255,7 +256,12 @@ def start_processing stdin_queues, stop_queues, instance_id, host
       redis.hdel "worlds:busy", world_id
       redis.publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:world[:port]
     else
-      port = INITIAL_PORT + RUNNING_WORLDS.size + (rand * 100).to_i
+      port = INITIAL_PORT + (rand * 10).to_i
+      puts "port: #{port}"
+      while ports_in_use.include? port
+        port += (rand * 10).to_i
+        puts "port: #{port}"
+      end
       puts "starting world:#{world_id} process on port:#{port}"
 
       EM.defer(
@@ -371,6 +377,10 @@ def world_running? world_id
   Process.alive? pid
 end
 
+def ports_in_use
+  Dir["#{PID_PATH}/*"].map{|f| File.basename(f.split('.')[1])}
+end
+
 stdin_queues = {}
 stop_queues = {}
 
@@ -395,7 +405,4 @@ EM.run do
     
     }, proc { start_processing stdin_queues, stop_queues, instance_id, host })
     
-  EM.add_timer(5) do
-    Prism.redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", world_id:'4e7d843f9fe7af003e000001'
-  end
 end
