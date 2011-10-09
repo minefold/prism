@@ -56,6 +56,7 @@ namespace :prism do
   def ssh cmd
     puts `ssh -i .ssh/minefold2.pem ubuntu@#{ENV['HOST']} "#{cmd}"`
   end
+  
   task :deploy do
     ssh "cd /opt/prism && sudo GIT_SSH=/home/fold/.ssh/deploy-wrapper git pull origin #{ENV['BRANCH']} && sudo bundle --binstubs --without test && sudo chown -R fold ."
     ssh "cd /opt/prism; sudo cp conf/prism.conf /etc/init/prism.conf; sudo cp conf/prism_back.conf /etc/init/prism_back.conf; sudo cp conf/sweeper.conf /etc/init/sweeper.conf"
@@ -63,7 +64,8 @@ namespace :prism do
   end
   
   task :kick do
-    puts `ssh -i .ssh/minefold2.pem ubuntu@#{ENV['HOST']} "sudo restart prism prism_back"`
+    raise "This is fucking dangerous!"
+    ssh "sudo restart prism; sudo restart prism_back"
   end
 end
 

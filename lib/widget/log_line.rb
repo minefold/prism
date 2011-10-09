@@ -29,6 +29,9 @@ class LogLine
     elsif message =~ /^Done/
       @type = :world_started
       @log_entry = "world started"
+    elsif message =~ /failed to bind to port/i
+      @type = :port_taken
+      @log_entry = "failed to bind port"
     end
   end
   

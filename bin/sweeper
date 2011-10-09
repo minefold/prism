@@ -13,6 +13,7 @@ EM.epoll
 module Prism
   EM.run do
     puts "Started. #{Fold.env} mode"
-    EM::PeriodicTimer.new(3 * 60) { Sweeper.new.perform_sweep }
+    Sweeper.new.perform_sweep
+    EM.add_periodic_timer(3 * 60) { Sweeper.new.perform_sweep }
   end
 end

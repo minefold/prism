@@ -39,13 +39,13 @@ end
 
 class WorldStdoutReader < EventMachine::FileTail
   attr_reader :redis
-  attr_accessor :world_id, :world_state, :instance_id, :host, :port
+  attr_accessor :world_watcher, :world_id, :world_state, :instance_id, :host, :port
   
   def info tag, message = nil
     tag_parts = [world_id]
-    tag_parts += Array(tag) if tag
+    tag_parts += Array(tag) if message
     tag_string = tag_parts.flatten.strip_blanks.join('|')
-    puts "[#{tag_string}] #{message}"
+    puts "[#{tag_string}] #{message || tag}"
   end
   
   def initialize(path, startpos=-1)
@@ -75,6 +75,8 @@ class WorldStdoutReader < EventMachine::FileTail
       world_state[:players] = Array(world_state[:players]) | [line.user]
     when :player_disconnected
       world_state[:players] = Array(world_state[:players]) - [line.user]
+    when :port_taken
+      world_watcher.stop_world
     end
   end
   
@@ -102,14 +104,21 @@ class WorldWatcher
   
   include Resque::Helpers
   
-  attr_reader :stdin, :stdout, :world_id, :instance_id, :host, :port, :redis, :state, :stdin_queue
+  attr_reader :stdin, :stdout, :world_id, :instance_id, :host, :port, :redis, :stdin_queues, :stop_queues
   
-  def initialize stdin, stdout, world_id, instance_id, host, port, stdin_queue, stop_queue
+  def stop_queue
+    stop_queues[world_id]
+  end
+
+  def stdin_queue
+    stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"]
+  end
+  
+  def initialize stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues
     @stdin, @stdout = stdin, stdout
     @world_id, @instance_id, @host, @port = world_id, instance_id, host, port
+    @stdin_queues, @stop_queues = stdin_queues, stop_queues
     @redis = Prism.redis
-    @state = state
-    @stdin_queue = stdin_queue
     
     RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
 
@@ -122,6 +131,7 @@ class WorldWatcher
       reader.instance_id = instance_id
       reader.host = host
       reader.port = port
+      reader.world_watcher = self
     end
     
     EM.add_timer(10) { send_line "list" }
@@ -131,7 +141,7 @@ class WorldWatcher
   
   def info tag, message = nil
     tag_parts = [world_id]
-    tag_parts += Array(tag) if tag
+    tag_parts += Array(tag) if message
     tag_string = tag_parts.flatten.strip_blanks.join('|')
     puts "[#{tag_string}] #{message}"
   end
@@ -149,6 +159,8 @@ class WorldWatcher
     RUNNING_WORLDS.delete world_id
     @backup_timer.cancel if @backup_timer
     @map_timer.cancel if @map_timer
+    stdin_queues.delete world_id
+    stop_queues.delete world_id
     
     @backup_waiter = EM.add_periodic_timer(10) do
       unless @backup_in_progress
@@ -162,6 +174,7 @@ class WorldWatcher
           end
           },
           proc { 
+            info "world stop completed  [worlds:busy #{world_id.class} #{world_id}]"
             redis.hdel "worlds:busy", world_id
             redis.del "worlds:#{world_id}:connected_players"
             redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
@@ -259,10 +272,10 @@ def start_processing stdin_queues, stop_queues, instance_id, host
         proc { |succeeded|
           begin
             if succeeded
-              stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
-              stop_queue = stop_queues[world_id] = EM::Queue.new
+              stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
+              stop_queues[world_id] = EM::Queue.new
 
-              spawn_world world_id, instance_id, host, port, stdin_queue, stop_queue
+              spawn_world world_id, instance_id, host, port, stdin_queues, stop_queues
               start_popper.listen
             else
               redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
@@ -285,9 +298,13 @@ def start_processing stdin_queues, stop_queues, instance_id, host
         stdin_queues.delete "workers:#{instance_id}:worlds:#{world_id}:stdin"
         stop_queues.delete world_id
       else
+        redis.hdel "worlds:busy", world_id
+        redis.del "worlds:#{world_id}:connected_players"
+        redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
         puts "world:#{world_id} stop request recieved but world is not running here"
       end
     rescue => e
+      redis.hdel "worlds:busy", world_id
       puts "ERROR: failed to stop world:#{e}"
     end
   end
@@ -317,7 +334,7 @@ def spawn_detached dir, cmd
   Process.detach process
 end
 
-def spawn_world world_id, instance_id, host, port, stdin_queue, stop_queue
+def spawn_world world_id, instance_id, host, port, stdin_queues, stop_queues
   world_path = "#{WORLDS}/#{world_id}"
   pid_file = "#{PID_PATH}/#{world_id}.#{port}"
   
@@ -329,17 +346,17 @@ def spawn_world world_id, instance_id, host, port, stdin_queue, stop_queue
       file_wait_timer.cancel
       puts "pot started:#{pid_file}"
       
-      watch_world pid_file, instance_id, host, stdin_queue, stop_queue
+      watch_world pid_file, instance_id, host, stdin_queues, stop_queues
     end
   end
 end
 
-def watch_world pid_file, instance_id, host, stdin_queue, stop_queue
+def watch_world pid_file, instance_id, host, stdin_queues, stop_queues
   pid = read_pid_file pid_file
   world_id, port = File.basename(pid_file).split('.')
   world_path = "#{WORLDS}/#{world_id}"
   stdin, stdout = "#{world_path}/world.stdin", "#{world_path}/world.stdout"
-  WorldWatcher.poll pid, stdin, stdout, world_id, instance_id, host, port, stdin_queue, stop_queue
+  WorldWatcher.poll pid, stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues
 end
 
 def read_pid_file pid_file
@@ -366,10 +383,10 @@ EM.run do
       if Process.alive? pid
         puts "Found running world:#{pid_file}"
         world_id, port = File.basename(pid_file).split('.')
-        stdin_queue = stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
-        stop_queue = stop_queues[world_id] = EM::Queue.new
+        stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
+        stop_queues[world_id] = EM::Queue.new
         
-        watch_world pid_file, instance_id, host, stdin_queue, stop_queue
+        watch_world pid_file, instance_id, host, stdin_queues, stop_queues
       else
         puts "Found dead world:#{pid_file}"
         FileUtils.rm_f pid_file
