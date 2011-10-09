@@ -1,6 +1,5 @@
 module Prism
-  
-  module Sweeper 
+  class Sweeper 
     include Debugger
     
     attr_reader :redis_universe, 

@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+require 'bundler/setup'
+Bundler.require :default
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'minefold'
+require 'prism/back'
+
+STDOUT.sync = true
+EM.epoll
+
+module Prism
+  EM.run do
+    puts "Started. #{Fold.env} mode"
+    EM::PeriodicTimer.new(3 * 60) { Sweeper.new.perform_sweep }
+  end
+end

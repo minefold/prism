@@ -11,41 +11,28 @@ STDOUT.sync = true
 EM.epoll
 
 module Prism
-  extend Sweeper
-  
   EM.run do
     
-    puts "Gathering state"
-    redis = Prism.redis
-    
-    op = perform_sweep
-    op.callback do
-      puts "Ready"
-
-      subscription = PrismRedis.connect
-      subscription.psubscribe "worlds:requests:*"
-      subscription.psubscribe "workers:requests:*"
-      subscription.on :pmessage do |key, channel, message|
-        puts " • [#{channel}] #{message}"
-        Prism::Messaging.deliver_message channel, message
-      end
-
-      [ PlayerConnectionRequest, 
-        PlayerDisconnectionEvent, 
-        PlayerMinutePlayedEvent, 
-        PlayerWorldRequest, 
-        WorkerStartRequest, 
-        WorkerStopRequest, 
-        WorkerFixRequest, 
-        WorkerCreateRequest].each do |klass|
-          QueueProcessor.new klass
-      end
-      
-      EM::PeriodicTimer.new(3 * 60) { perform_sweep }
-
-      puts "Started. #{Fold.env} mode"
-      
+    subscription = PrismRedis.connect
+    subscription.psubscribe "worlds:requests:*"
+    subscription.psubscribe "workers:requests:*"
+    subscription.on :pmessage do |key, channel, message|
+      puts " • [#{channel}] #{message}"
+      Prism::Messaging.deliver_message channel, message
     end
+
+    [ PlayerConnectionRequest, 
+      PlayerDisconnectionEvent, 
+      PlayerMinutePlayedEvent, 
+      PlayerWorldRequest, 
+      WorkerStartRequest, 
+      WorkerStopRequest, 
+      WorkerFixRequest, 
+      WorkerCreateRequest].each do |klass|
+        QueueProcessor.new klass
+    end
+    
+    puts "Started. #{Fold.env} mode"
+    
   end
-  # EM.add_periodic_timer(1) { puts "." }
 end
