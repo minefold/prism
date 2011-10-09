@@ -10,7 +10,6 @@ module Prism
       op.callback do |connected_players_keys| 
         multi = EventMachine::Multi.new
         multi.add :running_boxes,  redis.hgetall_json('workers:running')
-        multi.add :sleeping_boxes, redis.hgetall_json('workers:sleeping')
         multi.add :busy_boxes,     redis.hgetall_json('workers:busy')
         multi.add :running_worlds, redis.hgetall_json( 'worlds:running')
         multi.add :busy_worlds,    redis.hgetall_json( 'worlds:busy')
@@ -27,7 +26,6 @@ module Prism
     def initialize results = {}
       @boxes = { 
          running: results[:running_boxes],
-        sleeping: results[:sleeping_boxes],
             busy: results[:busy_boxes]
       }
 

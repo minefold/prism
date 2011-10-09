@@ -60,7 +60,7 @@ module Prism
         @deferrable
       end
       
-      attr_reader :vm
+      attr_reader :vm, :tags
         
       def initialize vm
         @vm = vm
@@ -68,6 +68,7 @@ module Prism
         
         @instance_id, @instance_type, @host = vm.id, vm.flavor_id, vm.public_ip_address
         @started_at = vm.created_at
+        @tags = vm.tags
       end
       
       def start

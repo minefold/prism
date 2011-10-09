@@ -3,7 +3,7 @@ module Prism
     include Debugger
     
     attr_reader :redis_universe, 
-                :boxes, :running_boxes, :working_boxes, :broken_boxes, :sleeping_boxes,
+                :boxes, :running_boxes, :working_boxes, :broken_boxes,
                 :running_worlds
     
     def redis; Prism.redis; end
@@ -20,7 +20,7 @@ module Prism
     def query_boxes boxes
       @boxes = boxes
       
-      @running_boxes, @working_boxes, @broken_boxes, @sleeping_boxes, @running_worlds = [], [], [], [], {}
+      @running_boxes, @working_boxes, @broken_boxes, @running_worlds = [], [], [], {}
       EM::Iterator.new(boxes).each(proc{ |box,iter|
         box.query_state do |state|
           if state == 'running'
@@ -35,9 +35,6 @@ module Prism
               @broken_boxes << box
               iter.next
             end
-          elsif state == 'stopped'
-            @sleeping_boxes << box
-            iter.next
           else
             iter.next
           end
@@ -88,21 +85,7 @@ module Prism
         debug "lost busy world:#{world_id}"
         redis.hdel "worlds:busy", world_id
       end
-      
-      # found sleeping boxes
-      new_sleeping_boxes = sleeping_boxes.reject{|instance_id| redis_universe.boxes[:sleeping].include? instance_id }
-      new_sleeping_boxes.each do |box|
-        debug "found sleeping box:#{box.instance_id}"
-        redis.sadd "workers:sleeping", box.instance_id
-      end
-      
-      # lost sleeping boxes
-      lost_sleeping_box_ids = redis_universe.boxes[:sleeping].keys - sleeping_boxes
-      lost_sleeping_box_ids.each do |instance_id|
-        debug "lost sleeping box:#{instance_id}"
-        redis.srem "workers:sleeping", instance_id
-      end
-      
+                  
       # fix broken boxes
       broken_boxes.each do |box|
         debug "ignoring broken box:#{box.instance_id}"

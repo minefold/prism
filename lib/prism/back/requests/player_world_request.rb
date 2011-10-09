@@ -102,24 +102,14 @@ module Prism
           }, proc { |workers_with_capacity|
             if workers_with_capacity.any?
               sorted_workers = workers_with_capacity.sort_by do |instance_id, w| 
-                uptime_minutes = (Time.now - Time.parse(w['started_at'])).to_i / 60
-                uptime_minutes % 60
+                Time.now - Time.parse(w['started_at'])
               end
             
               instance_id = sorted_workers.first[0]
             
               start_world_on_started_worker instance_id
             else
-              op = redis.smembers "workers:sleeping"
-              op.callback do |sleeping_workers|
-                debug "workers:sleeping #{sleeping_workers.size}"
-            
-                if sleeping_workers.any?
-                  start_world_on_sleeping_worker sleeping_workers.first
-                else
-                  start_world_on_new_worker 'm1.large' # TODO work out what instance type is best
-                end
-              end
+              start_world_on_new_worker 'm1.large' # TODO work out what instance type is best
             end
           })
       end
@@ -146,17 +136,6 @@ module Prism
       end
     end
     
-    def start_world_on_sleeping_worker instance_id
-      debug "starting world:#{world_id} on sleeping worker:#{instance_id}"
-      
-      redis.lpush "workers:requests:start", instance_id
-      listen_once "workers:requests:start:#{instance_id}" do
-        debug "started sleeping worker:#{instance_id}"
-        
-        start_world_on_started_worker instance_id
-      end
-    end
-
     def start_world_on_new_worker instance_type
       request_id = `uuidgen`.strip
       debug "starting world:#{world_id} on new worker"

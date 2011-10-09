@@ -39,6 +39,7 @@ module Prism
         @instance_id, @instance_type, @host = instance_id, 'm1.large', '0.0.0.0'
         @state = 'running'
         @started_at = Time.now
+        @tags = []
       end
       
       def query_state *c,&b

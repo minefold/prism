@@ -17,10 +17,6 @@ def worker_running instance_id, options = {}
   (EM::FakeRedis.internal_hashes["workers:running"] ||= {})[instance_id] = options.to_json
 end
 
-def worker_sleeping instance_id
-  (EM::FakeRedis.internal_sets["workers:sleeping"] ||= []) << instance_id
-end
-
 module Prism
   describe PlayerWorldRequest do
     let(:redis) { EM::FakeRedis }
@@ -78,17 +74,7 @@ module Prism
             redis.internal_lists["worlds:requests:start"].should include({instance_id:"i-1234", world_id:"world1", min_heap_size:512, max_heap_size:2048}.to_json)
           end
         end
-        
-        context "a sleeping worker is available" do
-          before {
-            worker_sleeping "i-1234"
-            process_json username:"whatupdave", user_id:"user1", world_id:"world1"
-          }
-        
-          it "should request worker start" do
-            redis.internal_lists["workers:requests:start"].should include("i-1234")
-          end
-        end
+      
 
         context "no worker is available" do
           before {
