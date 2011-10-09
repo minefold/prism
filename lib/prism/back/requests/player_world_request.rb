@@ -16,6 +16,13 @@ module Prism
       'm2.4xlarge' => 530
     }.freeze
     
+    INSTANCE_WORLD_CAPACITY = {
+      'm1.large'   => 4,
+      'm2.xlarge'  => 7,
+      'm2.2xlarge' => 14,
+      'm2.4xlarge' => 27
+    }.freeze
+    
     INSTANCE_PLAYER_BUFFER = 10 # needs to be space for 10 players to start a world
     
     def run
@@ -68,21 +75,26 @@ module Prism
       op = redis.hgetall_json("workers:running")
       op.callback do |boxes|
         EM::Iterator.new(boxes).inject({}, proc{ |hash, (instance_id, box), iter|
-            instance_capacity = INSTANCE_PLAYER_CAPACITY[box['instance_type']]
+            instance_type = box['instance_type']
+            player_capacity = INSTANCE_PLAYER_CAPACITY[instance_type]
+            world_capacity  = INSTANCE_WORLD_CAPACITY[instance_type]
             
             op = redis.smembers "workers:#{instance_id}:worlds" 
             op.callback do |worlds|
+              world_count = worlds.size
               world_sets = worlds.map {|world_id| "worlds:#{world_id}:connected_players"}
               if world_sets.any?
                 redis.sunion world_sets do |connected_players|
-                  puts "box:#{instance_id} player_count:#{connected_players.size} capacity:#{instance_capacity} (#{box['instance_type']})"
-                  if instance_capacity - connected_players.size > INSTANCE_PLAYER_BUFFER
+                  puts "box:#{instance_id} world_count:#{world_count} player_count:#{connected_players.size} player_cap:#{player_capacity} world_cap:#{world_capacity} (#{instance_type})"
+                  
+                  if (player_capacity - connected_players.size > INSTANCE_PLAYER_BUFFER) &&
+                     (world_capacity - world_count > 0)
                     hash[instance_id] = box
                   end
                   iter.return hash
                 end
               else
-                puts "box:#{instance_id} player_count:0 capacity:#{instance_capacity} (#{box['instance_type']})"
+                puts "box:#{instance_id} world_count:0 player_count:0 player_cap:#{player_capacity} world_cap:#{world_capacity} (#{instance_type})"
                 hash[instance_id] = box
                 iter.return hash
               end
