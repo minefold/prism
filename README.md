@@ -63,3 +63,9 @@ workers:not_responding
 
 # mapper
 worker: bundle exec rake resque:work QUEUE=worlds_to_map
+
+
+# logs
+ssh -i .ssh/minefold2.pem ubuntu@mars.minefold.com -t "sudo tail -fn 500 /var/log/syslog"
+ssh -i .ssh/minefold2.pem ubuntu@mars.minefold.com -t "sudo tail -fn 500 /var/log/syslog | grep total\:"
+ssh -i .ssh/minefold2.pem ubuntu@mars.minefold.com -t "sudo tail -fn 500 /var/log/syslog | grep chat_message"
