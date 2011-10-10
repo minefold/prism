@@ -27,11 +27,7 @@ module Prism
     
     def operation_succeeded box
       info "stopped box:#{instance_id}"
-
-      op = redis.hdel "workers:running", instance_id
-      op.callback {
-        redis.publish "workers:requests:stop:#{instance_id}", box.host
-      }
+      redis.unstore_running_worker instance_id, box.host
     end
     
     def operation_failed

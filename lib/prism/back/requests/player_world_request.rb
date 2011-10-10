@@ -84,7 +84,9 @@ module Prism
               world_count = worlds.size
               world_sets = worlds.map {|world_id| "worlds:#{world_id}:connected_players"}
               if world_sets.any?
-                redis.sunion world_sets do |connected_players|
+                
+                op = redis.sunion world_sets
+                op.callback do |connected_players|
                   puts "box:#{instance_id} world_count:#{world_count} player_count:#{connected_players.size} player_cap:#{player_capacity} world_cap:#{world_capacity} (#{instance_type})"
                   
                   if (player_capacity - connected_players.size > INSTANCE_PLAYER_BUFFER) &&

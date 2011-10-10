@@ -47,14 +47,15 @@ module Prism
       new_boxes = running_boxes.reject{|w| redis_universe.boxes[:running].keys.include? w.instance_id }
       new_boxes.each do |box|
         debug "found box:#{box.instance_id}"
-        redis.hset_hash "workers:running", box.instance_id, instance_id:box.instance_id, host:box.host, started_at:box.started_at, instance_type:box.instance_type
+        redis.store_running_worker box.instance_id, box.host, box.started_at, box.instance_type 
       end
       
       # lost boxes
       lost_box_ids = redis_universe.boxes[:running].keys - running_boxes.map(&:instance_id)
       lost_box_ids.each do |instance_id|
         debug "lost box:#{instance_id}"
-        redis.hdel "workers:running", instance_id
+        host = redis_universe.boxes[:running][instance_id]['host']
+        redis.unstore_running_worker instance_id, host
       end
       
       # lost busy boxes
@@ -68,15 +69,16 @@ module Prism
       new_worlds = running_worlds.reject{|world_id, world| redis_universe.worlds[:running].keys.include? world_id }
       new_worlds.each do |world_id, world|
         debug "found world:#{world_id}"
-        redis.hset_hash "worlds:running", world_id, instance_id:world['instance_id'], host:world['host'], port:world['port']
+        redis.store_running_world world['instance_id'], world_id, world['host'], world['port']
       end
       
       # lost worlds
       lost_world_ids = redis_universe.worlds[:running].keys - running_worlds.keys
       lost_world_ids.each do |world_id|
-        debug "lost world:#{world_id}"
-        redis.hdel "worlds:running", world_id
-        redis.del "worlds:#{world_id}:connected_players"
+        instance_id = redis_universe.worlds[:running][world_id]['instance_id']
+        
+        debug "lost world:#{world_id} instance:#{instance_id}"
+        redis.unstore_running_world instance_id, world_id
       end
       
       # lost busy worlds

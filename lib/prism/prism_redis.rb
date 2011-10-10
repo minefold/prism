@@ -28,12 +28,26 @@ module Prism
       @redis
     end
     
-    def store_running_worker instance_id, host, started_at
-      hset_hash "workers:running", instance_id, instance_id:instance_id, host:host, started_at:started_at
+    def store_running_worker instance_id, host, started_at, instance_type
+      hset_hash "workers:running", instance_id, instance_id:instance_id, host:host, started_at:started_at, instance_type:instance_type
+    end
+    
+    def unstore_running_worker instance_id, host
+      hdel "workers:running", instance_id
+      del "workers:#{instance_id}:worlds"
+      publish "workers:requests:stop:#{instance_id}", host
     end
 
     def store_running_world instance_id, world_id, host, port
       hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
+      sadd "workers:#{instance_id}:worlds", world_id
+      hdel "worlds:busy", world_id
+      publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:port
+    end
+    
+    def unstore_running_world instance_id, world_id
+      hdel "worlds:running", world_id
+      del "worlds:#{world_id}:connected_players", user_id
     end
     
     def hget_json key, field

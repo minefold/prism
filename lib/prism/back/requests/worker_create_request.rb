@@ -8,21 +8,18 @@ module Prism
     end
     
     def perform_operation
-      info "creating new worker type:#{instance_type} req:#{request_id}"
+      info "creating new box type:#{instance_type} req:#{request_id}"
       Box.create flavor_id:instance_type
     end
     
-    def operation_succeeded worker
-      info "worker:#{worker.instance_id} created"
-      op = redis.hset_hash "workers:running", worker.instance_id, instance_id:worker.instance_id, host:worker.host, started_at:Time.now.utc, instance_type:instance_type
-      op.callback {
-        debug "publish workers:requests:create:#{request_id}"
-        redis.publish_json "workers:requests:create:#{request_id}", instance_id:worker.instance_id, host:worker.host
-      }
+    def operation_succeeded box
+      info "worker:#{box.instance_id} created"
+      redis.store_running_worker box.instance_id, box.host, Time.now.utc, instance_type
+      redis.publish_json "workers:requests:create:#{request_id}", instance_id:box.instance_id, host:box.host
     end
     
     def operation_failed
-      error "failed to create worker type:#{instance_type} req:#{request_id}"
+      error "failed to create box type:#{instance_type} req:#{request_id}"
     end
     
    

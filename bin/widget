@@ -12,6 +12,8 @@ require 'prism/back'
 
 instance_id = ARGV.shift || ENV['INSTANCE_ID']
        host = ARGV.shift || ENV['INSTANCE_IP']
+       
+raise "specify INSTANCE_ID and INSTANCE_IP" unless instance_id && host
 
 STDOUT.sync = true
 EM.epoll
@@ -81,9 +83,7 @@ class WorldStdoutReader < EventMachine::FileTail
   end
   
   def world_ready
-    redis.hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
-    redis.hdel "worlds:busy", world_id
-    redis.publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:port
+    redis.store_running_world instance_id, world_id, host, port
   end
   
   def world_chat line
@@ -252,9 +252,7 @@ def start_processing stdin_queues, stop_queues, instance_id, host
     
     if world = RUNNING_WORLDS[world_id]
       puts "world:#{world_id} is already running"
-      redis.hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:world[:port]
-      redis.hdel "worlds:busy", world_id
-      redis.publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:world[:port]
+      redis.store_running_world instance_id, world_id, host, world[:port]
     else
       port = INITIAL_PORT + (rand * 10).to_i
       puts "port: #{port}"
@@ -298,7 +296,7 @@ def start_processing stdin_queues, stop_queues, instance_id, host
   stop_popper.on_pop do |world_id|
     begin
       if stop_queue = stop_queues[world_id]
-        redis.hdel "worlds:running", world_id
+        redis.unstore_running_world instance_id, world_id
         stop_queue.push "stop"
       
         stdin_queues.delete "workers:#{instance_id}:worlds:#{world_id}:stdin"
@@ -393,6 +391,9 @@ EM.run do
       if Process.alive? pid
         puts "Found running world:#{pid_file}"
         world_id, port = File.basename(pid_file).split('.')
+
+        Prism.redis.store_running_world instance_id, world_id, host, port
+
         stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
         stop_queues[world_id] = EM::Queue.new
         
@@ -403,6 +404,8 @@ EM.run do
       end
     end
     
-    }, proc { start_processing stdin_queues, stop_queues, instance_id, host })
+    }, proc { 
+      start_processing stdin_queues, stop_queues, instance_id, host 
+    })
     
 end
