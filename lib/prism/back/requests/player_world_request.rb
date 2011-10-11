@@ -89,8 +89,8 @@ module Prism
                 op.callback do |connected_players|
                   puts "box:#{instance_id} world_count:#{world_count} player_count:#{connected_players.size} player_cap:#{player_capacity} world_cap:#{world_capacity} (#{instance_type})"
                   
-                  if (player_capacity - connected_players.size > INSTANCE_PLAYER_BUFFER) &&
-                     (world_capacity - world_count > 0)
+                  if (player_capacity - connected_players.size > INSTANCE_PLAYER_BUFFER) # &&
+                     # (world_capacity - world_count > 0)
                     hash[instance_id] = box
                   end
                   iter.return hash
