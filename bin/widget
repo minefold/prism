@@ -378,7 +378,7 @@ def world_running? world_id
 end
 
 def ports_in_use
-  Dir["#{PID_PATH}/*"].map{|f| File.basename(f.split('.')[1])}
+  Dir["#{PID_PATH}/*"].map{|f| File.basename(f.split('.')[1]).to_i }
 end
 
 stdin_queues = {}
