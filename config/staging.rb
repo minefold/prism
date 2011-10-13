@@ -20,7 +20,7 @@ MAPPER = "~/pigmap/pigmap"
 uri = URI.parse(REDISTOGO_URL)
 Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
 
-SSH_PRIVATE_KEY_PATH="#{ROOT}/.ssh/minefold.pem"
+SSH_PRIVATE_KEY_PATH=ENV['EC2_SSH'] || "#{ROOT}/.ec2/east/minefold2.pem"
 
 Fold.workers = :cloud
 Fold.worker_tags = { :environment => :staging, :git_branch => :dev }

@@ -1,0 +1,3 @@
+#!/bin/sh
+source $FOLD_ROOT/.ec2/env
+export EC2_SSH=$FOLD_ROOT/.ec2/east/minefold2.pem
