@@ -36,7 +36,6 @@ module Prism
 
       @players = {}
       
-      puts "collecting players"
       world_players = results.each_with_object({}) do |(key, player_ids), hash| 
         key =~ /worlds:(.*):connected_players/
         if world_id = $1

@@ -11,11 +11,8 @@ module Prism
         username = data[3..-1].force_encoding('UTF-16BE').encode('UTF-8')
         new_handler KnownPlayerHandler, username
       elsif header == 0xFE
-        op = redis.hlen "players:playing"
-        op.callback do |player_count|
-          connection.send_data server_packet 0xFF, :reason => "Change worlds at minefold.com"
-          connection.close_connection_after_writing
-        end
+        connection.send_data server_packet 0xFF, :reason => "Change worlds at minefold.com"
+        connection.close_connection_after_writing
       else
         connection.close_connection
         StatsD.increment 'connections.unknown_client'
