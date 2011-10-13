@@ -7,24 +7,6 @@ module Prism
     
     attr_reader :instance_id
     
-    PLAYER_RAM_SIZE = 128
-    
-    INSTANCE_PLAYER_CAPACITY = { 
-      'm1.large'   => 50,
-      'm2.xlarge'  => 130,
-      'm2.2xlarge' => 260,
-      'm2.4xlarge' => 530
-    }.freeze
-    
-    INSTANCE_WORLD_CAPACITY = {
-      'm1.large'   => 4,
-      'm2.xlarge'  => 7,
-      'm2.2xlarge' => 14,
-      'm2.4xlarge' => 27
-    }.freeze
-    
-    INSTANCE_PLAYER_BUFFER = 10 # needs to be space for 10 players to start a world
-    
     def run
       redis.hget_json "worlds:busy", world_id do |busy_world|
         if busy_world
@@ -71,49 +53,13 @@ module Prism
     def start_world
       debug "getting world:#{world_id} started"
       
-      # any free boxes?
-      op = redis.hgetall_json("workers:running")
-      op.callback do |boxes|
-        EM::Iterator.new(boxes).inject({}, proc{ |hash, (instance_id, box), iter|
-            instance_type = box['instance_type']
-            player_capacity = INSTANCE_PLAYER_CAPACITY[instance_type]
-            world_capacity  = INSTANCE_WORLD_CAPACITY[instance_type]
-            
-            op = redis.smembers "workers:#{instance_id}:worlds" 
-            op.callback do |worlds|
-              world_count = worlds.size
-              world_sets = worlds.map {|world_id| "worlds:#{world_id}:connected_players"}
-              if world_sets.any?
-                
-                op = redis.sunion world_sets
-                op.callback do |connected_players|
-                  puts "box:#{instance_id} world_count:#{world_count} player_count:#{connected_players.size} player_cap:#{player_capacity} world_cap:#{world_capacity} (#{instance_type})"
-                  
-                  if (player_capacity - connected_players.size > INSTANCE_PLAYER_BUFFER) # &&
-                     # (world_capacity - world_count > 0)
-                    hash[instance_id] = box
-                  end
-                  iter.return hash
-                end
-              else
-                puts "box:#{instance_id} world_count:0 player_count:0 player_cap:#{player_capacity} world_cap:#{world_capacity} (#{instance_type})"
-                hash[instance_id] = box
-                iter.return hash
-              end
-            end
-          }, proc { |workers_with_capacity|
-            if workers_with_capacity.any?
-              sorted_workers = workers_with_capacity.sort_by do |instance_id, w| 
-                Time.now - Time.parse(w['started_at'])
-              end
-            
-              instance_id = sorted_workers.first[0]
-            
-              start_world_on_started_worker instance_id
-            else
-              start_world_on_new_worker 'm1.large' # TODO work out what instance type is best
-            end
-          })
+      Prism::RedisUniverse.collect do |universe|
+        instance_id = WorldAllocator.find_box_for_new_world universe
+        if instance_id
+          start_world_on_started_worker instance_id
+        else
+          start_world_on_new_worker 'm1.large' # TODO work out what instance type is best
+        end
       end
     end
     
