@@ -8,11 +8,16 @@ module Fold
       ENV['FOLD_ENV'].to_sym
     end
     
+    def region
+      ENV['EC2_REGION'] || 'us-east-1'
+    end
+    
     def compute_cloud
       @@compute_cloud ||= Fog::Compute.new({
         :provider                 => 'AWS',
         :aws_secret_access_key    => EC2_SECRET_KEY,
-        :aws_access_key_id        => EC2_ACCESS_KEY
+        :aws_access_key_id        => EC2_ACCESS_KEY,
+        :region                   => region
       })
     end
     
