@@ -1,0 +1,19 @@
+#! /bin/bash -e
+
+# usage plot cmd
+
+CMD=$*
+
+rm -f logger_pipe
+
+mkfifo logger_pipe
+
+${CMD} &> logger_pipe &
+CMD_PID=$!
+
+logger -t "$LOG_TAG" < logger_pipe &
+LOGGER_PID=$!
+
+trap "kill $CMD_PID &> /dev/null; kill $TAIL_PID &> /dev/null" INT TERM EXIT
+
+wait $CMD_PID
