@@ -28,7 +28,7 @@ TAIL_PID=$!
 ${CMD} < pipe_in 1> "$STDOUT" 2> "$STDERR" &
 CMD_PID=$!
 
-trap "kill $CMD_PID; kill $TAIL_PID" INT TERM EXIT
+trap "kill $CMD_PID &> /dev/null; kill $TAIL_PID &> /dev/null" INT TERM EXIT
 
 echo "pot:$POT_PID CMD:$CMD_PID TAIL:$TAIL_PID > $PID_FILE"
 
