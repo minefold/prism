@@ -37,7 +37,7 @@ module Prism
               options = {
                 :private_key_path => SSH_PRIVATE_KEY_PATH,
                 :username => 'ubuntu',
-                :image_id => 'ami-11d11c78',
+                :image_id => 'ami-6311dd0a',
                 :groups => %W{default proxy},
                 :flavor_id => 'm1.large'
               }.merge(options)
