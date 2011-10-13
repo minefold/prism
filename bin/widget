@@ -255,7 +255,7 @@ def start_processing stdin_queues, stop_queues, instance_id, host
       redis.store_running_world instance_id, world_id, host, world[:port]
     else
       port = INITIAL_PORT + (rand * 10).to_i
-      puts "port: #{port}"
+      puts "port: #{port} > #{ports_in_use}"
       while ports_in_use.include? port
         port += (rand * 10).to_i
         puts "port: #{port}"
