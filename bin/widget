@@ -360,6 +360,8 @@ end
 def watch_world pid_file, instance_id, host, stdin_queues, stop_queues
   pid = read_pid_file pid_file
   world_id, port = File.basename(pid_file).split('.')
+  port = port.to_i
+  
   world_path = "#{WORLDS}/#{world_id}"
   stdin, stdout = "#{world_path}/world.stdin", "#{world_path}/world.stdout"
   WorldWatcher.poll pid, stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues
@@ -378,7 +380,7 @@ def world_running? world_id
 end
 
 def ports_in_use
-  Dir["#{PID_PATH}/*"].map{|f| File.basename(f.split('.')[1]).to_i }
+  RUNNING_WORLDS.values.map{|world| world[:port] }
 end
 
 stdin_queues = {}
@@ -393,6 +395,7 @@ EM.run do
       if Process.alive? pid
         puts "Found running world:#{pid_file}"
         world_id, port = File.basename(pid_file).split('.')
+        port = port.to_i
 
         Prism.redis.store_running_world instance_id, world_id, host, port
 
