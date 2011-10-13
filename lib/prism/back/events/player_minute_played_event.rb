@@ -41,13 +41,14 @@ module Prism
         1  =>  "1 minefold minutes left!"
       }.freeze
 
-      if message = messages[credits_remaining]
+      if (message = messages[credits_remaining]) || credits_remaining < 1
         op = redis.hget "players:playing", username
         op.callback do |world_id|
           op = redis.hget_hash "worlds:running", world_id
           op.callback do |world|
-            send_world_player_message world['instance_id'], world_id, username, message
-            if credits_remaining < 0
+            send_world_player_message world['instance_id'], world_id, username, message if message
+            
+            if credits_remaining < 1
               EM.add_timer(1)  { send_world_player_message world['instance_id'], world_id, username, "Top up your account at minefold.com" }
               EM.add_timer(40) { send_world_player_message world['instance_id'], world_id, username, "Thanks for playing!" }
               EM.add_timer(60) { redis.publish "players:disconnect:#{username}", "no credit" }
