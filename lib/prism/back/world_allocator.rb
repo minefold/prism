@@ -41,7 +41,9 @@ module Prism
         start_new_box 'm1.large' if candidates_with_capacity.first[:world_slots] == 1
       end
       
-      p "candidates:", candidates_with_capacity
+      candidates_with_capacity.each do |box|
+        puts "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
+      end
 
       candidates_with_capacity.any? ? candidates_with_capacity.first["instance_id"] : nil
     end
