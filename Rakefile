@@ -54,7 +54,7 @@ end
 
 namespace :prism do
   def ssh cmd
-    puts `ssh -i .ssh/minefold2.pem ubuntu@#{ENV['HOST']} "#{cmd}"`
+    puts `ssh -i #{ENV['EC2_SSH']} ubuntu@#{ENV['HOST']} "#{cmd}"`
   end
   
   task :deploy do
