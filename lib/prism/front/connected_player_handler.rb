@@ -56,5 +56,9 @@ module Prism
       @server.send_data data
     end
     
+    def disconnected
+      debug "client disconnected"
+    end
+    
   end
 end

@@ -25,7 +25,6 @@ module Prism
     end
     
     def unbind
-      debug "client disconnected"
       disconnected
       exit
     end    

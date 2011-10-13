@@ -13,8 +13,6 @@ module Prism
         @redis_universe = universe
         Box.all method(:query_boxes)
       end
-
-      @deferred_sweep = EM::DefaultDeferrable.new
     end
     
     def query_boxes boxes
@@ -54,9 +52,10 @@ module Prism
       fix_broken_boxes
 
       shutdown_idle_worlds
-      shutdown_idle_boxes
-      
-      @deferred_sweep.succeed
+      EM.add_timer(10) do
+        # wait 10 seconds so redis is definitely up to date
+        RedisUniverse.collect {|universe| WorldAllocator.new(universe).shutdown_idle_boxes }
+      end
     end
     
     def found_boxes
@@ -126,35 +125,6 @@ module Prism
           redis.lpush "workers:#{world['instance_id']}:worlds:requests:stop", world_id
         end
       end
-    end
-    
-    def shutdown_idle_boxes
-      if running_boxes.size > 0
-        running_boxes.each do |box|
-          uptime_minutes = ((Time.now - box.started_at) / 60).to_i
-          close_to_end_of_hour = uptime_minutes % 60 > 55
-          
-          box_worlds = running_worlds.select {|world_id, w| w['instance_id'] == box.instance_id }
-  
-          world_count = box_worlds.size
-          player_count = box_worlds.values.inject(0) {|sum, w| sum + (w['players'] || []).size }
-      
-          box_not_busy = redis_universe.boxes[:busy].count {|busy_box_id, world| busy_box_id == box.instance_id } == 0
-       
-          world_not_busy = redis_universe.worlds[:busy].count {|busy_world_id, data| data['instance_id'] == box.instance_id } == 0
-  
-          message = "box:#{box.instance_id} worlds:#{world_count} players:#{player_count} uptime_minutes:#{uptime_minutes}"
-          if close_to_end_of_hour and world_count == 0 and box_not_busy and world_not_busy
-            puts "#{message} terminating idle [IGNORE]"
-            # redis.lpush "workers:requests:stop", box.instance_id
-          else
-            puts message
-          end
-        end
-      else
-        puts "No boxes running"
-      end
-      
     end
     
   end

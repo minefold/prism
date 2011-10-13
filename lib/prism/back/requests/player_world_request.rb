@@ -54,7 +54,7 @@ module Prism
       debug "getting world:#{world_id} started"
       
       Prism::RedisUniverse.collect do |universe|
-        instance_id = WorldAllocator.find_box_for_new_world universe
+        instance_id = WorldAllocator.new(universe).find_box_for_new_world
         if instance_id
           start_world_on_started_worker instance_id
         else

@@ -29,7 +29,7 @@ module Prism
         if @connection_active
           if response['host']
             connection_time_ms = (Time.now - started_connection) * 1000
-            puts "connection time:#{connection_time_ms}"
+            info "connection time:#{connection_time_ms}"
             StatsD.increment_and_measure_from started_connection, "players.connection_request.successful"
             new_handler ConnectedPlayerHandler, username, response["host"], response["port"]
           elsif response['rejected']
@@ -53,6 +53,7 @@ module Prism
     def disconnected
       @connection_active = false
       redis.lpush "players:disconnection_request", username
+      debug "client disconnected"
     end
   end
 end
