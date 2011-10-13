@@ -31,5 +31,5 @@ Storage.provider = Fog::Storage.new({
   :aws_access_key_id        => EC2_ACCESS_KEY
 })
 
-StatsD.server = 'logs.minefold.com:8125'
+StatsD.server = 'stats.minefold.com:8125'
 StatsD.mode = :production
