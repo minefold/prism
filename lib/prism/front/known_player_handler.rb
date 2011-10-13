@@ -21,7 +21,7 @@ module Prism
       @username = username
       @connection_active = true
       
-      start_keepalive
+      start_keepalive username
       
       started_connection = Time.now
       

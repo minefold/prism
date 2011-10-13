@@ -4,7 +4,7 @@ module Prism
     
     extend Debugger
     
-    def start_keepalive
+    def start_keepalive username
       started_at = Time.now
       @keepalive = EM::PeriodicTimer.new 15 do
         connection_time = Time.now - started_at
