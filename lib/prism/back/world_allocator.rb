@@ -17,54 +17,38 @@ module Prism
   
   INSTANCE_PLAYER_BUFFER = 10 # needs to be space for 10 players to start a world
   
+  
   class WorldAllocator
     def self.find_box_for_new_world universe
-      universe.boxes[:running].each do |instance_id, box|
-        player_capacity = box[:instance_type]
-        player_count = box[:players].size
-        world_count  = box[:worlds.size
-        
-        
+      # find a box with the least amount of world slots and the most player slots
+      # this means we fill boxes with smaller worlds and (in theory) allow larger
+      # worlds to grow larger still. This might be complete bullshit...
+
+      candidates = universe.boxes[:running].map do |instance_id, box|
+        instance_type = box["instance_type"]
+        box[:player_slots] = INSTANCE_PLAYER_CAPACITY[instance_type] - box[:players].size
+        box[:world_slots] = INSTANCE_WORLD_CAPACITY[instance_type] - box[:worlds].size
+        box
+      end.sort_by {|box| [box[:world_slots], -box[:player_slots]] }
+      
+      candidates_with_capacity = candidates.select do |box|
+        box[:world_slots] > 0 && box[:player_slots] >= INSTANCE_PLAYER_BUFFER
       end
       
-        EM::Iterator.new(boxes).inject({}, proc{ |hash, (instance_id, box), iter|
-            instance_type = box['instance_type']
-            player_capacity = INSTANCE_PLAYER_CAPACITY[instance_type]
-            world_capacity  = INSTANCE_WORLD_CAPACITY[instance_type]
-            
-            op = redis.smembers "workers:#{instance_id}:worlds" 
-            op.callback do |worlds|
-              world_count = worlds.size
-              world_sets = worlds.map {|world_id| "worlds:#{world_id}:connected_players"}
-              if world_sets.any?
-                
-                op = redis.sunion world_sets
-                op.callback do |connected_players|
-                  puts "box:#{instance_id} world_count:#{world_count} player_count:#{connected_players.size} player_cap:#{player_capacity} world_cap:#{world_capacity} (#{instance_type})"
-                  
-                  if (player_capacity - connected_players.size > INSTANCE_PLAYER_BUFFER) # &&
-                     # (world_capacity - world_count > 0)
-                    hash[instance_id] = box
-                  end
-                  iter.return hash
-                end
-              else
-                puts "box:#{instance_id} world_count:0 player_count:0 player_cap:#{player_capacity} world_cap:#{world_capacity} (#{instance_type})"
-                hash[instance_id] = box
-                iter.return hash
-              end
-            end
-          }, proc { |workers_with_capacity|
-            if workers_with_capacity.any?
-              sorted_workers = workers_with_capacity.sort_by do |instance_id, w| 
-                Time.now - Time.parse(w['started_at'])
-              end
-            
-              instance_id = sorted_workers.first[0]
-                        end
-          })
+      if candidates_with_capacity.size == 1
+        # we're down to 1 box, if it only has 1 world slot left lets start a new box
+        # in case more peeps join
+        start_new_box 'm1.large' if candidates_with_capacity.first[:world_slots] == 1
       end
       
+      p "candidates:", candidates_with_capacity
+
+      candidates_with_capacity.any? ? candidates_with_capacity.first["instance_id"] : nil
+    end
+    
+    def self.start_new_box instance_type
+      request_id = `uuidgen`.strip
+      Prism.redis.lpush_hash "workers:requests:create", request_id:request_id, instance_type:instance_type
     end
   end
 end

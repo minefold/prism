@@ -262,20 +262,22 @@ def start_processing stdin_queues, stop_queues, instance_id, host
       end
       puts "starting world:#{world_id} process on port:#{port}"
 
+      RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
+
       EM.defer(
         proc { 
           begin
             pid = fork { LocalWorld.prepare world_id, port }
             Process.waitpid pid
-            true
+            port
           rescue => e
             puts "ERROR: failed to prepare:#{world_id} #{e}"
-            false
+            nil
           end
         },
-        proc { |succeeded|
+        proc { |port|
           begin
-            if succeeded
+            if port
               stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
               stop_queues[world_id] = EM::Queue.new
 
