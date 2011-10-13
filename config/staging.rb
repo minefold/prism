@@ -1,7 +1,7 @@
 ROOT = File.expand_path "../..", __FILE__
 BIN = "#{ROOT}/bin"
 LIB = "#{ROOT}/lib"
-WORLDS = "#{ROOT}/worlds"
+WORLDS = File.expand_path("~/tmp/worlds")
 LOG_PATH = "#{ROOT}/log"
 
 JAR = "#{WORLDS}/server.jar"
