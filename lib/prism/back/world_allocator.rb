@@ -1,3 +1,5 @@
+require 'time'
+
 module Prism
   PLAYER_RAM_SIZE = 128
   
@@ -100,7 +102,7 @@ module Prism
     end
     
     def uptime box
-      ((Time.now - box["started_at"]) / 60).to_i
+      ((Time.now - Time.parse(box["started_at"])) / 60).to_i
     end
   end
 end
