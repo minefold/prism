@@ -52,7 +52,7 @@ module Prism
       idles_close_to_end_of_hour = idle_boxes.select{|instance_id, box| close_to_end_of_hour box }
       
       puts "boxes_with_capacity:#{boxes_with_capacity.size} idles:#{idle_boxes.size} killable:#{idles_close_to_end_of_hour.size}"
-      if number_of_idles_we_can_kill > 1
+      if number_of_idles_we_can_kill > 0
         ids_to_kill = boxes_with_capacity.keys.take number_of_idles_we_can_kill
       
         ids_to_kill.each do |instance_id|
