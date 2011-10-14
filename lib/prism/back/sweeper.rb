@@ -55,7 +55,7 @@ module Prism
       shutdown_idle_worlds
       EM.add_timer(10) do
         # wait 10 seconds so redis is definitely up to date
-        RedisUniverse.collect {|universe| WorldAllocator.new(universe).shutdown_idle_boxes }
+        RedisUniverse.collect {|universe| WorldAllocator.new(universe).rebalance_boxes }
       end
     end
     

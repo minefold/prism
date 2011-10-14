@@ -18,6 +18,7 @@ module Prism
   }.freeze
   
   INSTANCE_PLAYER_BUFFER = 10 # needs to be space for 10 players to start a world
+  INSTANCE_WORLD_BUFFER  = 1  # if the last box with capacity has space for 1 world, start a new box
   
   class WorldAllocator
     attr_reader :universe
@@ -30,19 +31,19 @@ module Prism
       # find a box with the least amount of world slots and the most player slots
       # this means we fill boxes with smaller worlds and (in theory) allow larger
       # worlds to grow larger still. This might be complete bullshit...
-      candidates_with_capacity = boxes_with_capacity
       
-      if candidates_with_capacity.size == 1
-        # we're down to 1 box, if it only has 1 world slot left lets start a new box
-        # in case more peeps join
-        start_new_box 'm1.large' if candidates_with_capacity.first[:world_slots] == 1
-      end
-      
-      candidates_with_capacity.each do |box|
+      boxes_with_capacity.each do |box|
         puts "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
       end
-
-      candidates_with_capacity.any? ? candidates_with_capacity.first["instance_id"] : nil
+      
+      start_box_if_at_capacity
+      
+      boxes_with_capacity.any? ? boxes_with_capacity.first["instance_id"] : nil
+    end
+    
+    def rebalance_boxes
+      start_box_if_at_capacity
+      shutdown_idle_boxes
     end
     
     def shutdown_idle_boxes
@@ -65,13 +66,17 @@ module Prism
       end
     end
     
+    def start_box_if_at_capacity
+      start_new_box 'm1.large' if at_capacity?
+    end
+    
     def start_new_box instance_type
       request_id = `uuidgen`.strip
       Prism.redis.lpush_hash "workers:requests:create", request_id:request_id, instance_type:instance_type
     end
     
     def boxes_with_capacity
-      running_box_capacities.select {|box| box_has_capacity? box }
+      @boxes_with_capacity ||= running_box_capacities.select {|box| has_capacity?(box) && accepting_worlds?(box) }
     end
     
     def idle_boxes
@@ -80,9 +85,11 @@ module Prism
           uptime_minutes = uptime box
           player_count = box[:players].size
            world_count = box[:worlds].size
-        
-          puts "box:#{instance_id} world_count:#{world_count} player_count:#{player_count} uptime:#{friendly_time uptime box}"
-        
+          
+          message = "box:#{instance_id} world_count:#{world_count} player_count:#{player_count} uptime:#{friendly_time uptime box}"
+          message += " not accepting" unless accepting_worlds? box
+          puts message
+          
           player_count == 0 && world_count == 0
         end
       end
@@ -101,6 +108,13 @@ module Prism
       end.sort_by {|box| [box[:world_slots], -box[:player_slots]] }
     end
     
+    def at_capacity?
+      # we're at capacity if there's no boxes left with capacity or the last box only has 1 world slot left
+      # (this allows everyone to have a fast connect because there should always be a world slot available)
+      (boxes_with_capacity.size < 1) || 
+      (boxes_with_capacity.size == 1 && boxes_with_capacity[0][:world_slots] <= INSTANCE_WORLD_BUFFER)
+    end
+    
     # helper
     
     def friendly_time minutes
@@ -110,8 +124,12 @@ module Prism
     
     # box methods (encapsulate?)
 
-    def box_has_capacity? box
+    def has_capacity? box
       box[:world_slots] > 0 && box[:player_slots] >= INSTANCE_PLAYER_BUFFER
+    end
+    
+    def accepting_worlds? box
+      true unless box["tags"] && box["tags"]["accepting_worlds"] == "false"
     end
     
     def uptime box
