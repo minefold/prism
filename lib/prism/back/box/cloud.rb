@@ -29,11 +29,16 @@ module Prism
         cb
       end
       
-      def self.ec2_hostname_script
-      <<-EOS
-        #!/bin/sh
-        /usr/local/ec2/ec2-hostname.sh
-      EOS
+      def self.cloud_init_script
+        <<-EOS
+#!/bin/sh
+# set hostname to ec2 instance id
+/usr/local/ec2/ec2-hostname.sh
+
+# restart hostname sensitive services
+/etc/init.d/collectd restart
+restart rsyslog
+        EOS
       end
       
       def self.create options = {}
@@ -47,10 +52,13 @@ module Prism
                 :image_id => 'ami-a734f8ce',
                 :groups => %W{default box},
                 :flavor_id => 'm1.large',
-                :user_data => ec2_hostname_script
+                :user_data => cloud_init_script
               }.merge(options)
 
-              cloud_box = Cloud.new compute_cloud.servers.bootstrap(options)
+              vm = compute_cloud.servers.bootstrap(options)
+              # p vm
+              
+              cloud_box = Cloud.new vm
               compute_cloud.create_tags cloud_box.instance_id, tags
               cloud_box
             rescue => e
