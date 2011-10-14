@@ -37,5 +37,4 @@ require 'minefold/storage'
 require 'minefold/worlds'
 require 'minefold/world'
 require 'jobs'
-require 'statsd'
 require "#{Fold.env}"

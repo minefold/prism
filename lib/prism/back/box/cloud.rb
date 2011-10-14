@@ -38,8 +38,9 @@ module Prism
                 :private_key_path => SSH_PRIVATE_KEY_PATH,
                 :username => 'ubuntu',
                 :image_id => 'ami-6311dd0a',
-                :groups => %W{default proxy},
-                :flavor_id => 'm1.large'
+                :groups => %W{default box},
+                :flavor_id => 'm1.large',
+                :user_data => ec2_hostname_script
               }.merge(options)
 
               cloud_box = Cloud.new compute_cloud.servers.bootstrap(options)
@@ -132,10 +133,14 @@ module Prism
           end
         end
       end
-    
-    
     end
     
     
+    def ec2_hostname_script
+    <<-EOS
+      #!/bin/sh
+      /usr/local/ec2/ec2-hostname.sh
+    EOS
+    end
   end
 end
