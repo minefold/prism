@@ -46,6 +46,10 @@ module Prism
     class Base
       attr_reader :instance_id, :instance_type, :host, :started_at
       
+      def uptime
+        ((Time.now - started_at) / 60).to_i
+      end
+      
       def query_worlds
         df = EM::DefaultDeferrable.new
         begin

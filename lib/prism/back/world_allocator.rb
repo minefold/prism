@@ -58,7 +58,7 @@ module Prism
         
           message = "box:#{box['instance_id']} worlds:#{box[:worlds].size} players:#{box[:players].size} uptime_minutes:#{uptime box}"
           puts "#{message} terminating idle"
-          redis.lpush "workers:requests:stop", instance_id
+          Prism.redis.lpush "workers:requests:stop", instance_id
         end
       end
     end
