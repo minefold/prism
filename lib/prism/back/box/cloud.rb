@@ -37,7 +37,7 @@ module Prism
               options = {
                 :private_key_path => SSH_PRIVATE_KEY_PATH,
                 :username => 'ubuntu',
-                :image_id => 'ami-6311dd0a',
+                :image_id => 'ami-f334f89a',
                 :groups => %W{default box},
                 :flavor_id => 'm1.large',
                 :user_data => ec2_hostname_script
