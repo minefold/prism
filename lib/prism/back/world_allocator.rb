@@ -49,12 +49,14 @@ module Prism
       # shutdown idle boxes when there is at least 1 other box with capacity
       number_of_idles_we_can_kill = boxes_with_capacity.size - 1
       
+      idles_close_to_end_of_hour = idle_boxes.select{|instance_id, box| close_to_end_of_hour box }
+      
+      puts "boxes_with_capacity:#{boxes_with_capacity.size} idles:#{idle_boxes.size} killable:#{idles_close_to_end_of_hour.size}"
       if number_of_idles_we_can_kill > 1
-        candidates = idle_boxes
-        ids_to_kill = candidates.keys.take number_of_idles_we_can_kill
+        ids_to_kill = boxes_with_capacity.keys.take number_of_idles_we_can_kill
       
         ids_to_kill.each do |instance_id|
-          box = candidates[instance_id]
+          box = idles_close_to_end_of_hour[instance_id]
         
           message = "box:#{box['instance_id']} worlds:#{box[:worlds].size} players:#{box[:players].size} uptime_minutes:#{uptime box}"
           puts "#{message} terminating idle"
@@ -73,14 +75,16 @@ module Prism
     end
     
     def idle_boxes
-      non_busy_boxes.select do |instance_id, box|
-        uptime_minutes = uptime box
-        close_to_end_of_hour = uptime_minutes % 60 > 55
+      @idle_boxes ||= begin
+        non_busy_boxes.select do |instance_id, box|
+          uptime_minutes = uptime box
+          player_count = box[:players].size
+           world_count = box[:worlds].size
         
-        player_count = box[:players].size
-        world_count = box[:worlds].size
+          puts "box:#{instance_id} world_count:#{world_count} player_count:#{player_count} uptime:#{friendly_time uptime box}"
         
-        close_to_end_of_hour && player_count == 0 && world_count == 0
+          player_count == 0 && world_count == 0
+        end
       end
     end
     
@@ -96,6 +100,15 @@ module Prism
         box
       end.sort_by {|box| [box[:world_slots], -box[:player_slots]] }
     end
+    
+    # helper
+    
+    def friendly_time minutes
+      hours, mins = minutes / 60, minutes % 60
+      "#{'%02i' % hours}:#{'%02i' % mins}"
+    end
+    
+    # box methods (encapsulate?)
 
     def box_has_capacity? box
       box[:world_slots] > 0 && box[:player_slots] >= INSTANCE_PLAYER_BUFFER
@@ -103,6 +116,10 @@ module Prism
     
     def uptime box
       ((Time.now - Time.parse(box["started_at"])) / 60).to_i
+    end
+    
+    def close_to_end_of_hour box
+      uptime(box) % 60 > 55
     end
   end
 end

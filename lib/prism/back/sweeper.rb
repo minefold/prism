@@ -28,8 +28,6 @@ module Prism
               @working_boxes << box
               @running_worlds.merge! worlds
               
-              info "box:#{box.instance_id} worlds:#{worlds.size} uptime:#{box.uptime}"
-              
               iter.next
             end
             op.errback do
