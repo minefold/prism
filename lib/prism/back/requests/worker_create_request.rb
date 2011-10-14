@@ -14,7 +14,7 @@ module Prism
     
     def operation_succeeded box
       info "worker:#{box.instance_id} created"
-      redis.store_running_worker box.instance_id, box.host, Time.now.utc, instance_type
+      redis.store_running_box box
       redis.publish_json "workers:requests:create:#{request_id}", instance_id:box.instance_id, host:box.host
     end
     

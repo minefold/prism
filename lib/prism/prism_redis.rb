@@ -28,11 +28,11 @@ module Prism
       @redis
     end
     
-    def store_running_worker instance_id, host, started_at, instance_type
-      hset_hash "workers:running", instance_id, instance_id:instance_id, host:host, started_at:started_at, instance_type:instance_type
+    def store_running_box box
+      hset_hash "workers:running", box.instance_id, box.to_hash
     end
     
-    def unstore_running_worker instance_id, host
+    def unstore_running_box instance_id, host
       hdel "workers:running", instance_id
       del "workers:#{instance_id}:worlds"
       publish "workers:requests:stop:#{instance_id}", host

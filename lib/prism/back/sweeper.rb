@@ -42,7 +42,7 @@ module Prism
     end
 
     def update_state
-      found_boxes
+      update_boxes
       lost_boxes
       lost_busy_boxes
       
@@ -59,11 +59,10 @@ module Prism
       end
     end
     
-    def found_boxes
-      new_boxes = running_boxes.reject{|w| redis_universe.boxes[:running].keys.include? w.instance_id }
-      new_boxes.each do |box|
-        debug "found box:#{box.instance_id}"
-        redis.store_running_worker box.instance_id, box.host, box.started_at, box.instance_type 
+    def update_boxes
+      running_boxes.each do |box|
+        debug "found box:#{box.instance_id}" unless redis_universe.boxes[:running].keys.include? box.instance_id 
+        redis.store_running_box box
       end
     end
     
@@ -72,7 +71,7 @@ module Prism
       lost_box_ids.each do |instance_id|
         debug "lost box:#{instance_id}"
         host = redis_universe.boxes[:running][instance_id]['host']
-        redis.unstore_running_worker instance_id, host
+        redis.unstore_running_box instance_id, host
       end
     end
     

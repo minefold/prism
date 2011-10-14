@@ -27,7 +27,7 @@ module Prism
     
     def operation_succeeded box
       info "stopped box:#{instance_id}"
-      redis.unstore_running_worker instance_id, box.host
+      redis.unstore_running_box instance_id, box.host
     end
     
     def operation_failed
