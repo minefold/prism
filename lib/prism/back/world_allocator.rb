@@ -11,10 +11,10 @@ module Prism
   }.freeze
   
   INSTANCE_WORLD_CAPACITY = {
-    'm1.large'   => 6,
-    'm2.xlarge'  => 7,
-    'm2.2xlarge' => 14,
-    'm2.4xlarge' => 27
+    'm1.large'   => 8,
+    'm2.xlarge'  => 13,
+    'm2.2xlarge' => 26,
+    'm2.4xlarge' => 52
   }.freeze
   
   INSTANCE_PLAYER_BUFFER = 10 # needs to be space for 10 players to start a world
