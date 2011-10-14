@@ -29,6 +29,13 @@ module Prism
         cb
       end
       
+      def self.ec2_hostname_script
+      <<-EOS
+        #!/bin/sh
+        /usr/local/ec2/ec2-hostname.sh
+      EOS
+      end
+      
       def self.create options = {}
         @deferrable = EM::DefaultDeferrable.new
         
@@ -37,7 +44,7 @@ module Prism
               options = {
                 :private_key_path => SSH_PRIVATE_KEY_PATH,
                 :username => 'ubuntu',
-                :image_id => 'ami-f334f89a',
+                :image_id => 'ami-a734f8ce',
                 :groups => %W{default box},
                 :flavor_id => 'm1.large',
                 :user_data => ec2_hostname_script
@@ -136,11 +143,5 @@ module Prism
     end
     
     
-    def ec2_hostname_script
-    <<-EOS
-      #!/bin/sh
-      /usr/local/ec2/ec2-hostname.sh
-    EOS
-    end
   end
 end
