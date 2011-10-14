@@ -53,7 +53,7 @@ module Prism
       
       puts "boxes_with_capacity:#{boxes_with_capacity.size} idles:#{idle_boxes.size} killable:#{idles_close_to_end_of_hour.size}"
       if number_of_idles_we_can_kill > 0
-        ids_to_kill = boxes_with_capacity.keys.take number_of_idles_we_can_kill
+        ids_to_kill = idles_close_to_end_of_hour.keys.take number_of_idles_we_can_kill
       
         ids_to_kill.each do |instance_id|
           box = idles_close_to_end_of_hour[instance_id]
