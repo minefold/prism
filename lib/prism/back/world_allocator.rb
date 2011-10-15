@@ -44,6 +44,7 @@ module Prism
     def rebalance_boxes
       start_box_if_at_capacity
       shutdown_idle_boxes
+      shutdown_boxes_not_in_use
     end
     
     def shutdown_idle_boxes
@@ -66,6 +67,14 @@ module Prism
       end
     end
     
+    def shutdown_boxes_not_in_use
+      unusable_boxes.select {|box| close_to_end_of_hour box }.each do |box|
+        message = "box:#{box['instance_id']} worlds:#{box[:worlds].size} players:#{box[:players].size} uptime_minutes:#{uptime box}"
+        puts "#{message} terminating unuseable"
+        Prism.redis.lpush "workers:requests:stop", box['instance_id']
+      end
+    end
+    
     def start_box_if_at_capacity
       start_new_box 'm1.large' if at_capacity?
     end
@@ -79,7 +88,12 @@ module Prism
       @boxes_with_capacity ||= running_box_capacities.select {|box| has_capacity?(box) && accepting_worlds?(box) }
     end
     
+    def unusable_boxes
+      @unusable_boxes ||= running_box_capacities.reject {|box| accepting_worlds?(box) }
+    end
+    
     def idle_boxes
+      # boxes that have no players, no worlds and are accepting new worlds
       @idle_boxes ||= begin
         non_busy_boxes.select do |instance_id, box|
           uptime_minutes = uptime box
@@ -90,22 +104,24 @@ module Prism
           message += " not accepting" unless accepting_worlds? box
           puts message
           
-          player_count == 0 && world_count == 0
+          player_count == 0 && world_count == 0 && accepting_worlds?(box)
         end
       end
     end
     
     def non_busy_boxes
-      universe.boxes[:running].reject{|id, box| universe.boxes[:busy].keys.include? id }
+      @non_busy_boxes ||= universe.boxes[:running].reject{|id, box| universe.boxes[:busy].keys.include? id }
     end
     
     def running_box_capacities
-      universe.boxes[:running].map do |instance_id, box|
-        instance_type = box["instance_type"]
-        box[:player_slots] = INSTANCE_PLAYER_CAPACITY[instance_type] - box[:players].size
-        box[:world_slots] = INSTANCE_WORLD_CAPACITY[instance_type] - box[:worlds].size
-        box
-      end.sort_by {|box| [box[:world_slots], -box[:player_slots]] }
+      @running_box_capacities ||= begin
+        universe.boxes[:running].map do |instance_id, box|
+          instance_type = box["instance_type"]
+          box[:player_slots] = INSTANCE_PLAYER_CAPACITY[instance_type] - box[:players].size
+          box[:world_slots] = INSTANCE_WORLD_CAPACITY[instance_type] - box[:worlds].size
+          box
+        end.sort_by {|box| [box[:world_slots], -box[:player_slots]] }
+      end
     end
     
     def at_capacity?
