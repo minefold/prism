@@ -3,16 +3,17 @@ module Debugger
     puts tagged_message(data.join(" "))
   end
 
-  def info message
-    puts tagged_message(message)
+  def info tag=nil, message
+    message = tag unless tag
+    puts tagged_message(message, tag)
   end
 
   def error message, error = nil
     puts tagged_message("ERROR: #{message}\n#{error}")
   end
 
-  def tagged_message message
-    @tag ||= Array(log_tag)
+  def tagged_message message, tag = nil
+    @tag = (Array(log_tag) + Array(tag)).compact
     if @tag.any?
       "[#{@tag.join('|')}] #{message}"
     else

@@ -2,8 +2,9 @@ module Prism
   class QueuePopper
     include Debugger
     
-    def initialize queue, &message_handler
+    def initialize queue, *a, &b
       @queue = queue
+      @callback = EM::Callback(*a, &b)
 
       start_processing
     end
@@ -19,15 +20,11 @@ module Prism
       @pop.callback do |channel, item|
         if item
           debug "recv #{@queue} #{item}"
-          @message_handler.call item
+          @callback.call item
         end
         
         EM.add_timer(0.5) { listen }
       end
-    end
-    
-    def on_pop &message_handler
-      @message_handler = message_handler
     end
   end
   
