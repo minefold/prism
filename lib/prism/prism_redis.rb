@@ -22,6 +22,16 @@ module Prism
       new Prism.hiredis_connect
     end
     
+    def self.psubscribe channel, *a, &b
+      cb = EM::Callback *a, &b
+      subscription = Prism::PrismRedis.connect
+      subscription.psubscribe channel
+      subscription.on :pmessage do |key, channel, message|
+        cb.call key, channel, message
+      end
+      subscription
+    end
+    
     def initialize connection
       @redis = connection
       @redis.errback {|e| error "failed to connect to redis: #{e}" }
