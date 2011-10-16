@@ -42,6 +42,7 @@ class LocalWorld
       # check s3 for world
       archived_world = Storage.new.worlds.files.get("#{world_id}.tar.gz")
       if archived_world
+        new_world = false
         FileUtils.mkdir_p "#{ROOT}/backups"
         archive = "#{ROOT}/backups/#{world_id}.tar.gz"
         File.open(archive, "w") do |tar|
@@ -51,6 +52,7 @@ class LocalWorld
           TarGz.new.extract archive
         end
       else
+        new_world = true
         puts "New world"
       end
 
@@ -69,8 +71,6 @@ class LocalWorld
           ops = ops | file.read.split("\n")
         end
       end
-      
-      p "ops:", ops
       
       File.open("#{world_path}/ops.txt", "w") do |file| 
         file.puts ops.join("\n")

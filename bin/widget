@@ -35,11 +35,12 @@ module Widget
     include Debugger
     
     attr_reader :stdin_queues, :stop_queues, :instance_id, :host
-    attr_reader :requests_key, :redis
+    attr_reader :requests_key, :statsd_key, :redis
     
     def initialize instance_id, host
       @stdin_queues, @stop_queues, @instance_id, @host = {}, {}, instance_id, host
       @requests_key = "workers:#{instance_id}:worlds:requests"
+      @statsd_key = "boxes.#{instance_id}"
       @redis = Prism.redis
       
       EM.defer method(:gather_initial_state), proc { start_processing }
@@ -104,6 +105,10 @@ module Widget
             world_state[:players] = Array(world_state[:players]) - [line.user]
           when :world_started
             redis.store_running_world instance_id, world_id, host, port
+          when :world_stressed
+            StatsD.increment "#{statsd_key}.worlds.#{world_id}.stressed"
+          when :lag_mentioned
+            StatsD.increment "#{statsd_key}.worlds.#{world_id}.lag_mentioned"
           when :port_taken
             world_watcher.stop_world
           end
@@ -236,8 +241,8 @@ module Widget
     end
     
     def record_stats
-      StatsD.measure "boxes.#{instance_id}.worlds.count", world_count
-      StatsD.measure "boxes.#{instance_id}.players.count", player_count
+      StatsD.measure "#{statsd_key}.worlds.count", world_count
+      StatsD.measure "#{statsd_key}.players.count", player_count
     end
     
     def read_pid_file pid_file

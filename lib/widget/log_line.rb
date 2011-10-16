@@ -15,6 +15,8 @@ module Widget
         @type = :chat_message
         @user = $1
         @chat_message = $2
+        
+        @type = :lag_mentioned if chat_message =~ /lag/i
         @log_entry = "[#{user}] #{chat_message}"
       elsif message =~ /Connected players: (.*)$/i
         @type = :connected_players
@@ -30,6 +32,9 @@ module Widget
       elsif message =~ /^Done/
         @type = :world_started
         @log_entry = "world started"
+      elsif message =~ /Can't keep up! Did the system time change, or is the server overloaded?/
+        @type = :world_stressed
+        @log_entry = "world stressed"
       elsif message =~ /failed to bind to port/i
         @type = :port_taken
         @log_entry = "failed to bind port"
