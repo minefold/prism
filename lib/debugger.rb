@@ -3,8 +3,11 @@ module Debugger
     puts tagged_message(data.join(" "))
   end
 
-  def info tag=nil, message
-    message = tag unless tag
+  def info tag, message = nil
+    unless message
+      message = tag
+      tag = nil
+    end
     puts tagged_message(message, tag)
   end
 

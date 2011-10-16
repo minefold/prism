@@ -19,7 +19,6 @@ module Prism
       @pop = @redis.blpop @queue, 30
       @pop.callback do |channel, item|
         if item
-          debug "recv #{@queue} #{item}"
           @callback.call item
         end
         
@@ -47,7 +46,6 @@ module Prism
       @pop = @redis.blpop @queue, 30
       @pop.callback do |channel, item|
         if item
-          debug "recv #{@queue} #{item}"
           @klass.new.process item
         end
         
