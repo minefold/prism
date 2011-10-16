@@ -43,8 +43,7 @@ module Prism
       if (message = messages[credits_remaining]) || credits_remaining < 1
         op = redis.hget "players:playing", username
         op.callback do |world_id|
-          op = redis.hget_json "worlds:running", world_id
-          op.callback do |world|
+          redis.hget_json "worlds:running", world_id do |world|
             send_world_player_message world['instance_id'], world_id, username, message if message
             
             if credits_remaining < 1
