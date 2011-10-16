@@ -57,7 +57,7 @@ module Widget
 
           Prism.redis.store_running_world instance_id, world_id, host, port
           create_world_in_queues world_id
-          watch_world pid_file, instance_id, host, stdin_queues, stop_queues
+          watch_world pid_file
         else
           puts "Found dead world:#{pid_file}"
           FileUtils.rm_f pid_file
