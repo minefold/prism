@@ -49,7 +49,7 @@ restart rsyslog
               options = {
                 :private_key_path => SSH_PRIVATE_KEY_PATH,
                 :username => 'ubuntu',
-                :image_id => 'ami-595e9230',
+                :image_id => 'ami-f964a890',
                 :groups => %W{default box},
                 :flavor_id => 'm1.large',
                 :user_data => cloud_init_script
