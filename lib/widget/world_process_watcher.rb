@@ -17,11 +17,6 @@ module Widget
     attr_accessor :on_process_exit
     attr_reader :stdin, :stdout, :world_id, :instance_id, :host, :port, :redis, :stdin_queues, :stop_queues
     
-    def info message
-      puts message
-      
-    end
-  
     def stop_queue
       stop_queues[world_id]
     end
@@ -65,7 +60,7 @@ module Widget
         EM.defer(
           proc { 
             begin
-              LocalWorld.new(world_id).backup! 
+              Process.waitpid fork { LocalWorld.new(world_id).backup! }
             rescue => e
               info "ERROR: backup failed: #{e.message}\n#{e.backtrace}"
             end

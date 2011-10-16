@@ -72,6 +72,7 @@ module Widget
 
       EM.start_server '0.0.0.0', 3000, StatusHandler
       EM.add_periodic_timer(60) { print_status }
+      EM.add_periodic_timer(10) { record_stats }
 
       puts "started #{Fold.env} mode"
     end
@@ -125,8 +126,7 @@ module Widget
               @backup_waiter.cancel
               EM.defer(proc { 
                 begin
-                  pid = fork { LocalWorld.new(world_id).backup! }
-                  Process.waitpid pid
+                  Process.waitpid fork { LocalWorld.new(world_id).backup! }
                 rescue => e
                   info "ERROR: backup on world stop failed: #{e.message}\n#{e.backtrace}"
                 end
@@ -235,13 +235,23 @@ module Widget
       end
     end
     
+    def world_count
+      RUNNING_WORLDS.size
+    end
+    
+    def player_count
+      RUNNING_WORLDS.inject(0) { |sum, (id, w)| sum + (w[:players] || []).size }
+    end
     
     def print_status
       m = System.memory_usage
-      world_count  = RUNNING_WORLDS.size
-      player_count = RUNNING_WORLDS.inject(0) { |sum, (id, w)| sum + (w[:players] || []).size }
 
       puts "worlds:#{world_count} players:#{player_count} mem:#{"%.0f%" % (m[:used]/m[:total].to_f * 100)} total:#{m[:total]} used:#{m[:used]} per_player:#{player_count > 0 ? m[:used]/player_count : 'no_players'} per_world:#{world_count > 0 ? m[:used]/world_count : 'no_worlds'}"
+    end
+    
+    def record_stats
+      StatsD.measure "boxes.#{instance_id}.worlds.count", world_count
+      StatsD.measure "boxes.#{instance_id}.players.count", player_count
     end
     
     def read_pid_file pid_file
