@@ -47,6 +47,8 @@ module Prism
           op.callback do |world|
             send_world_player_message world['instance_id'], world_id, username, message if message
             
+            p "Into NEGATIVE TIME #{credits_remaining}"
+            
             if credits_remaining < 1
               EM.add_timer(1)  { send_world_player_message world['instance_id'], world_id, username, "Top up your account at minefold.com" }
               EM.add_timer(40) { send_world_player_message world['instance_id'], world_id, username, "Thanks for playing!" }
