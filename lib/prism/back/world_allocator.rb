@@ -27,18 +27,23 @@ module Prism
       @universe = universe
     end
     
-    def find_box_for_new_world
+    def find_box_for_new_world world_id
       # find a box with the least amount of world slots and the most player slots
       # this means we fill boxes with smaller worlds and (in theory) allow larger
       # worlds to grow larger still. This might be complete bullshit...
       
-      boxes_with_capacity.each do |box|
-        puts "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
+      if box = running_box_capacities.find{|box| Array(worlds_accepted(box)).include? world_id }
+        puts "using dedicated box:#{box['instance_id']}"
+        box['instance_id']
+      else
+        boxes_with_capacity.each do |box|
+          puts "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
+        end
+      
+        start_box_if_at_capacity
+      
+        boxes_with_capacity.any? ? boxes_with_capacity.first["instance_id"] : nil
       end
-      
-      start_box_if_at_capacity
-      
-      boxes_with_capacity.any? ? boxes_with_capacity.first["instance_id"] : nil
     end
     
     def rebalance_boxes
@@ -85,11 +90,11 @@ module Prism
     end
     
     def boxes_with_capacity
-      @boxes_with_capacity ||= running_box_capacities.select {|box| has_capacity?(box) && accepting_worlds?(box) }
+      @boxes_with_capacity ||= running_box_capacities.select {|box| has_capacity?(box) }.reject{|box| worlds_accepted(box) }
     end
     
     def unusable_boxes
-      @unusable_boxes ||= running_box_capacities.reject {|box| accepting_worlds?(box) }
+      @unusable_boxes ||= running_box_capacities.select {|box| worlds_accepted(box) }
     end
     
     def idle_boxes
@@ -101,10 +106,10 @@ module Prism
            world_count = box[:worlds].size
           
           message = "box:#{instance_id} world_count:#{world_count} player_count:#{player_count} uptime:#{friendly_time uptime box}"
-          message += " not accepting" unless accepting_worlds? box
+          message += " not accepting" if worlds_accepted box
           puts message
           
-          player_count == 0 && world_count == 0 && accepting_worlds?(box)
+          player_count == 0 && world_count == 0 && !keepalive?(box)
         end
       end
     end
@@ -144,8 +149,13 @@ module Prism
       box[:world_slots] > 0 && box[:player_slots] >= INSTANCE_PLAYER_BUFFER
     end
     
-    def accepting_worlds? box
-      true unless box["tags"] && box["tags"]["accepting_worlds"] == "false"
+    # list of worlds this box accepts
+    def worlds_accepted box
+      (box["tags"] && box["tags"]["worlds_accepted"]) ? box["tags"]["worlds_accepted"].split(',') : nil
+    end
+    
+    def keepalive? box
+      box["tags"] && box["tags"]["keepalive"]
     end
     
     def uptime box
