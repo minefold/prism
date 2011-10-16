@@ -48,7 +48,24 @@ module Widget
     end
   
     def unbind
+      @backup_timer.cancel if @backup_timer
+      @map_timer.cancel if @map_timer
       on_process_exit.call
+      
+      @backup_waiter = EM.add_periodic_timer(10) do
+        unless @backup_in_progress
+          @backup_waiter.cancel
+          EM.defer(proc { 
+              begin
+                Process.waitpid fork { LocalWorld.new(world_id).backup! }
+              rescue => e
+                info "ERROR: backup on world stop failed: #{e.message}\n#{e.backtrace}"
+              end
+            },
+            proc { on_world_stopped.call })
+        end 
+      end
+      
     end
   
     def backup_world

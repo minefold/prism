@@ -115,30 +115,16 @@ module Widget
           info "process exited. Starting backup"
           redis.hset_hash "worlds:busy", world_id, state:'stopping'
           RUNNING_WORLDS.delete world_id
-          @backup_timer.cancel if @backup_timer
-          @map_timer.cancel if @map_timer
           stdin_queues.delete world_id
           stop_queues.delete world_id
           FileUtils.rm_f "#{PID_PATH}/#{world_id}.#{port}"
-
-          @backup_waiter = EM.add_periodic_timer(10) do
-            unless @backup_in_progress
-              @backup_waiter.cancel
-              EM.defer(proc { 
-                begin
-                  Process.waitpid fork { LocalWorld.new(world_id).backup! }
-                rescue => e
-                  info "ERROR: backup on world stop failed: #{e.message}\n#{e.backtrace}"
-                end
-                },
-                proc { 
-                  info "world stop completed  [worlds:busy #{world_id.class} #{world_id}]"
-                  redis.hdel "worlds:busy", world_id
-                  redis.del "worlds:#{world_id}:connected_players"
-                  redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
-                })
-            end 
-          end
+        end
+        
+        ww.on_world_stopped = proc do
+          info "world stop completed  [worlds:busy #{world_id.class} #{world_id}]"
+          redis.hdel "worlds:busy", world_id
+          redis.del "worlds:#{world_id}:connected_players"
+          redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
         end
       end
     end
