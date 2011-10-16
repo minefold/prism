@@ -40,6 +40,7 @@ module Widget
     end
   
     def stop_world
+      StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.stopped"
       send_line "stop"
     end
   

@@ -156,6 +156,7 @@ module Widget
         EM.defer(
           proc { 
             begin
+              StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.prepared"
               pid = fork { LocalWorld.prepare world_id, port }
               Process.waitpid pid
               port
@@ -221,6 +222,8 @@ module Widget
       pid_file = "#{PID_PATH}/#{world_id}.#{port}"
       cmd = "java -Xmx#{max_heap_size}M -Xms#{min_heap_size}M -jar server.jar nogui"
 
+      StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.spawned"
+      
       Pot.spawn_pot_process world_path, pid_file, cmd, "world.stdin", "world.stdout", "world.stdout" do
         watch_world pid_file
       end
