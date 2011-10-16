@@ -30,97 +30,53 @@ module StatusHandler
   end
 end
 
-# def info tag, message = nil
-#   tag_parts = [world_id]
-#   tag_parts += Array(tag) if message
-#   tag_string = tag_parts.flatten.strip_blanks.join('|')
-#   puts "[#{tag_string}] #{message || tag}"
-# end
-
-def spawn_world world_id, instance_id, host, port, stdin_queues, stop_queues
-  world_path = "#{WORLDS}/#{world_id}"
-  pid_file = "#{PID_PATH}/#{world_id}.#{port}"
-
-  FileUtils.mkdir_p PID_PATH
-  Process.spawn_detached world_path, "#{BIN}/pot world.stdin world.stdout world.stdout #{pid_file} java -Xmx1024M -Xms512M -jar server.jar nogui"
-
-  file_wait_timer = EM.add_periodic_timer(0.1) do
-    if File.exist?(pid_file) && File.exist?("#{world_path}/world.stdout")
-      file_wait_timer.cancel
-      puts "pot started:#{pid_file}"
-  
-      watch_world pid_file, instance_id, host, stdin_queues, stop_queues
-    end
-  end
-end
-
-def read_pid_file pid_file
-  File.exists?(pid_file) && File.read(pid_file).strip.to_i
-end
-
-def world_running? world_id
-  pid_file = Dir["#{PID_PATH}/*"].find{|f| File.basename(f.split('.').first) == world_id }
-  pid = read_pid_file
-  Process.alive? pid
-end
-
-def ports_in_use
-  RUNNING_WORLDS.values.map{|world| world[:port] }
-end
-
 module Widget
   class Processor
-    def self.gather_state_and_begin instance_id, host
-      stdin_queues = {}
-      stop_queues = {}
-      
-      EM.defer(proc {
-          FileUtils.mkdir_p PID_PATH
-          
-          Dir["#{PID_PATH}/*"].each do |pid_file|
-            pid = read_pid_file(pid_file)
-            if Process.alive? pid
-              puts "Found running world:#{pid_file}"
-              world_id, port = File.basename(pid_file).split('.')
-              port = port.to_i
-
-              Prism.redis.store_running_world instance_id, world_id, host, port
-
-              stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
-              stop_queues[world_id] = EM::Queue.new
-
-              watch_world pid_file, instance_id, host, stdin_queues, stop_queues
-            else
-              puts "Found dead world:#{pid_file}"
-              FileUtils.rm_f pid_file
-            end
-          end
-        }, proc { 
-          Processor.new stdin_queues, stop_queues, instance_id, host 
-        })
-    end
-    
     include Debugger
     
     attr_reader :stdin_queues, :stop_queues, :instance_id, :host
     attr_reader :requests_key, :redis
     
-    def initialize stdin_queues, stop_queues, instance_id, host
-      @stdin_queues, @stop_queues, @instance_id, @host = stdin_queues, stop_queues, instance_id, host
+    def initialize instance_id, host
+      @stdin_queues, @stop_queues, @instance_id, @host = {}, {}, instance_id, host
       @requests_key = "workers:#{instance_id}:worlds:requests"
       @redis = Prism.redis
       
+      EM.defer method(:gather_initial_state), proc { start_processing }
+    end
+    
+    def gather_initial_state
+      FileUtils.mkdir_p PID_PATH
+      
+      Dir["#{PID_PATH}/*"].each do |pid_file|
+        pid = read_pid_file(pid_file)
+        if Process.alive? pid
+          puts "Found running world:#{pid_file}"
+          world_id, port = File.basename(pid_file).split('.')
+          port = port.to_i
+
+          Prism.redis.store_running_world instance_id, world_id, host, port
+          create_world_in_queues world_id
+          watch_world pid_file, instance_id, host, stdin_queues, stop_queues
+        else
+          puts "Found dead world:#{pid_file}"
+          FileUtils.rm_f pid_file
+        end
+      end
+    end
+    
+    def start_processing
       @stdin_subscription = Prism::PrismRedis.psubscribe "workers:#{instance_id}:worlds:*:stdin", method(:receive_stdin)
       @start_popper = Prism::QueuePopper.new "#{requests_key}:start", method(:receive_start_request)
       @stop_popper  = Prism::QueuePopper.new "#{requests_key}:stop",  method(:receive_stop_request)
-      
+
       EM.start_server '0.0.0.0', 3000, StatusHandler
       EM.add_periodic_timer(60) { print_status }
-      
+
       puts "started #{Fold.env} mode"
     end
     
-    def watch_world pid_file, instance_id, host, stdin_queues, stop_queues
+    def watch_world pid_file
       pid = read_pid_file pid_file
       world_id, port = File.basename(pid_file).split('.')
       port = port.to_i
@@ -201,12 +157,7 @@ module Widget
         puts "world:#{world_id} is already running"
         redis.store_running_world instance_id, world_id, host, world[:port]
       else
-        port = INITIAL_PORT + (rand * 10).to_i
-        puts "port: #{port} > #{ports_in_use}"
-        while ports_in_use.include? port
-          port += (rand * 10).to_i
-          puts "port: #{port}"
-        end
+        port = find_available_port
         puts "starting world:#{world_id} process on port:#{port}"
 
         RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
@@ -225,10 +176,9 @@ module Widget
           proc { |port|
             begin
               if port
-                stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
-                stop_queues[world_id] = EM::Queue.new
-
-                spawn_world world_id, instance_id, host, port, stdin_queues, stop_queues
+                create_world_in_queues world_id
+                
+                spawn_world world_id, port, world_start['min_heap_size'], world_start['max_heap_size']
               else
                 redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
               end
@@ -238,6 +188,21 @@ module Widget
             end
         })
       end
+    end
+    
+    def create_world_in_queues world_id
+      stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"] = EM::Queue.new
+      stop_queues[world_id] = EM::Queue.new
+    end
+    
+    def find_available_port
+      port = INITIAL_PORT + (rand * 10).to_i
+      puts "port: #{port} > #{ports_in_use}"
+      while ports_in_use.include? port
+        port += (rand * 10).to_i
+        puts "port: #{port}"
+      end
+      port
     end
     
     def receive_stop_request world_id
@@ -260,6 +225,17 @@ module Widget
       end
     end
     
+    def spawn_world world_id, port, min_heap_size, max_heap_size
+      world_path = "#{WORLDS}/#{world_id}"
+      pid_file = "#{PID_PATH}/#{world_id}.#{port}"
+      cmd = "java -Xmx#{max_heap_size}M -Xms#{min_heap_size}M -jar server.jar nogui"
+
+      Pot.spawn_pot_process world_path, pid_file, cmd, "world.stdin", "world.stdout", "world.stdout" do
+        watch_world pid_file
+      end
+    end
+    
+    
     def print_status
       m = System.memory_usage
       world_count  = RUNNING_WORLDS.size
@@ -267,6 +243,21 @@ module Widget
 
       puts "worlds:#{world_count} players:#{player_count} mem:#{"%.0f%" % (m[:used]/m[:total].to_f * 100)} total:#{m[:total]} used:#{m[:used]} per_player:#{player_count > 0 ? m[:used]/player_count : 'no_players'} per_world:#{world_count > 0 ? m[:used]/world_count : 'no_worlds'}"
     end
+    
+    def read_pid_file pid_file
+      File.exists?(pid_file) && File.read(pid_file).strip.to_i
+    end
+
+    def world_running? world_id
+      pid_file = Dir["#{PID_PATH}/*"].find{|f| File.basename(f.split('.').first) == world_id }
+      pid = read_pid_file
+      Process.alive? pid
+    end
+
+    def ports_in_use
+      RUNNING_WORLDS.values.map{|world| world[:port] }
+    end
+    
   end
   
   EM.run do
@@ -275,6 +266,6 @@ module Widget
 
     raise "specify INSTANCE_ID and INSTANCE_IP" unless instance_id && host
     
-    Processor.gather_state_and_begin instance_id, host
+    Processor.new instance_id, host
   end
 end

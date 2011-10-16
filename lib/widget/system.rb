@@ -8,5 +8,4 @@ class System
       { total:4096, used:1024 }
     end
   end
-  
 end
