@@ -3,6 +3,8 @@ module Prism
     include ChatMessaging
 
     process "players:minute_played", :username, :timestamp
+    
+    def log_tag; username; end
 
     def run
       op = redis.hget "usernames", username
