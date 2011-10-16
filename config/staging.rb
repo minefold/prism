@@ -32,5 +32,5 @@ Storage.provider = Fog::Storage.new({
   :aws_access_key_id        => EC2_ACCESS_KEY
 })
 
-StatsD.logger = Logger.new(STDOUT)
-StatsD.mode = :staging
+StatsD.server = 'stats.minefold.com:8125'
+StatsD.mode = :production
