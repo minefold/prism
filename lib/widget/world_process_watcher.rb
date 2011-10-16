@@ -14,7 +14,7 @@ module Widget
     include Resque::Helpers
     include Debugger
   
-    attr_accessor :on_process_exit
+    attr_accessor :on_process_exit, :on_world_stopped
     attr_reader :stdin, :stdout, :world_id, :instance_id, :host, :port, :redis, :stdin_queues, :stop_queues
     
     def stop_queue
