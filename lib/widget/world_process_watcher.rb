@@ -77,6 +77,7 @@ module Widget
         EM.defer(
           proc { 
             begin
+              StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.backup"
               Process.waitpid fork { LocalWorld.new(world_id).backup! }
             rescue => e
               info "ERROR: backup failed: #{e.message}\n#{e.backtrace}"
