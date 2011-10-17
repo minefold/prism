@@ -14,7 +14,7 @@ EC2_ACCESS_KEY="AKIAJPN5IJVEBB2QE35A"
 MONGOHQ_URL="mongodb://heroku_app650862:96gg63iarmqm0tuq46knv4a8mb@dbh18.mongolab.com:27187/heroku_app650862"
 REDISTOGO_URL="redis://redistogo:0128df27dcecc0dac569b231d5bd7ccb@angler.redistogo.com:9097/"
 PUSHER_URL="http://e7fc68c29773ff816794:8f58121bba8d8983f10b@api.pusherapp.com/apps/7187"
-MAPPER = "~/pigmap/pigmap"
+MAPPER = ENV['PIGMAP']
 
 uri = URI.parse(REDISTOGO_URL)
 Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
