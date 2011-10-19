@@ -22,6 +22,8 @@ gem 'hirb'
 gem 'statsd-instrument', git:'https://github.com/Shopify/statsd-instrument.git'
 gem 'pusher'
 
+gem 'geokit'
+
 group :test do
   gem "autotest-fsevent"
   gem "autotest-growl"
