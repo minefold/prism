@@ -73,7 +73,7 @@ module Prism
     end
     
     def shutdown_boxes_not_in_use
-      unusable_boxes.select {|box| close_to_end_of_hour box }.each do |box|
+      unusable_boxes.select {|box| box[:worlds].size == 0 && box[:players].size == 0 && close_to_end_of_hour(box) }.each do |box|
         message = "box:#{box['instance_id']} worlds:#{box[:worlds].size} players:#{box[:players].size} uptime_minutes:#{uptime box}"
         puts "#{message} terminating unuseable"
         Prism.redis.lpush "workers:requests:stop", box['instance_id']
