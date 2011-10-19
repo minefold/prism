@@ -22,7 +22,7 @@ gem 'hirb'
 gem 'statsd-instrument', git:'https://github.com/Shopify/statsd-instrument.git'
 gem 'pusher'
 
-gem 'geokit'
+# gem 'geokit'  - monkey patches json and kills it
 
 group :test do
   gem "autotest-fsevent"
