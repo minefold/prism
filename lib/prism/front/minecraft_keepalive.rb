@@ -1,6 +1,6 @@
 module Prism
   module MinecraftKeepalive
-    include Minecraft::Packets::Server
+    include EM::P::Minecraft::Packets::Server
     
     extend Debugger
     

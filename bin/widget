@@ -171,6 +171,17 @@ module Widget
                 create_world_in_queues world_id
                 
                 spawn_world world_id, port, world_start['min_heap_size'], world_start['max_heap_size']
+                
+                # EM.add_timer 20 do
+                #   puts "stopping world"
+                #   stop_queues[world_id].push "stop"
+                #   
+                #   EM.add_timer 20 do
+                #     create_world_in_queues world_id
+                #     spawn_world world_id, port, world_start['min_heap_size'], world_start['max_heap_size']
+                #   end
+                # end
+                                
               else
                 redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
               end

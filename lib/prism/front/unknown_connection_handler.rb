@@ -1,7 +1,7 @@
 # encoding: UTF-8
 module Prism
   class UnknownConnectionHandler < Handler
-    include Minecraft::Packets::Server
+    include EM::P::Minecraft::Packets::Server
     
     def receive_data data
       connection.buffered_data << data
