@@ -2,7 +2,7 @@ module Prism
   class KnownPlayerHandler < Handler
     include MinecraftKeepalive
     include Messaging
-    include Minecraft::Packets::Server
+    include EM::P::Minecraft::Packets::Server
 
     attr_reader :username
     
@@ -50,7 +50,7 @@ module Prism
       cancel_listener "players:connection_request:#{username}"
     end
     
-    def disconnected
+    def client_unbound
       @connection_active = false
       redis.lpush "players:disconnection_request", username
       debug "client disconnected"
