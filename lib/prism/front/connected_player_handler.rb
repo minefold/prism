@@ -1,40 +1,19 @@
 module Prism
-  module ServerConnection
-    include Debugger
-    
-    def initialize client, buffered_data
-      @client, @buffered_data = client, buffered_data
-    end
-    
-    def post_init
-      send_data @buffered_data
-    end
-    
-    def receive_data data
-      @client.send_data data
-    end
-
-    def unbind
-      debug "server connection closed"
-      @client.server_unbound
-    end
-  end
-  
   class ConnectedPlayerHandler < Handler
     include Messaging
-    include MinecraftKeepalive
     
     attr_reader :username, :host, :port
     
     def log_tag; username; end
     
-    def init username, host, port
-      @server = EM.connect host, port, ServerConnection, self, connection.buffered_data
+    def init server, username, host, port
+      @server = server
+      @server.client = self
+      
       @username, @host, @port = username, host, port
       @minecraft_session_started_at = Time.now
-      @server_connected = true
       
-      EM.add_timer(20) { disconnect_and_reconnect }
+      # EM.add_timer(20) { disconnect_and_reconnect }
       
       debug "starting credit muncher"
       @credit_muncher = EventMachine::PeriodicTimer.new(60) do
@@ -57,33 +36,17 @@ module Prism
     end
     
     def receive_data data
-      @server.send_data data if @server_connected
-    end
-    
-    def disconnect_and_reconnect
-      @server.close_connection_after_writing
-      
-      @server_connected = false
-
-      start_keepalive username
-      EM.add_timer(5) do
-        puts "attempting reconnect"
-        @server = EM.connect host, port, Prism::AuthenticatingMinecraftClient, self, username
-      end
-    end
-    
-    def connection_reestablished
-      @server_connected = true
-      stop_keepalive
+      @server.send_data data
     end
     
     def server_unbound
+      debug "server disconnected while connected"
+      connection.close_connection
     end
     
     def client_unbound
-      stop_keepalive
-      
-      debug "client disconnected"
+      debug "client disconnected while connected"
+      @server.close_connection
     end
     
   end
