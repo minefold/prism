@@ -54,25 +54,31 @@ module Prism
       debug "getting world:#{world_id} started"
       
       Prism::RedisUniverse.collect do |universe|
-        instance_id = WorldAllocator.new(universe).find_box_for_new_world world_id
-        if instance_id
-          start_world_on_started_worker instance_id
-        else
-          start_world_on_new_worker 'm1.large' # TODO work out what instance type is best
-        end
+        EM.defer(proc { 
+            mongo_connect['worlds'].find_one({"_id"  => BSON::ObjectId(world_id) }) 
+          }, proc { |world| 
+            mongo_connect.collection('users').find_one({"_id"  => BSON::ObjectId(user_id) }) 
+            start_options = WorldAllocator.new(universe).find_box_for_new_world world
+            
+            if start_options[:instance_id]
+              start_world_on_started_worker start_options
+            else
+              start_world_on_new_worker start_options
+            end
+          })
       end
     end
     
-    def start_world_on_running_worker instance_id
-      debug "starting world:#{world_id} on running worker:#{instance_id}"
+    def start_world_on_running_worker options
+      instance_id = options[:instance_id]
+      debug "starting world:#{world_id} on worker:#{instance_id} heap:#{options[:heap_size]}"
       
       redis.hset_hash "worlds:busy", world_id, state:'starting'
-      
-      redis.lpush "workers:#{instance_id}:worlds:requests:start", {
-        instance_id:instance_id, 
-        world_id:world_id, 
-        min_heap_size:512, max_heap_size:(4 * 1024) 
-      }.to_json 
+      redis.lpush_hash "workers:#{instance_id}:worlds:requests:start",
+          instance_id: instance_id, 
+             world_id: world_id, 
+        min_heap_size: options[:heap_size], 
+        max_heap_size: options[:heap_size]
       
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
         if world['failed']
@@ -84,23 +90,23 @@ module Prism
       end
     end
     
-    def start_world_on_new_worker instance_type
+    def start_world_on_new_worker options
       request_id = `uuidgen`.strip
       debug "starting world:#{world_id} on new worker"
-      redis.lpush_hash "workers:requests:create", request_id:request_id, instance_type:instance_type
+      redis.lpush_hash "workers:requests:create", options.merge( request_id:request_id )
       listen_once_json "workers:requests:create:#{request_id}" do |worker|
         debug "created new worker:#{worker['instance_id']}"
         
-        start_world_on_started_worker worker['instance_id']
+        start_world_on_started_worker options
       end
     end
     
-    def start_world_on_started_worker instance_id
+    def start_world_on_started_worker options
       # player still around?
       op = redis.hexists "players:playing", username
       op.callback do |player_connected|
         if player_connected
-          start_world_on_running_worker instance_id 
+          start_world_on_running_worker options
         else
           debug "player:#{username} has disconnected wont start world:#{world_id} on worker:#{instance_id}"
         end

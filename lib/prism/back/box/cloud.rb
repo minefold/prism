@@ -38,6 +38,9 @@ module Prism
 # restart hostname sensitive services
 /etc/init.d/collectd restart
 restart rsyslog
+
+sync
+echo 3 > /proc/sys/vm/drop_caches
         EOS
       end
       
@@ -56,7 +59,6 @@ restart rsyslog
               }.merge(options)
 
               vm = compute_cloud.servers.bootstrap(options)
-              # p vm
               
               cloud_box = Cloud.new vm
               compute_cloud.create_tags cloud_box.instance_id, tags
