@@ -1,8 +1,9 @@
 module Prism
-  module AuthenticatingMinecraftClient
+  module AuthenticatingMinecraftProxy
     include EM::P::Minecraft::Client
   
-    attr_reader :client, :username
+    attr_accessor :client
+    attr_reader :username
   
     def initialize client, username
       @client, @username = client, username
@@ -12,6 +13,15 @@ module Prism
   
     def post_init
       send_packet 0x02, username: username
+    end
+    
+    def receive_packet header, packet
+      case header
+      when 0x02
+        EM.add_timer(0.5) { send_packet 0x01, protocol_version:17, username:username, map_seed:0, dimension:0, unused1:0, unused2:0,  unused3:0, unused4:0, unused5:0, unused6:0 }
+      when 0x01
+        @authenticated = true
+      end
     end
   
     def receive_data data
@@ -46,16 +56,6 @@ module Prism
     def connection_reestablished data
       send_client_data data
       @client.connection_reestablished
-    end
-  
-  
-    def receive_packet header, packet
-      case header
-      when 0x02
-        EM.add_timer(0.5) { send_packet 0x01, protocol_version:17, username:username, map_seed:0, dimension:0, unused1:0, unused2:0,  unused3:0, unused4:0, unused5:0, unused6:0 }
-      when 0x01
-        @authenticated = true
-      end
     end
   
     def unbind

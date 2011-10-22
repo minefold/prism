@@ -31,7 +31,8 @@ module Prism
             connection_time_ms = (Time.now - started_connection) * 1000
             info "connection time:#{connection_time_ms}"
             StatsD.increment_and_measure_from started_connection, "players.connection_request.successful"
-            new_handler ConnectedPlayerHandler, username, response["host"], response["port"]
+            server = EM.connect response["host"], response["port"], MinecraftProxy, connection, connection.buffered_data
+            new_handler ConnectedPlayerHandler, server, username, response["host"], response["port"]
           elsif response['rejected']
             connection.send_data server_packet(0xFF, :reason => friendly_kick_messages[response['rejected']])
             connection.close_connection_after_writing
