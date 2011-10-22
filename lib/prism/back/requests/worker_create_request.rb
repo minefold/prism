@@ -1,7 +1,7 @@
 module Prism
   class WorkerCreateRequest < BusyOperationRequest
     
-    process "workers:requests:create", :request_id, :instance_type
+    process "workers:requests:create", :request_id, :instance_type, :image_id
     
     def busy_hash
       ["workers:busy", request_id, state:'creating']
@@ -9,7 +9,7 @@ module Prism
     
     def perform_operation
       info "creating new box type:#{instance_type} req:#{request_id}"
-      Box.create flavor_id:instance_type
+      Box.create flavor_id:instance_type, image_id:image_id
     end
     
     def operation_succeeded box

@@ -28,8 +28,6 @@ module Prism
         redis.hset "usernames", username, user_id
         redis.hset "players:playing", username, world_id
         
-        p {username:username, user_id:user_id, world_id:world_id, credits:user['credits']}
-      
         redis.lpush_hash "players:world_request", username:username, user_id:user_id, world_id:world_id, credits:user['credits']
       else
         info "user:#{username} has no world"
