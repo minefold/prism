@@ -22,8 +22,6 @@ gem 'hirb'
 gem 'statsd-instrument', git:'https://github.com/Shopify/statsd-instrument.git'
 gem 'pusher'
 
-# gem 'geokit'  - monkey patches json and kills it
-
 group :test do
   gem "autotest-fsevent"
   gem "autotest-growl"
@@ -38,4 +36,8 @@ group :test do
   gem "ZenTest", "~> 4.4.2"
   gem 'em-spec', git:'https://github.com/joshbuddy/em-spec.git', require:'em-spec/rspec'
   gem 'awesome_print'
+end
+
+group :geo do
+  gem 'geokit' # warning requires json/pure which kills everything
 end

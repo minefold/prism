@@ -2,7 +2,7 @@
 # encoding: UTF-8
 
 require 'bundler/setup'
-Bundler.require :default
+Bundler.require :default, :geo
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
@@ -12,8 +12,8 @@ include Prism::Mongo
 mongo = mongo_connect
 
 mongo['users'].find({ '$or' => [
-                          {'geo_location' => {'$exists' => false}},
-                          {'geo_location.success' => false},
+                          {'geo_location' => {'$exists' => false}}
+                          # {'geo_location.success' => false},
                       ]}).select{|user| user['last_sign_in_ip'] && user['last_sign_in_ip'].size > 0 }.each do |user|
   
   g = Geokit::Geocoders::MultiGeocoder.geocode(user['last_sign_in_ip']) 

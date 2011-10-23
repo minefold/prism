@@ -1,0 +1,122 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+
+require 'bundler/setup'
+Bundler.require :default
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'minefold'
+
+def page_world_files
+  dir = Storage.new.worlds
+
+  files = dir.files.all
+  truncated = files.is_truncated
+
+  # while truncated
+  #   puts "Page: #{files.last.key}"
+  #   set = dir.files.all( :marker => files.last.key )
+  #   truncated = set.is_truncated
+  #   files += set
+  # end
+  files
+end
+
+def backups files
+  puts "#{files.size} files found"
+
+  files.map do |f| 
+    f.key =~ /([a-z0-9]+)\.([0-9]+)\.tar\.gz/i
+    if $2
+      time = Time.at($2.to_i)
+      {
+            name: f.key,
+  content_length: f.content_length,
+        world_id: $1,
+            time: time,
+            hour: time.strftime('%Y-%m-%d %H'),
+             day: time.strftime('%Y-%m-%d')
+      }
+    else
+      nil
+    end
+  end.compact
+end
+
+all_files = page_world_files
+
+b = backups all_files
+
+def sum_gb backups
+  (backups.inject(0) {|acc, b| acc + b[:content_length] }) / 1024.0 / 1024.0 / 1024.0
+end
+
+puts "#{b.size} backups found (#{sum_gb b})"
+
+## retention
+# all for an hour
+# hourly for a day
+# daily forever
+
+grouped = b.each_with_object({}) do |backup, hash|
+  day = backup[:time].strftime('%Y-%m-%d')
+  
+  hash[backup[:world_id]] ||= []
+  hash[backup[:world_id]] << backup
+end
+
+to_prune = []
+
+grouped.each do |world_id, backups|
+  # p world_id, backups
+
+  rest = backups.sort_by {|b| -b[:time].to_i }
+  puts "#{world_id}: (#{backups.size})"
+  
+  period_end = rest.first[:time] - 1.hour
+  in_period, rest = rest.partition {|b| b[:time] > period_end }
+  puts "  all:"
+  in_period.each {|b| puts "    #{b[:time]} #{b[:name]}"}
+  
+  period_end -= 1.day
+  in_period, rest = rest.partition {|b| b[:time] > period_end  }
+  in_period.group_by {|b| b[:hour] }.each do |hour, backups|
+    puts " hourly (#{hour}):"
+    backups.each.with_index do |b, i|
+      prune = i > 0
+      to_prune << b if prune
+      puts "    #{b[:time]} #{b[:name]} #{'prune' if prune}"
+    end
+  end
+  
+  in_period = rest.select{|b| b[:time] < period_end }
+  in_period.group_by {|b| b[:day] }.each do |day, backups|
+    puts " daily (#{day}):"
+    backups.each.with_index do |b, i|
+      prune = i > 0
+      to_prune << b if prune
+      puts "    #{b[:time]} #{b[:name]} #{'prune' if prune}"
+    end
+  end
+end
+
+puts "Pruning #{to_prune.size} files (#{sum_gb to_prune})"
+
+to_prune.each do |backup|
+  puts "  Prune: #{backup[:name]}"
+  all_files.find{|f| f.key == backup[:name] }.destroy
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+

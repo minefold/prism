@@ -94,6 +94,11 @@ class LocalWorld
   def world_path
     "#{WORLDS}/#{id}"
   end
+  
+  def set_last_backup file
+    puts "setting world:#{id} backup:#{file}"
+    MinefoldDb.connection['worlds'].update({'_id' => BSON::ObjectId(id)}, {'$set' => {'last_backup' => file}})
+  end
 
   def backup!
     puts "Starting backup"
@@ -114,6 +119,8 @@ class LocalWorld
 
     directory = Storage.new.worlds
 
+    backup_time = Time.now
+    backup_file = "#{id}.#{backup_time.to_i}.tar.gz"
     retries = 10
     begin
       File.open(world_archive) do |world_archive_file|
@@ -128,13 +135,15 @@ class LocalWorld
       File.open(world_archive) do |world_archive_file|
         puts "Uploading #{retries}"
         file = directory.files.create(
-          :key    => "#{id}.#{Time.now.to_i}.tar.gz",
+          :key    => backup_file,
           :body   => world_archive_file,
           :public => false
         )
       end
       
       FileUtils.rm_f world_archive
+      
+      set_last_backup backup_file
     rescue => e
       puts "UPLOAD ERROR: #{e.message}\n#{e.backtrace}"
       retry if (retries -= 1) > 0
