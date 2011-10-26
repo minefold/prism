@@ -1,6 +1,6 @@
 module Prism
   class PlayerConnectionRequest < Request
-    process "players:connection_request", :username, :remote_ip
+    process "players:connection_request", :username
 
     def log_tag; username; end
     
@@ -25,7 +25,9 @@ module Prism
       debug "found user:#{user_id} world:#{world_id}"
       
       if world_id && world_id.size > 0
-        record_connection_event user_id, world_id
+        redis.hset "usernames", username, user_id
+        redis.hset "players:playing", username, world_id
+        
         redis.lpush_hash "players:world_request", username:username, user_id:user_id, world_id:world_id, credits:user['credits']
       else
         info "user:#{username} has no world"
@@ -42,28 +44,5 @@ module Prism
       info "user:#{username} has no credit"
       redis.publish_json "players:connection_request:#{username}", rejected:'no_credit'
     end
-    
-    def record_connection_event user_id, world_id
-      redis.hset "usernames", username, user_id
-      redis.hset "players:playing", username, world_id
-      
-      EM.defer(proc {
-          mongo_connect.collection('users').find_and_modify({ 
-            query: {
-              "_id"  => BSON::ObjectId(user_id) 
-            }, update: { 
-              '$set' => {'last_connected_at' => Time.now.utc }
-            } 
-          })
-        }, proc { |user|
-          event = user['last_connected_at'] ? 'played' : 'played first time'
-          mixpanel.track event, distinct_id:user_id
-        })
-    end
-    
-    def mixpanel
-      Mixpanel::Tracker.new MIXPANEL_TOKEN, remote_ip
-    end
-    
   end
 end
