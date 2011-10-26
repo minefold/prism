@@ -31,6 +31,7 @@ module Prism
             connection_time_ms = (Time.now - started_connection) * 1000
             info "connection time:#{connection_time_ms}"
             StatsD.increment_and_measure_from started_connection, "players.connection_request.successful"
+            
             server = EM.connect response["host"], response["port"], MinecraftProxy, connection, connection.buffered_data
             new_handler ConnectedPlayerHandler, server, username, response["host"], response["port"]
           elsif response['rejected']
@@ -43,7 +44,7 @@ module Prism
         end
       end
       
-      redis.lpush "players:connection_request", username
+      redis.lpush_hash "players:connection_request", username:username, remote_ip:remote_ip
     end
     
     def exit

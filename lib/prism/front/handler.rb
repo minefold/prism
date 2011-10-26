@@ -31,6 +31,14 @@ module Prism
     def unbind
       client_unbound
       exit
-    end    
+    end
+    
+    def remote_ip
+      @remote_ip ||= begin 
+        port, ip = Socket.unpack_sockaddr_in(connection.get_peername)
+        ip
+      end
+    end
+    
   end
 end
