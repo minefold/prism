@@ -1,3 +1,4 @@
+require 'mixpanel'
 require 'prism/prism_redis'
 require 'prism/prism_mongo'
 require 'prism/messaging'
