@@ -24,6 +24,7 @@ module Prism
         
         EM.add_timer(0.5) { listen }
       end
+      @pop.errback { EM.add_timer(0.5) { listen } }
     end
   end
   
@@ -51,6 +52,7 @@ module Prism
         
         EM.next_tick { listen }
       end
+      @pop.errback { EM.next_tick { listen } }
     end
   end
 end

@@ -67,6 +67,11 @@ namespace :prism do
     raise "This is fucking dangerous!"
     ssh "sudo restart prism; sudo restart prism_back"
   end
+  
+  task :logs do
+    FileUtils.mkdir_p 'tmp/logs'
+    puts `scp -i #{ENV['EC2_SSH']} ubuntu@pluto.minefold.com:/var/log/syslog* tmp/logs`
+  end
 end
 
 namespace :graphite do

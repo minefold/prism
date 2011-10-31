@@ -72,7 +72,6 @@ module Widget
       @stop_popper  = Prism::QueuePopper.new "#{requests_key}:stop",  method(:receive_stop_request)
 
       EM.start_server '0.0.0.0', 3000, StatusHandler
-      EM.add_periodic_timer(60) { print_status }
       EM.add_periodic_timer(10) { record_stats }
 
       puts "started #{Fold.env} mode"
@@ -169,19 +168,7 @@ module Widget
             begin
               if port
                 create_world_in_queues world_id
-                
                 spawn_world world_id, port, world_start['min_heap_size'], world_start['max_heap_size']
-                
-                # EM.add_timer 20 do
-                #   puts "stopping world"
-                #   stop_queues[world_id].push "stop"
-                #   
-                #   EM.add_timer 20 do
-                #     create_world_in_queues world_id
-                #     spawn_world world_id, port, world_start['min_heap_size'], world_start['max_heap_size']
-                #   end
-                # end
-                                
               else
                 redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
               end
@@ -248,12 +235,6 @@ module Widget
       RUNNING_WORLDS.inject(0) { |sum, (id, w)| sum + (w[:players] || []).size }
     end
     
-    def print_status
-      m = System.memory_usage
-
-      puts "worlds:#{world_count} players:#{player_count} mem:#{"%.0f%" % (m[:used]/m[:total].to_f * 100)} total:#{m[:total]} used:#{m[:used]} per_player:#{player_count > 0 ? m[:used]/player_count : 'no_players'} per_world:#{world_count > 0 ? m[:used]/world_count : 'no_worlds'}"
-    end
-    
     def record_stats
       StatsD.measure "#{statsd_key}.worlds.count", world_count
       StatsD.measure "#{statsd_key}.players.count", player_count
@@ -272,7 +253,6 @@ module Widget
     def ports_in_use
       RUNNING_WORLDS.values.map{|world| world[:port] }
     end
-    
   end
   
   EM.run do
