@@ -10,16 +10,18 @@ require 'minefold'
 def page_world_files
   dir = Storage.new.worlds
 
+  all_files = []
   files = dir.files.all
   truncated = files.is_truncated
 
-  # while truncated
-  #   puts "Page: #{files.last.key}"
-  #   set = dir.files.all( :marker => files.last.key )
-  #   truncated = set.is_truncated
-  #   files += set
-  # end
-  files
+  all_files += files.to_a
+  
+  while truncated
+    set = dir.files.all( :marker => files.last.key )
+    all_files += set.to_a
+    truncated = set.is_truncated
+  end
+  all_files
 end
 
 def backups files
@@ -30,7 +32,8 @@ def backups files
     if $2
       time = Time.at($2.to_i)
       {
-            name: f.key,
+             key: f.key,
+            file: f,
   content_length: f.content_length,
         world_id: $1,
             time: time,
@@ -76,7 +79,7 @@ grouped.each do |world_id, backups|
   period_end = rest.first[:time] - 1.hour
   in_period, rest = rest.partition {|b| b[:time] > period_end }
   puts "  all:"
-  in_period.each {|b| puts "    #{b[:time]} #{b[:name]}"}
+  in_period.each {|b| puts "    #{b[:time]} #{b[:key]}"}
   
   period_end -= 1.day
   in_period, rest = rest.partition {|b| b[:time] > period_end  }
@@ -85,7 +88,7 @@ grouped.each do |world_id, backups|
     backups.each.with_index do |b, i|
       prune = i > 0
       to_prune << b if prune
-      puts "    #{b[:time]} #{b[:name]} #{'prune' if prune}"
+      puts "    #{b[:time]} #{b[:key]} #{'prune' if prune}"
     end
   end
   
@@ -95,7 +98,7 @@ grouped.each do |world_id, backups|
     backups.each.with_index do |b, i|
       prune = i > 0
       to_prune << b if prune
-      puts "    #{b[:time]} #{b[:name]} #{'prune' if prune}"
+      puts "    #{b[:time]} #{b[:key]} #{'prune' if prune}"
     end
   end
 end
@@ -103,8 +106,8 @@ end
 puts "Pruning #{to_prune.size} files (#{sum_gb to_prune})"
 
 to_prune.each do |backup|
-  puts "  Prune: #{backup[:name]}"
-  all_files.find{|f| f.key == backup[:name] }.destroy
+  puts "  Prune: #{backup[:key]}"
+  backup[:file].destroy
 end
 
 
