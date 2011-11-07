@@ -1,6 +1,5 @@
 source :rubygems
 
-gem 'god', git:'https://github.com/whatupdave/god'
 gem 'file-tail', :require => 'file/tail'
 gem 'fog', git:'https://github.com/whatupdave/fog'
 gem 'httparty'
@@ -14,7 +13,7 @@ gem 'em-http-request'
 gem 'rake'
 gem "hiredis", "~> 0.3.1"
 gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
-gem 'em-hiredis', git:'https://github.com/whatupdave/em-hiredis'
+gem 'em-hiredis', git:'https://github.com/mloughran/em-hiredis'
 gem 'resque'
 gem 'resque-lock', require:'resque/plugins/lock'
 gem "resque-loner"

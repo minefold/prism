@@ -30,7 +30,6 @@ class LocalWorld
 
       world_path = "#{WORLDS}/#{world_id}"
       properties_path = "#{world_path}/server.properties"
-      god_config = "#{world_path}/world.god"
 
       # create world path if it aint there
       FileUtils.mkdir_p world_path

@@ -15,8 +15,8 @@ GIT
       test-unit
 
 GIT
-  remote: https://github.com/whatupdave/em-hiredis
-  revision: c83971568204fc06659866ce82b6a54d3626a2ca
+  remote: https://github.com/mloughran/em-hiredis
+  revision: 4f1d24bd8e21a18d42758fb53f01eb2d5e936dba
   specs:
     em-hiredis (0.1.0)
       hiredis (~> 0.3.0)
@@ -35,12 +35,6 @@ GIT
       net-ssh (~> 2.1.4)
       nokogiri (~> 1.5.0)
       ruby-hmac
-
-GIT
-  remote: https://github.com/whatupdave/god
-  revision: 95a7fc083d46c49f1a4189fad9a1e7c72343dee1
-  specs:
-    god (0.11.0)
 
 GEM
   remote: http://rubygems.org/
@@ -166,7 +160,6 @@ DEPENDENCIES
   fog!
   foreman
   geokit
-  god!
   hirb
   hiredis (~> 0.3.1)
   httparty
