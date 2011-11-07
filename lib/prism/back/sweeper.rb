@@ -55,7 +55,13 @@ module Prism
       shutdown_idle_worlds
       EM.add_timer(10) do
         # wait 10 seconds so redis is definitely up to date
-        RedisUniverse.collect {|universe| WorldAllocator.new(universe).rebalance_boxes }
+        RedisUniverse.collect do |universe| 
+          WorldAllocator.new(universe).rebalance_boxes
+          StatsD.measure "boxes.count", universe.boxes.size
+          universe.boxes[:running].values.group_by {|b| b['instance_type'] }.each do |instance_type, group|
+            StatsD.measure "boxes.#{instance_type}.count", group.size
+          end
+        end
       end
     end
     
