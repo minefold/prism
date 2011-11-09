@@ -57,10 +57,7 @@ module Prism
         # wait 10 seconds so redis is definitely up to date
         RedisUniverse.collect do |universe| 
           WorldAllocator.new(universe).rebalance_boxes
-          StatsD.measure "boxes.count", universe.boxes.size
-          universe.boxes[:running].values.group_by {|b| b['instance_type'] }.each do |instance_type, group|
-            StatsD.measure "boxes.#{instance_type}.count", group.size
-          end
+          record_stats universe
         end
       end
     end
@@ -130,6 +127,13 @@ module Prism
           puts "box:#{world['instance_id']} world:#{world_id} stopping empty"
           redis.lpush "workers:#{world['instance_id']}:worlds:requests:stop", world_id
         end
+      end
+    end
+    
+    def record_stats universe
+      StatsD.measure "boxes.count", universe.boxes.size
+      universe.boxes[:running].values.group_by {|b| b['instance_type'] }.each do |instance_type, group|
+        StatsD.measure "boxes.#{instance_type}.count", group.size
       end
     end
     

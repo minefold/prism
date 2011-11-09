@@ -9,6 +9,7 @@ module Prism
     
     def perform_operation
       info "creating new box type:#{instance_type} req:#{request_id}"
+      
       Box.create flavor_id:instance_type, image_id:image_id
     end
     

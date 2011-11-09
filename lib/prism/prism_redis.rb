@@ -39,10 +39,12 @@ module Prism
     end
     
     def store_running_box box
+      zadd "boxes:stopped", "inf", box.instance_id
       hset_hash "workers:running", box.instance_id, box.to_hash
     end
     
     def unstore_running_box instance_id, host
+      zadd "boxes:stopped", Time.now.to_i, instance_id
       hdel "workers:running", instance_id
       del "workers:#{instance_id}:worlds"
       publish "workers:requests:stop:#{instance_id}", host
@@ -91,7 +93,7 @@ module Prism
       redis.send sym, *args, &blk
     end
     
-    %w[blpop hexists hget hgetall hset lpush publish scard sadd srem smembers sunion].each do |cmd|
+    %w[blpop hexists hget hgetall hset lpush publish scard sadd srem smembers sunion zadd zcard zcount].each do |cmd|
       define_method(:"#{cmd}") do |*args, &blk| 
         op = redis.send cmd, *args
         op.errback {|e| handle_error e }
