@@ -58,7 +58,7 @@ namespace :prism do
   end
   
   task :deploy do
-    ssh %Q(su - fold -c "cd /opt/prism; GIT_SSH=/home/fold/.ssh/deploy-wrapper git pull origin #{ENV['BRANCH']} && bundle install --deployment --binstubs --without test")
+    ssh "cd /opt/prism && sudo GIT_SSH=/home/fold/.ssh/deploy-wrapper git pull origin #{ENV['BRANCH']} && sudo bundle --binstubs --without test && sudo chown -R fold ."
     ssh "cd /opt/prism; sudo cp conf/prism.conf /etc/init/prism.conf; sudo cp conf/prism_back.conf /etc/init/prism_back.conf; sudo cp conf/sweeper.conf /etc/init/sweeper.conf"
     ssh "sudo stop prism_back; sudo start prism_back; sudo stop sweeper; sudo start sweeper"
   end
