@@ -135,6 +135,8 @@ module Prism
       universe.boxes[:running].values.group_by {|b| b['instance_type'] }.each do |instance_type, group|
         StatsD.measure "boxes.#{instance_type}.count", group.size
       end
+      StatsD.measure "players.count", universe.players.size
+      StatsD.measure "worlds.count",  universe.worlds.size
     end
     
   end
