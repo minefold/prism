@@ -54,7 +54,7 @@ module Prism
     
     def client_unbound
       @connection_active = false
-      redis.lpush "players:disconnection_request", username
+      redis.lpush_hash "players:disconnection_request", username: username, remote_ip:remote_ip
       debug "client disconnected"
     end
   end

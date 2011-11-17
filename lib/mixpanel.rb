@@ -1,6 +1,17 @@
 require 'base64'
 
 module Mixpanel
+  module EventTracker
+    def mixpanel
+      Mixpanel::Tracker.new MIXPANEL_TOKEN, remote_ip
+    end
+    
+    def mixpanel_track event, properties = {}
+      properties = { distinct_id: @mp_id, mp_name_tag: @mp_name.downcase.strip }.merge(properties)
+      mixpanel.track event, properties.delete_if {|k,v| v.nil?}
+    end
+  end
+  
   class Tracker
     attr_reader :token, :ip
     

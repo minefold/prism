@@ -1,12 +1,10 @@
 module Prism
   class PlayerConnectionRequest < Request
+    include Mixpanel::EventTracker
+    
     process "players:connection_request", :username, :remote_ip
 
     def log_tag; username; end
-    
-    def mixpanel_track event
-      mixpanel.track event, { distinct_id: @mp_id, mp_name_tag: @mp_name }.delete_if {|k,v| v.nil?}
-    end
     
     def run
       debug "processing #{username}"
@@ -16,7 +14,6 @@ module Prism
           @mp_id, @mp_name = user['_id'].to_s, user['safe_username']
           
           if (user['plan'] && user['plan'] == 'pro') || user['credits'] > 0
-            mixpanel_track 'played'
             recognised_player_connecting user
           else
             mixpanel_track 'bounced'
@@ -65,10 +62,6 @@ module Prism
             } 
           })
         })
-    end
-    
-    def mixpanel
-      Mixpanel::Tracker.new MIXPANEL_TOKEN, remote_ip
     end
     
   end

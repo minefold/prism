@@ -31,7 +31,11 @@ module Prism
         debug "stopping credit muncher"
         @credit_muncher.cancel 
       end
-      redis.lpush "players:disconnection_request", username
+      redis.lpush_hash "players:disconnection_request", username: username, 
+                                                       remote_ip: remote_ip,
+                                                      started_at: @minecraft_session_started_at.to_i, 
+                                                        ended_at: Time.now.to_i
+                                                        
       StatsD.measure_timer @minecraft_session_started_at, "sessions.minecraft"
     end
     

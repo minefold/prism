@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 module Widget
   class WorldLineReader < EventMachine::FileTail
     attr_accessor :on_line

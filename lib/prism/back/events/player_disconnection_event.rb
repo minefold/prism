@@ -1,8 +1,9 @@
 module Prism
   class PlayerDisconnectionEvent < Request
     include Messaging
+    include Mixpanel::EventTracker    
     
-    process "players:disconnection_request", :username
+    process "players:disconnection_request", :username, :remote_ip, :started_at, :ended_at
     
     def run
       op = redis.hget "players:playing", username
@@ -12,6 +13,7 @@ module Prism
         
         op = redis.hget "usernames", username
         op.callback do |user_id|
+          record_session user_id
           op = redis.srem "worlds:#{world_id}:connected_players", user_id
           op.callback do
             op = redis.scard "worlds:#{world_id}:connected_players"
@@ -55,6 +57,13 @@ module Prism
         debug "world:#{world_id} is already stopping."
       end
       
+    end
+    
+    def record_session user_id
+      if started_at
+        @mp_id, @mp_name = user_id, username
+        mixpanel_track 'played', seconds: (ended_at - started_at)
+      end
     end
   end
 end
