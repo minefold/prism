@@ -4,17 +4,26 @@ module Prism
 
     def log_tag; username; end
     
+    def mixpanel_track event
+      mixpanel.track event, { distinct_id: @mp_id, mp_name_tag: @mp_name }.delete_if {|k,v| v.nil?}
+    end
+    
     def run
       debug "processing #{username}"
 
       EM.defer(proc { mongo_connect.collection('users').find_one(:safe_username => username.downcase) }, proc { |user|
         if user
+          @mp_id, @mp_name = user['_id'].to_s, user['safe_username']
+          
           if (user['plan'] && user['plan'] == 'pro') || user['credits'] > 0
+            mixpanel_track 'played'
             recognised_player_connecting user
           else
+            mixpanel_track 'bounced'
             no_credit_player_connecting
           end
         else
+          mixpanel_track 'rejected'
           unrecognised_player_connecting
         end
       }) 
@@ -25,8 +34,11 @@ module Prism
       debug "found user:#{user_id} world:#{world_id}"
       
       if world_id && world_id.size > 0
-        record_connection_event user_id, world_id
+        redis.hset "usernames", username, user_id
+        redis.hset "players:playing", username, world_id
         redis.lpush_hash "players:world_request", username:username, user_id:user_id, world_id:world_id, credits:user['credits']
+        
+        record_connection user_id, world_id
       else
         info "user:#{username} has no world"
         redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
@@ -43,10 +55,7 @@ module Prism
       redis.publish_json "players:connection_request:#{username}", rejected:'no_credit'
     end
     
-    def record_connection_event user_id, world_id
-      redis.hset "usernames", username, user_id
-      redis.hset "players:playing", username, world_id
-      
+    def record_connection user_id, world_id
       EM.defer(proc {
           mongo_connect.collection('users').find_and_modify({ 
             query: {
@@ -55,9 +64,6 @@ module Prism
               '$set' => {'last_connected_at' => Time.now.utc }
             } 
           })
-        }, proc { |user|
-          event = user['last_connected_at'] ? 'played' : 'played first time'
-          mixpanel.track event, distinct_id:user_id, mp_name_tag: user['safe_username']
         })
     end
     
