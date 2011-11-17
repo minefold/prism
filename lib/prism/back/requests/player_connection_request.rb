@@ -57,7 +57,7 @@ module Prism
           })
         }, proc { |user|
           event = user['last_connected_at'] ? 'played' : 'played first time'
-          mixpanel.track event, distinct_id:user_id
+          mixpanel.track event, distinct_id:user_id, mp_name_tag: user['safe_username']
         })
     end
     
