@@ -26,7 +26,7 @@ class LocalWorld
 
     def prepare world_id, port
       puts "preparing local world:#{world_id}"
-      `#{BIN}/download-server #{WORLDS}`
+      `#{BIN}/download-server #{WORLDS}` unless File.exists? JAR
 
       world_path = "#{WORLDS}/#{world_id}"
       properties_path = "#{world_path}/server.properties"
