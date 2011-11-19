@@ -26,7 +26,7 @@ class LocalWorld
 
     def prepare world_id, port
       puts "preparing local world:#{world_id}"
-      `#{BIN}/download-server #{WORLDS}` unless File.exists? JAR
+      `#{BIN}/download-server #{WORLDS}`
 
       world_path = "#{WORLDS}/#{world_id}"
       properties_path = "#{world_path}/server.properties"
@@ -64,22 +64,22 @@ class LocalWorld
       # create ops.txt
       user = MinefoldDb.connection['users'].find_one({'_id' => world['creator_id']})
       ops = WORLD_OPS | Array(user['username'])
-      
+
       if File.exists? "#{world_path}/ops.txt"
-        File.open("#{world_path}/ops.txt") do |file| 
+        File.open("#{world_path}/ops.txt") do |file|
           ops = ops | file.read.split("\n")
         end
       end
-      
-      File.open("#{world_path}/ops.txt", "w") do |file| 
+
+      File.open("#{world_path}/ops.txt", "w") do |file|
         file.puts ops.join("\n")
         file.puts
       end
-      
+
       # clear server log
       server_log = File.join(world_path, "server.log")
       File.open(server_log, "w") {|file| file.print }
-      
+
       puts "finished preparing local world:#{world_id}"
     end
   end
@@ -93,7 +93,7 @@ class LocalWorld
   def world_path
     "#{WORLDS}/#{id}"
   end
-  
+
   def set_last_backup file
     puts "setting world:#{id} backup:#{file}"
     MinefoldDb.connection['worlds'].update({'_id' => BSON::ObjectId(id)}, {'$set' => {'last_backup' => file}})
@@ -130,7 +130,7 @@ class LocalWorld
           :public => false
         )
       end
-      
+
       File.open(world_archive) do |world_archive_file|
         puts "Uploading #{retries}"
         file = directory.files.create(
@@ -139,16 +139,16 @@ class LocalWorld
           :public => false
         )
       end
-      
+
       FileUtils.rm_f world_archive
-      
+
       set_last_backup backup_file
     rescue => e
       puts "UPLOAD ERROR: #{e.message}\n#{e.backtrace}"
       retry if (retries -= 1) > 0
     end
-    
-    
+
+
     puts "Finished backup"
   end
 

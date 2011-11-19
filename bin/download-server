@@ -5,4 +5,4 @@ worlds_root = ARGV.shift
 
 FileUtils.mkdir_p worlds_root
 
-`curl -L http://www.minecraft.net/download/minecraft_server.jar -o '#{worlds_root}/server.jar'`
+`curl -L https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar -o '#{worlds_root}/server.jar'`
