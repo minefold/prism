@@ -47,8 +47,15 @@ def backups files
 end
 
 all_files = page_world_files
+# all_files.each{|f| puts f.key }
 
 b = backups all_files
+
+# b.select{|f| f[:key] =~ /4ec7187fa3f63e0001000134/ }.sort{|a,b| b[:time] <=> a[:time]}.each do |f|
+#   puts "#{f[:time]} #{f[:content_length]}"
+# end
+
+
 
 def sum_gb backups
   (backups.inject(0) {|acc, b| acc + b[:content_length] }) / 1024.0 / 1024.0 / 1024.0

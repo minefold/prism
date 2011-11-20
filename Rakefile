@@ -55,7 +55,6 @@ end
 desc "store latest server"
 task :store_server do
   `curl -L https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar -o tmp/server.jar`
-  
 end
 
 namespace :prism do

@@ -1,7 +1,7 @@
 source :rubygems
 
 gem 'file-tail', :require => 'file/tail'
-gem 'fog', git:'https://github.com/whatupdave/fog'
+gem 'fog', '~> 1.1.1'
 gem 'httparty'
 gem 'mongo'
 gem 'bson_ext'

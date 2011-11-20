@@ -76,14 +76,13 @@ echo 3 > /proc/sys/vm/drop_caches
                 :image_id => 'ami-f964a890',
                 :groups => %W{default box},
                 :flavor_id => 'm1.large',
-                :user_data => cloud_init_script
+                :user_data => cloud_init_script,
+                :tags => tags
               }.merge(options)
 
               vm = compute_cloud.servers.bootstrap(options)
               
-              cloud_box = Cloud.new vm
-              compute_cloud.create_tags cloud_box.instance_id, tags
-              cloud_box
+              Cloud.new vm
             rescue => e
               puts "ERROR: create cloud box failed  #{e}"
               nil
