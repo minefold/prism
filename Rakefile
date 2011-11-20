@@ -52,6 +52,12 @@ task "map_world" => "resque:setup" do
   Resque.enqueue(Job::MapWorld, ENV['WORLD_ID'])
 end
 
+desc "store latest server"
+task :store_server do
+  `curl -L https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar -o tmp/server.jar`
+  
+end
+
 namespace :prism do
   def ssh cmd
     puts `ssh -i #{ENV['EC2_SSH']} ubuntu@#{ENV['HOST']} "#{cmd}"`
