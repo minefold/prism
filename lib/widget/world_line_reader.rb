@@ -1,4 +1,4 @@
-# encoding: UTF-8
+# encoding: ISO-8859-1
 
 module Widget
   class WorldLineReader < EventMachine::FileTail
@@ -10,7 +10,7 @@ module Widget
     end
 
     def receive_data(data)
-      data.split("\n").each {|line| on_line.call LogLine.new(line) }
+      data.force_encoding('ISO-8859-1').split("\n").each {|line| on_line.call LogLine.new(line) }
     end
   end
 end
