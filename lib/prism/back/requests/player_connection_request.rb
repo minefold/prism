@@ -11,7 +11,7 @@ module Prism
 
       EM.defer(proc { mongo_connect.collection('users').find_one(:safe_username => username.downcase) }, proc { |user|
         if user
-          @mp_id, @mp_name = user['_id'].to_s, user['safe_username']
+          @mp_id, @mp_name = user['_id'].to_s, username
 
           if user['unlimited'] || user['credits'] > 0
             recognised_player_connecting user

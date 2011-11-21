@@ -26,13 +26,15 @@ class LocalWorld
 
     def prepare world_id, port
       puts "preparing local world:#{world_id}"
-      `#{BIN}/download-server #{WORLDS}`
 
       world_path = "#{WORLDS}/#{world_id}"
       properties_path = "#{world_path}/server.properties"
-
+      
       # create world path if it aint there
       FileUtils.mkdir_p world_path
+      
+      # download latest server jar
+      `curl -L https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar -o '#{world_path}/server.jar'`
 
       # get world from db
       worlds = MinefoldDb.connection['worlds']
@@ -54,9 +56,6 @@ class LocalWorld
         new_world = true
         puts "New world"
       end
-
-      # symlink server
-      FileUtils.ln_s JAR, world_path unless File.exist? "#{world_path}/server.jar"
 
       # create server.properties
       File.open(properties_path, 'w') {|file| file.puts server_properties(world, port) }
