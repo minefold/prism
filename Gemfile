@@ -35,6 +35,7 @@ group :test do
   gem "ZenTest", "~> 4.4.2"
   gem 'em-spec', git:'https://github.com/joshbuddy/em-spec.git', require:'em-spec/rspec'
   gem 'awesome_print'
+  gem 'capistrano'
 end
 
 group :geo do
