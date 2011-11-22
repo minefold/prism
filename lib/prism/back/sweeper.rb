@@ -56,8 +56,8 @@ module Prism
       EM.add_timer(10) do
         # wait 10 seconds so redis is definitely up to date
         RedisUniverse.collect do |universe| 
+          @redis_universe = universe
           WorldAllocator.new(universe).rebalance_boxes
-          record_stats universe
         end
       end
     end
@@ -130,18 +130,14 @@ module Prism
       end
     end
     
-    def record_stats universe
-      running_boxes = universe.boxes[:running]
-      p "[stats] boxes.count:  #{running_boxes.size}"
+    def record_stats
+      running_boxes = redis_universe.boxes[:running]
       StatsD.measure "boxes.count", running_boxes.size
       running_boxes.values.group_by {|b| b['instance_type'] }.each do |instance_type, group|
-        p "[stats] boxes.#{instance_type.gsub('.','-')}.count:  #{group.size}"
         StatsD.measure "boxes.#{instance_type.gsub('.','-')}.count", group.size
       end
-      p "[stats] players.count:  #{universe.players.size}"
-      StatsD.measure "players.count", universe.players.size
-      p "[stats] worlds.count:  #{universe.worlds[:running].size}"
-      StatsD.measure "worlds.count",  universe.worlds[:running].size
+      StatsD.measure "players.count", redis_universe.players.size
+      StatsD.measure "worlds.count",  redis_universe.worlds[:running].size
     end
     
   end
