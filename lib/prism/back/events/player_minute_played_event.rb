@@ -19,7 +19,7 @@ module Prism
               }
 
               unless user['unlimited']
-                update.merge! '$inc'  => {'credits' => -1, 'minutes_played' => 1}
+                update['$inc'].merge! 'credits' => -1
               end
 
               mongo_connect.collection('users').find_and_modify({ query: {"_id"  => BSON::ObjectId(user_id) }, update:update })
