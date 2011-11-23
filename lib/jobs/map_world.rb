@@ -87,6 +87,8 @@ module Job
         
         worlds = MinefoldDb.connection['worlds']
         worlds.update({'_id' => BSON::ObjectId(world_id)}, {"$set" => { "last_mapped_at" => Time.now.utc }})
+
+        FileUtils.rm_rf base_path
         
         puts "mapping completed"
       end
