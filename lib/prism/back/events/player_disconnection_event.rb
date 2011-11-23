@@ -62,7 +62,8 @@ module Prism
     def record_session user_id
       if started_at
         @mp_id, @mp_name = user_id, username
-        mixpanel_track 'played', seconds: (ended_at - started_at)
+        seconds = ended_at - started_at
+        mixpanel_track 'played', seconds: seconds, minutes: (seconds / 60.0), hours: (seconds / 60.0 / 60.0)
       end
     end
   end
