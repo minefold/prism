@@ -68,6 +68,10 @@ namespace :prism do
     ssh "sudo stop prism_back; sudo start prism_back; sudo stop sweeper; sudo start sweeper"
   end
   
+  task :bounce do
+    ssh "sudo restart prism_back; sudo restart sweeper"
+  end
+  
   task :restart_prism do
     raise "This is fucking dangerous!"
     ssh "sudo restart prism"
