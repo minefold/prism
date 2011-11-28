@@ -4,7 +4,7 @@ module Prism
   ECUS_PER_WORLD = 2
   RAM_PER_PLAYER = 128
   INSTANCE_PLAYER_BUFFER = 5 # needs to be space for this many players to start a world
-  INSTANCE_WORLD_BUFFER  = 1  # if the last box with capacity has space for this many worlds, start a new box
+  INSTANCE_WORLD_BUFFER  = 3  # there must be room for 3 more worlds at any time
   OS_RAM_BUFFER = 0.2 # let the OS have this much ram
   
   INSTANCE_DEFS = {
@@ -77,25 +77,26 @@ module Prism
     end
     
     def rebalance_boxes
+      print_box_status
       start_box_if_at_capacity
       shutdown_idle_boxes
       shutdown_boxes_not_in_use
     end
     
     def shutdown_idle_boxes
-      # shutdown idle boxes when there is at least 1 other box with capacity
-      number_of_idles_we_can_kill = boxes_with_capacity.size - 1
-      
+      excess_capacity = total_world_slots - INSTANCE_WORLD_BUFFER
+            
       idles_close_to_end_of_hour = idle_boxes.select{|instance_id, box| close_to_end_of_hour box }
       
-      puts "boxes_with_capacity:#{boxes_with_capacity.size} idles:#{idle_boxes.size} killable:#{idles_close_to_end_of_hour.size}"
-      if number_of_idles_we_can_kill > 0
-        ids_to_kill = idles_close_to_end_of_hour.keys.take number_of_idles_we_can_kill
+      puts "available world slots:#{total_world_slots} idle boxes:#{idle_boxes.size} killable:#{idles_close_to_end_of_hour.size}"
       
-        ids_to_kill.each do |instance_id|
+      idles_close_to_end_of_hour.each do |instance_id, box|
+        box_type = BoxType.new(box['instance_type'])
+        excess_capacity -= box_type.world_cap
+        if excess_capacity >= 0
           box = idles_close_to_end_of_hour[instance_id]
         
-          message = "box:#{box['instance_id']} worlds:#{box[:worlds].size} players:#{box[:players].size} uptime_minutes:#{uptime box}"
+          message = "box:#{box['instance_id']} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime_minutes:#{uptime box}"
           puts "#{message} terminating idle"
           Prism.redis.lpush "workers:requests:stop", instance_id
         end
@@ -115,8 +116,23 @@ module Prism
     end
     
     def start_new_box box_type
+      puts "starting new box"
       request_id = `uuidgen`.strip
       Prism.redis.lpush_hash "workers:requests:create", box_type.to_hash.merge(request_id:request_id)
+    end
+    
+    def print_box_status
+      upcoming_boxes.each do |request_id, box|
+        box_type = BoxType.new(box['instance_id'])
+        puts "box:#{request_id} worlds:0/#{box_type.world_cap} players:0/#{box_type.player_cap} creating..."
+      end
+      
+      running_box_capacities.each do |box|
+        box_type = BoxType.new(box['instance_type'])
+        message = "box:#{box[:instance_id]} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime:#{friendly_time uptime box}"
+        message += " not accepting" if worlds_accepted box
+        puts message
+      end
     end
     
     def boxes_with_capacity
@@ -134,10 +150,6 @@ module Prism
           uptime_minutes = uptime box
           player_count = box[:players].size
            world_count = box[:worlds].size
-          
-          message = "box:#{instance_id} world_count:#{world_count} player_count:#{player_count} uptime:#{friendly_time uptime box}"
-          message += " not accepting" if worlds_accepted box
-          puts message
           
           player_count == 0 && world_count == 0 && !keepalive?(box)
         end
@@ -159,14 +171,27 @@ module Prism
       end
     end
     
-    def at_capacity?
-      # we're at capacity if there's no boxes left with capacity or the last box only has 1 world slot left
-      # (this allows everyone to have a fast connect because there should always be a world slot available)
-      (boxes_with_capacity.size < 1) || 
-      (boxes_with_capacity.size == 1 && boxes_with_capacity[0][:world_slots] <= INSTANCE_WORLD_BUFFER)
+    def total_world_slots
+      running_world_slots + upcoming_world_slots
     end
     
-    # helper
+    def running_world_slots
+      boxes_with_capacity.inject(0) {|acc, box| acc + box[:world_slots] }
+    end
+    
+    def upcoming_world_slots
+      upcoming_boxes.inject(0) {|acc, (_, box)| acc + BoxType.new(box['instance_type']).world_cap }
+    end
+    
+    def upcoming_boxes
+      universe.boxes[:busy].select {|instance_id, box| box['state'] == 'creating' }
+    end
+    
+    def at_capacity?
+      total_world_slots < INSTANCE_WORLD_BUFFER
+    end
+    
+    # helpers
     
     def friendly_time minutes
       hours, mins = minutes / 60, minutes % 60

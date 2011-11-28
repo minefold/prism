@@ -4,7 +4,7 @@ module Prism
     process "workers:requests:create", :request_id, :instance_type, :image_id
     
     def busy_hash
-      ["workers:busy", request_id, state:'creating']
+      ["workers:busy", request_id, state:'creating', instance_type: instance_type]
     end
     
     def perform_operation

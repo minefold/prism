@@ -93,7 +93,7 @@ module Prism
       redis.send sym, *args, &blk
     end
     
-    %w[blpop hexists hget hgetall hset lpush publish scard sadd srem smembers sunion zadd zcard zcount].each do |cmd|
+    %w[brpop hexists hget hgetall hset lpush publish scard sadd srem smembers sunion zadd zcard zcount].each do |cmd|
       define_method(:"#{cmd}") do |*args, &blk| 
         op = redis.send cmd, *args
         op.errback {|e| handle_error e }

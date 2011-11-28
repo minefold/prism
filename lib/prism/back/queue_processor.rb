@@ -16,7 +16,7 @@ module Prism
     end
     
     def listen
-      @pop = @redis.blpop @queue, 30
+      @pop = @redis.brpop @queue, 30
       @pop.callback do |channel, item|
         if item
           @callback.call item
@@ -44,7 +44,7 @@ module Prism
     end
     
     def listen
-      @pop = @redis.blpop @queue, 30
+      @pop = @redis.brpop @queue, 30
       @pop.callback do |channel, item|
         if item
           @klass.new.process item

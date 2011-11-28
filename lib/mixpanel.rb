@@ -8,7 +8,7 @@ module Mixpanel
     
     def mixpanel_track event, properties = {}
       mp_name = @mp_name ? @mp_name.downcase.strip : nil
-      properties = { distinct_id: @mp_id, mp_name_tag: mp_name }.merge(properties)
+      properties = { distinct_id: @mp_id.to_s, mp_name_tag: mp_name }.merge(properties)
       mixpanel.track event, properties.delete_if {|k,v| v.nil?}
     end
   end

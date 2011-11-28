@@ -69,3 +69,31 @@ worker: bundle exec rake resque:work QUEUE=worlds_to_map
 ssh -i .ssh/minefold2.pem ubuntu@mars.minefold.com -t "sudo tail -fn 500 /var/log/syslog"
 ssh -i .ssh/minefold2.pem ubuntu@mars.minefold.com -t "sudo tail -fn 500 /var/log/syslog | grep total\:"
 ssh -i .ssh/minefold2.pem ubuntu@mars.minefold.com -t "sudo tail -fn 500 /var/log/syslog | grep chat_message"
+
+
+
+# messaging design:
+
+each process has one mailbox (eg. mailbox:prism)
+jobs get pushed onto queue (eg. jobs:player_connection)
+each job has a unique id for RPC purposes
+
+eg.
+
+reddy.pop 'mailbox:prism' do |name, data|
+
+end
+
+reddy.queue 'jobs:prism_back', {
+  callback: 'mailbox:prism',
+  name: 'player_connection',
+  data: {
+    username: 'whatupdave',
+    remote_ip: '1'
+  }
+} # 4ed2a69c2013df05d8000001
+
+
+reddy.rpc 'jobs:prism_back', 'player_connection', username: 'whatupdave', remote_ip: '1' do |result|
+  ...
+end

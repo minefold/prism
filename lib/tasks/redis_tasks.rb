@@ -1,5 +1,5 @@
 namespace "redis" do
-  
+  desc "watch number of clients"
   task "monitor_clients" do
     redis = redis_connect
     while true
@@ -31,5 +31,12 @@ namespace "redis" do
       end
       puts
     end
+  end
+  
+  desc "deletes all keys"
+  task :flush_all do
+    raise 'this is fucking dangerous!'
+    
+    redis_connect.flushall
   end
 end
