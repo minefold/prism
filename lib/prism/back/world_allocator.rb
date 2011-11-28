@@ -96,7 +96,7 @@ module Prism
         if excess_capacity >= 0
           box = idles_close_to_end_of_hour[instance_id]
         
-          message = "box:#{box['instance_id']} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime_minutes:#{uptime box}"
+          message = "box:#{instance_id} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime_minutes:#{uptime box}"
           puts "#{message} terminating idle"
           Prism.redis.lpush "workers:requests:stop", instance_id
         end
@@ -129,7 +129,7 @@ module Prism
       
       running_box_capacities.each do |box|
         box_type = BoxType.new(box['instance_type'])
-        message = "box:#{box[:instance_id]} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime:#{friendly_time uptime box}"
+        message = "box:#{box['instance_id']} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime:#{friendly_time uptime box}"
         message += " not accepting" if worlds_accepted box
         puts message
       end
