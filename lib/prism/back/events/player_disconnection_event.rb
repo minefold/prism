@@ -16,7 +16,7 @@ module Prism
           record_session user_id
           op = redis.srem "worlds:#{world_id}:connected_players", user_id
           op.callback do
-            EM.add_timer(60) do
+            EM.add_timer(30) do
               op = redis.scard "worlds:#{world_id}:connected_players"
               op.callback do |player_count|
                 debug "world:#{world_id} players:#{player_count}"
