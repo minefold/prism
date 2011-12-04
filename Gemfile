@@ -15,7 +15,7 @@ gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
 gem 'em-hiredis', git:'https://github.com/mloughran/em-hiredis'
 gem 'resque'
 gem 'resque-lock', require:'resque/plugins/lock'
-gem "resque-loner"
+gem "resque-loner", git: 'https://github.com/whatupdave/resque-loner'
 gem "em-mongo"
 gem 'hirb'
 gem 'statsd-instrument', git:'https://github.com/Shopify/statsd-instrument.git'

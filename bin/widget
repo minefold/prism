@@ -91,7 +91,7 @@ module Widget
         world_state = RUNNING_WORLDS[world_id]
 
         reader.on_line = proc do |line|
-          info ["mc", line.type], line.log_entry
+          info ["mc", world_id, line.type], line.log_entry
 
           case line.type
           when :chat_message

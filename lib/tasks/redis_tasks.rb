@@ -13,7 +13,7 @@ namespace "redis" do
   task "state" do
     redis = redis_connect
     puts "clients: #{redis.info['connected_clients']}"
-    redis.keys.reject {|key| key =~ /resque/ }.sort.each do |key|
+    redis.keys.sort.each do |key|
       type = redis.type key
       
       puts "#{key} [#{type}]"
@@ -35,7 +35,7 @@ namespace "redis" do
   
   desc "deletes all keys"
   task :flush_all do
-    raise 'this is fucking dangerous!'
+    # raise 'this is fucking dangerous!'
     
     redis_connect.flushall
   end
