@@ -65,7 +65,7 @@ module Prism
       if started_at
         @mp_id, @mp_name = user_id, username
         seconds = ended_at - started_at
-        mixpanel_track 'played', seconds: seconds, minutes: (seconds / 60.0), hours: (seconds / 60.0 / 60.0)
+        mixpanel_track 'played', seconds: seconds, minutes: (seconds / 60.0).to_i, hours: (seconds / 60.0 / 60.0).to_i
       end
     end
   end

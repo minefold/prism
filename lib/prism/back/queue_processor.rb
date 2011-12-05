@@ -33,26 +33,11 @@ module Prism
     
     def initialize klass
       @queue, @klass = klass.queue, klass
-
-      start_processing
+      @popper = QueuePopper.new klass.queue, method(:process)
     end
     
-    def start_processing
-      debug "processing #{@queue}"
-      @redis = PrismRedis.connect
-      listen
-    end
-    
-    def listen
-      @pop = @redis.brpop @queue, 30
-      @pop.callback do |channel, item|
-        if item
-          @klass.new.process item
-        end
-        
-        EM.next_tick { listen }
-      end
-      @pop.errback { EM.next_tick { listen } }
+    def process item
+      @klass.new.process item if item
     end
   end
 end
