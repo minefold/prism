@@ -82,37 +82,9 @@ module Widget
       world_id, port = File.basename(pid_file).split('.')
       port = port.to_i
 
-      RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
-
+      world_state = RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
       world_path = "#{WORLDS}/#{world_id}"
       stdin, stdout = "#{world_path}/world.stdin", "#{world_path}/world.stdout"
-
-      EM.file_tail(stdout, Widget::WorldLineReader) do |reader| 
-        world_state = RUNNING_WORLDS[world_id]
-
-        reader.on_line = proc do |line|
-          info ["mc", world_id, line.type], line.log_entry
-
-          case line.type
-          when :chat_message
-            Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_id}", line.chat_user, line.chat_message ])
-          when :connected_players
-            world_state[:players] = Array(line.players)
-          when :player_connected
-            world_state[:players] = Array(world_state[:players]) | [line.user]
-          when :player_disconnected
-            world_state[:players] = Array(world_state[:players]) - [line.user]
-          when :world_started
-            redis.store_running_world instance_id, world_id, host, port
-          when :world_stressed
-            StatsD.increment "#{statsd_key}.worlds.#{world_id}.stressed"
-          when :lag_mentioned
-            StatsD.increment "#{statsd_key}.worlds.#{world_id}.lag_mentioned"
-          when :port_taken
-            world_watcher.stop_world
-          end
-        end
-      end
 
       Widget::WorldProcessWatcher.poll pid, stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues do |ww|
         ww.on_process_exit = proc do
@@ -129,6 +101,18 @@ module Widget
           redis.hdel "worlds:busy", world_id
           redis.del "worlds:#{world_id}:connected_players"
           redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
+        end
+        
+        ww.on_players_listed = proc do |usernames|
+          world_state[:players] = Array(usernames)
+        end
+        
+        ww.on_player_connected = proc do |username|
+          world_state[:players] = Array(world_state[:players]) | [username]
+        end
+        
+        ww.on_player_disconnected = proc do |username|
+          world_state[:players] = Array(world_state[:players]) - [username]
         end
       end
     end

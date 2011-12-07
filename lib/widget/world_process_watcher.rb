@@ -14,8 +14,9 @@ module Widget
     include Resque::Helpers
     include Debugger
   
-    attr_accessor :on_process_exit, :on_world_stopped
-    attr_reader :stdin, :stdout, :world_id, :instance_id, :host, :port, :redis, :stdin_queues, :stop_queues
+    attr_accessor :on_process_exit, :on_world_stopped, :on_players_listed, :on_player_connected, :on_player_disconnected
+    
+    attr_reader :stdin, :stdout, :world_id, :instance_id, :host, :port, :redis, :stdin_queues, :stop_queues, :plugins
     
     def stop_queue
       stop_queues[world_id]
@@ -30,6 +31,7 @@ module Widget
       @world_id, @instance_id, @host, @port = world_id, instance_id, host, port
       @stdin_queues, @stop_queues = stdin_queues, stop_queues
       @redis = Prism.redis
+      @plugins = WorldPlugin.plugins.map {|klass| klass.new world_id }
     
       process_stdin
       stop_queue.pop { stop_world }
@@ -37,6 +39,32 @@ module Widget
       EM.add_timer(10) { send_line "list" }
       @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
          @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue Job::MapWorld, world_id }
+      
+      EM.file_tail(stdout, Widget::WorldLineReader) do |reader| 
+        reader.on_line = proc do |line|
+          info ["mc", world_id, line.type], line.log_entry
+
+          case line.type
+          when :chat_message
+            Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_id}", line.chat_user, line.chat_message ])
+          when :connected_players
+            on_players_listed.call line.players
+          when :player_connected
+            on_player_connected.call line.user
+          when :player_disconnected
+            on_player_disconnected.call line.user
+          when :world_started
+            redis.store_running_world instance_id, world_id, host, port
+            plugins.each &:world_started
+          when :world_stressed
+            StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.stressed"
+          when :lag_mentioned
+            StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.lag_mentioned"
+          when :port_taken
+            stop_world
+          end
+        end
+      end
     end
   
     def stop_world
@@ -52,6 +80,7 @@ module Widget
       @backup_timer.cancel if @backup_timer
       @map_timer.cancel if @map_timer
       on_process_exit.call
+      plugins.each &:world_stopped
       
       @backup_waiter = EM.add_periodic_timer(10) do
         unless @backup_in_progress
