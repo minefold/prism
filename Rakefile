@@ -47,9 +47,15 @@ task "resque:setup" do
   end
 end
 
-task "map_world" => "resque:setup" do 
-  require 'jobs'
-  Resque.enqueue(Job::MapWorld, ENV['WORLD_ID'])
+namespace :jobs do
+  task :map_world => "resque:setup" do 
+    require 'jobs'
+    Resque.enqueue(Job::MapWorld, ENV['WORLD_ID'] || '4e7d843f9fe7af003e000001')
+  end
+  
+  task :world_started => "resque:setup" do
+    Resque.push 'low', class: 'WorldStartedJob', args: [ENV['WORLD_ID'] || '4e7d843f9fe7af003e000001']
+  end
 end
 
 desc "store latest server"

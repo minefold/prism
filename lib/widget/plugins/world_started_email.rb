@@ -3,7 +3,8 @@ module Widget
     def world_started
       @timer = EM.add_periodic_timer(3 * 60) do
         @timer.cancel
-        Resque.push 'mailer', class: 'WorldMailer', args: ['world_started', world_id]
+        puts "scheduling job:world_started #{world_id}"
+        Resque.push 'low', class: 'WorldStartedJob', args: [world_id]
       end
     end
     
