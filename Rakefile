@@ -63,11 +63,20 @@ task :store_server do
   `curl -L https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar -o tmp/server.jar`
 end
 
-namespace :prism do
-  def ssh cmd
-    puts `ssh -i #{ENV['EC2_SSH']} ubuntu@#{ENV['HOST']} "#{cmd}"`
+def ssh cmd
+  ssh_cmd = %Q{ssh -i #{ENV['EC2_SSH']} ubuntu@#{ENV['HOST']} "#{cmd}"}
+  puts ssh_cmd
+  # puts `#{ssh_cmd}`
+end
+
+namespace :widget do
+  task :deploy do
+    ENV['HOST'] ||= `ec2-describe-instances --hide-tags --filter instance-id=#{ENV['INSTANCE_ID']} | grep #{ENV['INSTANCE_ID']} | cut -f4`.strip
+    ssh "ps -eF | grep '[r]uby' | awk '{print $2}' | sudo xargs kill"
   end
-  
+end
+
+namespace :prism do
   task :deploy do
     ssh "cd /opt/prism && sudo GIT_SSH=/home/fold/.ssh/deploy-wrapper git pull origin #{ENV['BRANCH']} && sudo bundle --binstubs --without test && sudo chown -R fold ."
     ssh "cd /opt/prism; sudo cp conf/prism.conf /etc/init/prism.conf; sudo cp conf/prism_back.conf /etc/init/prism_back.conf; sudo cp conf/sweeper.conf /etc/init/sweeper.conf"
