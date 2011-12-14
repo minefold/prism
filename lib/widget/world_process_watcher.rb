@@ -47,10 +47,13 @@ module Widget
           when :chat_message
             Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_id}", line.chat_user, line.chat_message ])
           when :connected_players
+            plugins.each {|p| p.players_listed line.players }
             on_players_listed.call line.players
           when :player_connected
+            plugins.each {|p| p.player_connected line.user }
             on_player_connected.call line.user
           when :player_disconnected
+            plugins.each {|p| p.player_disconnected line.user }
             on_player_disconnected.call line.user
           when :world_started
             redis.store_running_world instance_id, world_id, host, port

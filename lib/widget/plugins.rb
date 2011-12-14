@@ -18,5 +18,8 @@ module Widget
     def world_started; end
     def world_stopped; end
     def world_backed_up; end
+    def players_listed usernames; end
+    def player_connected username; end
+    def player_disconnected username; end
   end
 end

@@ -18,7 +18,6 @@ MIXPANEL_TOKEN = '34356c196fac389dff577bf3e1a2164a'
 MAPPER = ENV['PIGMAP']
 
 uri = URI.parse(REDISTOGO_URL)
-p uri.host, uri.port, uri.password
 Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
 
 SSH_PRIVATE_KEY_PATH=ENV['EC2_SSH'] || "#{ROOT}/.ec2/east/minefold2.pem"

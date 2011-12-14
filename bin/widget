@@ -6,8 +6,9 @@ Bundler.require :default
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'debugger'
-require 'widget'
 require 'prism/back'
+require 'widget'
+require 'mixpanel'
 
 # Usage: widget instance_id host
 
