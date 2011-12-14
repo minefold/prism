@@ -65,8 +65,7 @@ end
 
 def ssh cmd
   ssh_cmd = %Q{ssh -i #{ENV['EC2_SSH']} ubuntu@#{ENV['HOST']} "#{cmd}"}
-  puts ssh_cmd
-  # puts `#{ssh_cmd}`
+  puts `#{ssh_cmd}`
 end
 
 namespace :widget do
@@ -95,6 +94,13 @@ namespace :prism do
   task :logs do
     FileUtils.mkdir_p 'tmp/logs'
     puts `scp -i #{ENV['EC2_SSH']} ubuntu@pluto.minefold.com:/var/log/syslog* tmp/logs`
+  end
+end
+
+namespace :atlas do
+  task :deploy do
+    ENV['HOST'] ||= 'mapper.minefold.com'
+    ssh "cd atlas && git pull origin master && sudo restart atlas"
   end
 end
 

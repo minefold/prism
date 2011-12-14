@@ -17,5 +17,6 @@ module Widget
     
     def world_started; end
     def world_stopped; end
+    def world_backed_up; end
   end
 end

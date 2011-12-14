@@ -38,7 +38,6 @@ module Widget
     
       EM.add_timer(10) { send_line "list" }
       @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
-         @map_timer = EM.add_periodic_timer(10 * 60) { Resque.enqueue Job::MapWorld, world_id }
       
       EM.file_tail(stdout, Widget::WorldLineReader) do |reader| 
         reader.on_line = proc do |line|
@@ -78,7 +77,6 @@ module Widget
   
     def unbind
       @backup_timer.cancel if @backup_timer
-      @map_timer.cancel if @map_timer
       on_process_exit.call
       plugins.each &:world_stopped
       
@@ -92,7 +90,10 @@ module Widget
                 info "ERROR: backup on world stop failed: #{e.message}\n#{e.backtrace}"
               end
             },
-            proc { on_world_stopped.call })
+            proc { 
+              on_world_stopped.call 
+              plugins.each &:world_backed_up
+            })
         end 
       end
       
@@ -116,6 +117,7 @@ module Widget
           proc { 
             send_line "save-on"
             @backup_in_progress = false
+            plugins.each &:world_backed_up
           })
       end
     end
