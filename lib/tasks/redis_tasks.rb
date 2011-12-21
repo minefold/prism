@@ -19,6 +19,8 @@ namespace "redis" do
       puts "#{key} [#{type}]"
       
       case type
+      when 'string'
+        p redis.get(key)
       when 'hash'
         p redis.hgetall(key)
       when 'list'

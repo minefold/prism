@@ -5,7 +5,6 @@ class MapError < StandardError; end
 
 module Job
   class MapWorld
-    extend Resque::Plugins::Lock
     include Resque::Plugins::UniqueJob
     
     @queue = :worlds_to_map
