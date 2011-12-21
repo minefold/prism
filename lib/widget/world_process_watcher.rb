@@ -45,7 +45,7 @@ module Widget
 
           case line.type
           when :chat_message
-            Resque.push('high', :class => 'SaveChatMessage', :args => [ "#{world_id}", line.chat_user, line.chat_message ])
+            Resque.push('high', :class => 'ProcessChatJob', :args => [ "#{world_id}", line.chat_user, line.chat_message ])
           when :connected_players
             plugins.each {|p| p.players_listed line.players }
             on_players_listed.call line.players
