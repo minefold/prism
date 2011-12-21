@@ -5,7 +5,7 @@ module Widget
     end
     
     def elapsed_seconds
-      (Time.now - @started_at).to_i
+      (Time.now - (@started_at || Time.now)).to_i
     end
     
     def world_backed_up
