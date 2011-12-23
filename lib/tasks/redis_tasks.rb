@@ -37,8 +37,14 @@ namespace "redis" do
   
   desc "deletes all keys"
   task :flush_all do
-    # raise 'this is fucking dangerous!'
+    raise 'this is fucking dangerous!'
     
     redis_connect.flushall
+  end
+  
+  desc "gets rid of loner keys"
+  task :delete_loners do
+    redis = redis_connect
+    redis.keys.grep(/resque:loners/).each {|key| redis.del key }
   end
 end
