@@ -38,6 +38,12 @@ module Widget
       elsif message =~ /failed to bind to port/i
         @type = :port_taken
         @log_entry = "failed to bind port"
+      elsif message =~ /server command: op (\w+)/
+        @type = :op
+        @user = $1
+      elsif message =~ /server command: deop (\w+)/
+        @type = :deop
+        @user = $1
       end
     end
   

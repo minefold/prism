@@ -61,8 +61,7 @@ class LocalWorld
       File.open(properties_path, 'w') {|file| file.puts server_properties(world, port) }
 
       # create ops.txt
-      user = MinefoldDb.connection['users'].find_one({'_id' => world['creator_id']})
-      ops = WORLD_OPS | Array(user['username'])
+      ops = WORLD_OPS | op_usernames(world)
 
       if File.exists? "#{world_path}/ops.txt"
         File.open("#{world_path}/ops.txt") do |file|
@@ -80,6 +79,19 @@ class LocalWorld
       File.open(server_log, "w") {|file| file.print }
 
       puts "finished preparing local world:#{world_id}"
+    end
+    
+    def op_ids world
+      [world['creator_id']] + 
+       world['memberships'].
+         select {|m| m['role'] == 'op' }.
+            map {|m| m['user_id']}
+    end
+    
+    def op_usernames world
+      MinefoldDb.connection['users'].
+        find('_id' => { '$in' => op_ids(world) }).
+        map {|u| u['username']}
     end
   end
 

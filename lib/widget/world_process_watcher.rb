@@ -58,6 +58,10 @@ module Widget
           when :world_started
             redis.store_running_world instance_id, world_id, host, port
             plugins.each &:world_started
+          when :op
+            Resque.push 'low', class: 'PlayerOppedJob', args: [world_id, line.user]
+          when :deop
+            Resque.push 'low', class: 'PlayerDeoppedJob', args: [world_id, line.user]
           when :world_stressed
             StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.stressed"
           when :lag_mentioned
