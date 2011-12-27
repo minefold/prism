@@ -72,9 +72,22 @@ def ssh cmd
   puts `#{ssh_cmd}`
 end
 
+def ssh_connect
+  system %Q{ssh -i #{ENV['EC2_SSH']} ubuntu@#{ENV['HOST']} "#{cmd}"}
+end
+
+def set_host
+  ENV['HOST'] ||= `ec2-describe-instances --hide-tags --filter instance-id=#{ENV['INSTANCE_ID']} | grep #{ENV['INSTANCE_ID']} | cut -f4`.strip
+end
+
 namespace :widget do
+  task :ssh do
+    set_host
+    ssh
+  end
+  
   task :deploy do
-    ENV['HOST'] ||= `ec2-describe-instances --hide-tags --filter instance-id=#{ENV['INSTANCE_ID']} | grep #{ENV['INSTANCE_ID']} | cut -f4`.strip
+    set_host
     ssh "ps -eF | grep '[r]uby' | awk '{print $2}' | sudo xargs kill"
   end
 end
