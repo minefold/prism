@@ -80,6 +80,9 @@ class LocalWorld
         file.puts ops.join("\n")
         file.puts
       end
+      
+      # remove banned-players.txt
+      FileUtils.rm("#{world_path}/banned-players.txt")
 
       # clear server log
       server_log = File.join(world_path, "server.log")
