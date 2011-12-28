@@ -23,6 +23,14 @@ class LocalWorld
         "white-list"       => false
       }.map {|values| values.join('=')}.join("\n")
     end
+    
+    def mongo_worlds
+      MinefoldDb.connection['worlds']
+    end
+    
+    def mongo_world world_id
+      mongo_worlds.find_one('_id' => BSON::ObjectId(world_id))
+    end
 
     def prepare world_id, port
       puts "preparing local world:#{world_id}"
@@ -37,8 +45,7 @@ class LocalWorld
       `curl -L https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar -o '#{world_path}/server.jar'`
 
       # get world from db
-      worlds = MinefoldDb.connection['worlds']
-      world = worlds.find_one({'_id' => BSON::ObjectId(world_id)})
+      world = mongo_world world_id
 
       # check s3 for world
       archived_world = Storage.new.worlds.files.get("#{world_id}.tar.gz")
@@ -133,6 +140,7 @@ class LocalWorld
     backup_file = "#{id}.#{backup_time.to_i}.tar.gz"
     retries = 10
     begin
+      # TODO: stop storing this file
       File.open(world_archive) do |world_archive_file|
         puts "Uploading #{retries}"
         file = directory.files.create(
@@ -150,6 +158,11 @@ class LocalWorld
           :public => false
         )
       end
+      
+      LocalWorld.mongo_worlds.update(
+        {'_id' => BSON::ObjectId(id)}, 
+        {'$set' => {'latest_backup' => backup_file}}
+      )
 
       FileUtils.rm_f world_archive
 
@@ -158,7 +171,6 @@ class LocalWorld
       puts "UPLOAD ERROR: #{e.message}\n#{e.backtrace}"
       retry if (retries -= 1) > 0
     end
-
 
     puts "Finished backup"
   end
