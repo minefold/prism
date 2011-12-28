@@ -10,8 +10,12 @@ module Widget
       @all_players ||= Set.new
     end
     
+    def started_at
+      @started_at ||= Time.now
+    end
+    
     def world_started
-      @started_at = Time.now
+      started_at
     end
     
     def players_listed usernames
@@ -26,7 +30,7 @@ module Widget
     
     def world_stopped
       @mp_id = world_id.to_s
-      seconds = (Time.now - @started_at).to_i
+      seconds = (Time.now - started_at).to_i
       if seconds > MIN_GAME_SESSION
         mixpanel_track 'game played', 'game' => 'Minecraft', 
                                    'minutes' => (seconds / 60), 
