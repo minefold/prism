@@ -2,14 +2,19 @@ require 'base64'
 
 module Mixpanel
   module EventTracker
+    
+    IGNORE_USERS = %w(system-check)
+    
     def mixpanel
       Mixpanel::Tracker.new MIXPANEL_TOKEN, remote_ip
     end
     
     def mixpanel_track event, properties = {}
       mp_name = @mp_name ? @mp_name.downcase.strip : nil
-      properties = { distinct_id: @mp_id.to_s, mp_name_tag: mp_name }.merge(properties)
-      mixpanel.track event, properties.delete_if {|k,v| v.nil?}
+      unless IGNORE_USERS.include? mp_name
+        properties = { distinct_id: @mp_id.to_s, mp_name_tag: mp_name }.merge(properties)
+        mixpanel.track event, properties.delete_if {|k,v| v.nil?}
+      end
     end
   end
   
