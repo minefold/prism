@@ -11,7 +11,7 @@ class LocalWorld
         "level-name"       => world['_id'].to_s,
         "level-seed"       => world['seed'].to_s,
         "max-players"      => 1000,
-        "online-mode"      => (world['online_mode'] || true).to_s,
+        "online-mode"      => (world['online_mode'].nil? ? true : world['online_mode']).to_s,
         "difficulty"       => world['difficulty'].to_s,
         "gamemode"         => world['game_mode'].to_s,
         "pvp"              => (world['pvp'] || false).to_s,
@@ -67,7 +67,7 @@ class LocalWorld
       # create server.properties
       File.open(properties_path, 'w') do |file| 
         properties = server_properties(world, port)
-        p "settings", properties, world['online_mode']
+        p "settings", properties
         
         file.puts properties
       end
