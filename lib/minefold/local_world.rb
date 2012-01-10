@@ -11,7 +11,7 @@ class LocalWorld
         "level-name"       => world['_id'].to_s,
         "level-seed"       => world['seed'].to_s,
         "max-players"      => 1000,
-        "online-mode"      => true,
+        "online-mode"      => (world['online_mode'] || true).to_s,
         "difficulty"       => world['difficulty'].to_s,
         "gamemode"         => world['game_mode'].to_s,
         "pvp"              => (world['pvp'] || false).to_s,
