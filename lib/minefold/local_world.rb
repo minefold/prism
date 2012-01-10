@@ -82,7 +82,7 @@ class LocalWorld
       end
       
       # remove banned-players.txt
-      FileUtils.rm("#{world_path}/banned-players.txt")
+      FileUtils.rm_f("#{world_path}/banned-players.txt")
 
       # clear server log
       server_log = File.join(world_path, "server.log")
