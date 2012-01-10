@@ -65,7 +65,12 @@ class LocalWorld
       end
 
       # create server.properties
-      File.open(properties_path, 'w') {|file| file.puts server_properties(world, port) }
+      File.open(properties_path, 'w') do |file| 
+        properties = server_properties(world, port)
+        p "settings", properties, world['online_mode']
+        
+        file.puts properties
+      end
 
       # create ops.txt
       ops = WORLD_OPS | op_usernames(world)
