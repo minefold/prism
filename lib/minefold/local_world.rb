@@ -120,9 +120,9 @@ class LocalWorld
     "#{WORLDS}/#{id}"
   end
 
-  def set_last_backup file
+  def set_last_backup backup_time
     puts "setting world:#{id} backup:#{file}"
-    MinefoldDb.connection['worlds'].update({'_id' => BSON::ObjectId(id)}, {'$set' => {'last_backup' => file}})
+    MinefoldDb.connection['worlds'].update({'_id' => BSON::ObjectId(id)}, {'$set' => {'backed_up_at' => backup_time}})
   end
 
   def backup!
@@ -166,15 +166,10 @@ class LocalWorld
           :public => false
         )
       end
-      
-      LocalWorld.mongo_worlds.update(
-        {'_id' => BSON::ObjectId(id)}, 
-        {'$set' => {'latest_backup' => backup_file}}
-      )
+
+      set_last_backup backup_time
 
       FileUtils.rm_f world_archive
-
-      set_last_backup backup_file
     rescue => e
       puts "UPLOAD ERROR: #{e.message}\n#{e.backtrace}"
       retry if (retries -= 1) > 0
