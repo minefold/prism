@@ -121,7 +121,7 @@ class LocalWorld
   end
 
   def set_last_backup backup_time
-    puts "setting world:#{id} backup:#{file}"
+    puts "setting world:#{id} backup:#{backup_time}"
     MinefoldDb.connection['worlds'].update({'_id' => BSON::ObjectId(id)}, {'$set' => {'backed_up_at' => backup_time}})
   end
 
