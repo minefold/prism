@@ -221,7 +221,6 @@ module Widget
     end
     
     def record_stats
-      sup
       StatsD.measure "#{statsd_key}.worlds.count", world_count
       StatsD.measure "#{statsd_key}.players.count", player_count
     end
