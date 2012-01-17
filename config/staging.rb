@@ -15,7 +15,7 @@ MONGOHQ_URL="mongodb://heroku_app650862:96gg63iarmqm0tuq46knv4a8mb@dbh18.mongola
 REDISTOGO_URL="redis://redistogo:a41865a64de42e31b2022186ad94bd38@angler.redistogo.com:9095/"
 PUSHER_URL="http://d7a615c1e88b0696d3f1:665ba5c2f03785e75e84@api.pusherapp.com/apps/7184"
 MIXPANEL_TOKEN = nil
-MAPPER = "~/pigmap/pigmap"
+AIRBRAKE_TOKEN = '2a986c2b8d31075b30f812baeabb97f7'
 
 uri = URI.parse(REDISTOGO_URL)
 Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)

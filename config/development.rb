@@ -12,6 +12,7 @@ REDISTOGO_URL="redis://localhost:6379/"
 PUSHER_URL="http://d6ddfd6bf3e166ae0ce6:aa7e63965d17d964678c@api.pusherapp.com/apps/7185"
 MAPPER = "~/code/minefold/pigmap/pigmap"
 MIXPANEL_TOKEN = nil
+AIRBRAKE_TOKEN = nil
 
 Fold.workers = :local
 Fold.worker_user = ENV['USER']

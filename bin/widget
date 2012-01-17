@@ -221,6 +221,7 @@ module Widget
     end
     
     def record_stats
+      sup
       StatsD.measure "#{statsd_key}.worlds.count", world_count
       StatsD.measure "#{statsd_key}.players.count", player_count
     end
@@ -241,6 +242,11 @@ module Widget
   end
   
   EM.run do
+    EM.error_handler do |e| 
+      Toadhopper(AIRBRAKE_TOKEN).post!(e) if AIRBRAKE_TOKEN
+      raise
+    end
+    
     instance_id = ARGV.shift || ENV['INSTANCE_ID']
            host = ARGV.shift || ENV['INSTANCE_IP']
 

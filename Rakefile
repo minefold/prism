@@ -51,6 +51,19 @@ namespace :jobs do
   task :map_world => "resque:setup" do 
     require 'jobs'
     Resque.enqueue(Job::MapWorld, ENV['WORLD_ID'] || '4e7d843f9fe7af003e000001')
+  end  
+  
+  task :map_all_worlds => "resque:setup" do 
+    require 'jobs'
+    require 'prism/back'
+    include Prism::Mongo
+    def mongo
+      @mongo ||= mongo_connect
+    end
+    
+    mongo['worlds'].find.map {|w| w['_id'].to_s }.each do |world_id|
+      Resque.enqueue(Job::MapWorld, world_id)
+    end
   end
   
   task :world_started => "resque:setup" do
