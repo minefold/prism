@@ -115,7 +115,7 @@ module Prism
     
     def connect_player_to_world instance_id, host, port
       puts "connecting to #{host}:#{port}"
-      redis.publish_json "players:connection_request:#{username}", host:host, port:port
+      redis.publish_json "players:connection_request:#{username}", host:host, port:port, user_id:user_id, world_id:world_id
       
       op = redis.hget "usernames", username
       op.callback do |user_id| 

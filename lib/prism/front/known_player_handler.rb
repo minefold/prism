@@ -33,7 +33,7 @@ module Prism
             StatsD.increment_and_measure_from started_connection, "players.connection_request.successful"
             
             server = EM.connect response["host"], response["port"], MinecraftProxy, connection, connection.buffered_data
-            new_handler ConnectedPlayerHandler, server, username, response["host"], response["port"]
+            new_handler ConnectedPlayerHandler, server, username, response["host"], response["port"], response["user_id"], response["world_id"]
           elsif response['rejected']
             connection.send_data server_packet(0xFF, :reason => friendly_kick_messages[response['rejected']])
             connection.close_connection_after_writing

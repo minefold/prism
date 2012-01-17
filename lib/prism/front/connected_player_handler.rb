@@ -2,15 +2,15 @@ module Prism
   class ConnectedPlayerHandler < Handler
     include Messaging
     
-    attr_reader :username, :host, :port
+    attr_reader :username, :host, :port, :user_id, :world_id
     
     def log_tag; username; end
     
-    def init server, username, host, port
+    def init server, username, host, port, user_id, world_id
       @server = server
       @server.client = self
       
-      @username, @host, @port = username, host, port
+      @username, @host, @port, @user_id, @world_id = username, host, port
       @minecraft_session_started_at = Time.now
       
       # EM.add_timer(20) { disconnect_and_reconnect }
@@ -19,6 +19,7 @@ module Prism
       @credit_muncher = EventMachine::PeriodicTimer.new(60) do
         debug "recording minute played"
         redis.lpush_hash "players:minute_played", username:username, timestamp:Time.now.utc
+        Resque.push 'high', class: 'MinutePlayedJob', args: [user_id, world_id, Time.now.utc]
       end
       
       listen_once("players:disconnect:#{username}") { exit }
