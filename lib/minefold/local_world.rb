@@ -49,8 +49,10 @@ class LocalWorld
       world = mongo_world world_id
 
       # check s3 for world
-      archived_world = Storage.new.worlds.files.get("#{world_id}.tar.gz")
+      backup_file = world['world_data_file'] || "#{world_id}.tar.gz"
+      archived_world = Storage.new.worlds.files.get(backup_file)
       if archived_world
+        puts "using existing world backup:#{backup_file}"
         new_world = false
         FileUtils.mkdir_p "#{ROOT}/backups"
         archive = "#{ROOT}/backups/#{world_id}.tar.gz"
@@ -62,7 +64,7 @@ class LocalWorld
         end
       else
         new_world = true
-        puts "New world"
+        puts "creating new world data"
       end
 
       # create server.properties
