@@ -64,8 +64,6 @@ module Widget
             Resque.push 'low', class: 'PlayerDeoppedJob', args: [world_id, line.user]
           when :world_stressed
             StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.stressed"
-          when :lag_mentioned
-            StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.lag_mentioned"
           when :port_taken
             stop_world
           end

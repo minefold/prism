@@ -15,9 +15,6 @@ module Widget
         @type = :chat_message
         @user = $1
         @chat_message = $2
-        
-        @type = :lag_mentioned if chat_message =~ /lag/i
-        @log_entry = "[#{user}] #{chat_message}"
       elsif message =~ /Connected players: (.*)$/i
         @type = :connected_players
         @players = $1.strip.split(', ')

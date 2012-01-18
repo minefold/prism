@@ -10,6 +10,7 @@ class LocalWorld
         "allow-nether"     => true,
         "level-name"       => world['_id'].to_s,
         "level-seed"       => world['seed'].to_s,
+        "level-type"       => world['level_type'] || 'DEFAULT',
         "max-players"      => 1000,
         "online-mode"      => (world['online_mode'].nil? ? true : world['online_mode']).to_s,
         "difficulty"       => world['difficulty'].to_s,
@@ -21,7 +22,7 @@ class LocalWorld
         "spawn-monsters"   => (world['spawn_monsters'] || false).to_s,
         "view-distance"    => 10,
         "white-list"       => false
-      }.map {|values| values.join('=')}.join("\n")
+      }
     end
     
     def mongo_worlds
@@ -66,10 +67,9 @@ class LocalWorld
 
       # create server.properties
       File.open(properties_path, 'w') do |file| 
-        properties = server_properties(world, port)
-        p "settings", properties
-        
-        file.puts properties
+        properties = server_properties(world, port).map {|values| values.join('=')}
+        puts "world settings #{properties.join ' '}"
+        file.puts properties.join "\n"
       end
 
       # create ops.txt
@@ -120,9 +120,15 @@ class LocalWorld
     "#{WORLDS}/#{id}"
   end
 
-  def set_last_backup backup_time
-    puts "setting world:#{id} backup:#{backup_time}"
-    MinefoldDb.connection['worlds'].update({'_id' => BSON::ObjectId(id)}, {'$set' => {'backed_up_at' => backup_time}})
+  def set_last_backup backup_file, backup_time
+    puts "backed up world:#{id} file:#{backup_file} time:#{backup_time.to_i}"
+    MinefoldDb.connection['worlds'].update(
+      {'_id' => BSON::ObjectId(id)}, 
+      {'$set' => {
+        'backed_up_at'    => backup_time,
+        'world_data_file' => backup_file
+      }}
+    )
   end
 
   def backup!
@@ -135,11 +141,9 @@ class LocalWorld
     FileUtils.touch world_archive
 
     # tar gz world
-    Dir.chdir WORLDS do
-      puts "Archiving #{world_path} to #{world_archive}"
-      result = TarGz.new.archive id, world_archive, exclude:'server.jar'
-      puts result unless $?.exitstatus == 0
-    end
+    puts "Archiving #{world_path} to #{world_archive}"
+    result = TarGz.new.archive WORLDS, id, world_archive, exclude:'server.jar'
+    puts result unless $?.exitstatus == 0
     raise "error archiving world" unless $?.exitstatus == 0
 
     directory = Storage.new.worlds
@@ -167,7 +171,7 @@ class LocalWorld
         )
       end
 
-      set_last_backup backup_time
+      set_last_backup backup_file, backup_time
 
       FileUtils.rm_f world_archive
     rescue => e

@@ -56,14 +56,19 @@ module Prism
       Prism::RedisUniverse.collect do |universe|
         EM.defer(proc { 
             mongo_connect['worlds'].find_one({"_id"  => BSON::ObjectId(world_id) }) 
-          }, proc { |world| 
-            mongo_connect.collection('users').find_one({"_id"  => BSON::ObjectId(user_id) }) 
-            start_options = WorldAllocator.new(universe).find_box_for_new_world world
+          }, proc { |world|
+            if world
+              mongo_connect.collection('users').find_one({"_id"  => BSON::ObjectId(user_id) }) 
+              start_options = WorldAllocator.new(universe).find_box_for_new_world world
             
-            if start_options[:instance_id]
-              start_world_on_started_worker start_options
+              if start_options[:instance_id]
+                start_world_on_started_worker start_options
+              else
+                start_world_on_new_worker start_options
+              end
             else
-              start_world_on_new_worker start_options
+              info "user:#{username} world:#{world_id} does not exist"
+              redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
             end
           })
       end
