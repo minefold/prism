@@ -2,6 +2,7 @@ require 'fileutils'
 require 'targz'
 
 WORLD_OPS = %W(chrislloyd whatupdave)
+SERVER_JAR = 'https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar'
 
 class LocalWorld
   class << self
@@ -99,10 +100,13 @@ class LocalWorld
       File.open(server_log, "w") {|file| file.print }
       
       # download latest server jar
-      `curl -L https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar -o '#{world_path}/server.jar'`
-      
+      download_server "#{world_path}/server.jar"
 
       puts "finished preparing local world:#{world_id}"
+    end
+    
+    def download_server local_file
+      puts `curl --silent --show-error -RL #{SERVER_JAR} -o '#{local_file}'`
     end
     
     def op_ids world
