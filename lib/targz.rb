@@ -25,8 +25,8 @@ class TarGz
       run_command "tar #{option_string(options)} -C '#{working_directory}' -czf '#{output_file}' '#{path}'"
     end
     
-    def extract archive_file, options = {}
-      run_command "tar #{option_string(options)} -xzf '#{archive_file}'"
+    def extract working_directory, archive_file, options = {}
+      run_command "tar #{option_string(options)} -C '#{working_directory}' -xzf '#{archive_file}'"
     end
   end
   

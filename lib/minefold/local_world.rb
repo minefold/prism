@@ -5,10 +5,10 @@ WORLD_OPS = %W(chrislloyd whatupdave)
 
 class LocalWorld
   class << self
-    def server_properties world, port
+    def server_properties world, level_name, port
       { "allow-flight"     => false,
         "allow-nether"     => true,
-        "level-name"       => world['_id'].to_s,
+        "level-name"       => level_name,
         "level-seed"       => world['seed'].to_s,
         "level-type"       => world['level_type'] || 'DEFAULT',
         "max-players"      => 1000,
@@ -36,40 +36,43 @@ class LocalWorld
     def prepare world_id, port
       puts "preparing local world:#{world_id}"
 
-      world_path = "#{WORLDS}/#{world_id}"
-      properties_path = "#{world_path}/server.properties"
       
-      # create world path if it aint there
-      FileUtils.mkdir_p world_path
-      
-      # download latest server jar
-      `curl -L https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar -o '#{world_path}/server.jar'`
-
       # get world from db
       world = mongo_world world_id
 
       # check s3 for world
       backup_file = world['world_data_file'] || "#{world_id}.tar.gz"
       archived_world = Storage.new.worlds.files.get(backup_file)
+      level_name = 'level'
+      world_path = "#{WORLDS}/#{world_id}"
+      FileUtils.mkdir_p world_path
+      
       if archived_world
-        puts "using existing world backup:#{backup_file}"
-        new_world = false
-        FileUtils.mkdir_p "#{ROOT}/backups"
-        archive = "#{ROOT}/backups/#{world_id}.tar.gz"
-        File.open(archive, "w") do |tar|
-          tar.write archived_world.body
-        end
-        Dir.chdir WORLDS do
-          TarGz.new.extract archive
-        end
-      else
-        new_world = true
-        puts "creating new world data"
-      end
+        backup_dir = "#{ROOT}/backups"
+        FileUtils.mkdir_p backup_dir
+        archive = "#{backup_dir}/#{world_id}.tar.gz"
+        File.open(archive, "w") {|tar| tar.write archived_world.body }
+        TarGz.new.extract backup_dir, archive
+        
+        # find world and level dirs
+        level_dir = File.dirname(`find #{backup_dir} -iname level\.dat | head -n1`.strip)
+        extracted_world_dir = File.dirname level_dir
+        level_name = File.basename level_dir
+          
+        # move to world_path
+        puts "extracted world dir:#{extracted_world_dir} => #{world_path}"
+        FileUtils.rm_rf world_path
+        FileUtils.mv extracted_world_dir, world_path
 
+        puts "using existing world backup:#{backup_file} level_data:#{world_path}/#{level_name}"
+      else
+        puts "no backup found for:#{backup_file} creating new world data"
+      end
+      
       # create server.properties
+      properties_path = "#{world_path}/server.properties"
       File.open(properties_path, 'w') do |file| 
-        properties = server_properties(world, port).map {|values| values.join('=')}
+        properties = server_properties(world, level_name, port).map {|values| values.join('=')}
         puts "world settings #{properties.join ' '}"
         file.puts properties.join "\n"
       end
@@ -94,6 +97,10 @@ class LocalWorld
       # clear server log
       server_log = File.join(world_path, "server.log")
       File.open(server_log, "w") {|file| file.print }
+      
+      # download latest server jar
+      `curl -L https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar -o '#{world_path}/server.jar'`
+      
 
       puts "finished preparing local world:#{world_id}"
     end
