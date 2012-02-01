@@ -23,9 +23,9 @@ module Prism
             User.new mongo_connect.collection('users').find_and_modify({ query: {"_id"  => BSON::ObjectId(user_id) }, update:update })
           }, proc { |user|
             if user.unlimited?
-              info "played:#{user['minutes_played']} minutes [UNLIMITED]"
+              info "played:#{user.minutes_played} minutes [UNLIMITED]"
             else
-              info "deducting 1 credit. #{user.credits} remaining. Played:#{user['minutes_played']} minutes"
+              info "deducting 1 credit. #{user.credits} remaining. Played:#{user.minutes_played} minutes"
               credits_updated user_id, user.credits
             end
           })

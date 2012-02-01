@@ -51,4 +51,8 @@ class User
   def credits
     @doc['credits']
   end
+  
+  def minutes_played
+    @doc['minutes_played']
+  end
 end
