@@ -1,0 +1,3 @@
+#!/bin/sh
+
+ssh -i $EC2_SSH ubuntu@$(ec2-describe-instances --hide-tags | grep $1 | cut -f4)

@@ -15,7 +15,7 @@ PUSHER_URL="http://d6ddfd6bf3e166ae0ce6:aa7e63965d17d964678c@api.pusherapp.com/a
 MAPPER = "~/code/minefold/pigmap/pigmap"
 MIXPANEL_TOKEN = nil
 AIRBRAKE_TOKEN = nil
-WORLDS_BUCKET = 'minefold-development-worlds'
+WORLDS_BUCKET = 'minefold.production.worlds'
 
 Fold.workers = :local
 Fold.worker_user = ENV['USER']
@@ -30,5 +30,5 @@ Storage.provider = Fog::Storage.new({
   :aws_access_key_id        => EC2_ACCESS_KEY
 })
 
-StatsD.logger = Logger.new(STDOUT)
+StatsD.logger = Logger.new('/dev/null')
 StatsD.mode = :development

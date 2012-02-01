@@ -101,7 +101,8 @@ namespace :widget do
   
   task :deploy do
     set_host
-    ssh "ps -eF | grep '[r]uby' | awk '{print $2}' | sudo xargs kill"
+    ENV['BRANCH'] ||= 'master'
+    ssh "cd /opt/widget && sudo GIT_SSH=/home/fold/.ssh/deploy-wrapper git pull origin #{ENV['BRANCH']} && bin/restart-widget"
   end
 end
 
@@ -130,7 +131,7 @@ end
 namespace :atlas do
   task :deploy do
     ENV['HOST'] ||= 'mapper.minefold.com'
-    ssh "cd atlas && git pull origin master && sudo restart atlas"
+    ssh "cd atlas && git pull origin master && sudo stop atlas && rm -rf tmp && sudo start atlas"
   end
 end
 

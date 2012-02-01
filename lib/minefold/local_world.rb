@@ -37,7 +37,6 @@ class LocalWorld
     def prepare world_id, port
       puts "preparing local world:#{world_id}"
 
-      
       # get world from db
       world = mongo_world world_id
 

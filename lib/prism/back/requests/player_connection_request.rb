@@ -9,11 +9,10 @@ module Prism
     def run
       debug "processing #{username}"
 
-      EM.defer(proc { mongo_connect.collection('users').find_one(:safe_username => username.downcase) }, proc { |user|
+      User.find_by_username username do |user|
         if user
-          @mp_id, @mp_name = user['_id'].to_s, username
-
-          if user['unlimited'] || user['credits'] > 0
+          @mp_id, @mp_name = user.id.to_s, username
+          if user.has_credit?
             recognised_player_connecting user
           else
             mixpanel_track 'bounced'
@@ -23,17 +22,21 @@ module Prism
           mixpanel_track 'rejected'
           unrecognised_player_connecting
         end
-      })
+      end
     end
 
     def recognised_player_connecting user
-      user_id, world_id = "#{user['_id']}", "#{user['current_world_id']}"
+      user_id, world_id = user.id.to_s, user.current_world_id.to_s
       debug "found user:#{user_id} world:#{world_id}"
 
       if world_id && world_id.size > 0
         redis.hset "usernames", username, user_id
         redis.hset "players:playing", username, world_id
-        redis.lpush_hash "players:world_request", username:username, user_id:user_id, world_id:world_id, credits:user['credits']
+        redis.lpush_hash "players:world_request", 
+          username: username, 
+           user_id: user_id, 
+          world_id: world_id, 
+           credits: user.credits
 
         record_connection user_id, world_id
       else

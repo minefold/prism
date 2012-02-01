@@ -9,6 +9,7 @@ require 'debugger'
 require 'prism/back'
 require 'widget'
 require 'mixpanel'
+require 'eventmachine/graceful'
 
 # Usage: widget instance_id host
 
@@ -89,6 +90,7 @@ module Widget
 
       Widget::WorldProcessWatcher.poll pid, stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues do |ww|
         ww.on_process_exit = proc do
+          # EM.start_work 
           info "process exited. Starting backup"
           redis.hset_hash "worlds:busy", world_id, state:'stopping'
           RUNNING_WORLDS.delete world_id
@@ -241,6 +243,8 @@ module Widget
   end
   
   EM.run do
+    EM.stop_gracefully
+    
     EM.error_handler do |e| 
       Toadhopper(AIRBRAKE_TOKEN).post!(e) if AIRBRAKE_TOKEN
       raise
