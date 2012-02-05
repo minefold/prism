@@ -37,7 +37,7 @@ class User
   end
   
   def unlimited?
-    valid_plan? or (not @doc['unlimited'].nil?)
+    valid_plan? or @doc['unlimited'] or @doc['beta']
   end
   
   def valid_plan?

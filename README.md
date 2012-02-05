@@ -48,52 +48,33 @@ players:disconnecting
 
 workers:not_responding
 
+# game packs
+
+example game pack
+
+minecraft:
+  version: (HEAD | 1.1 | bukkit-1.1)
+  plugins:
+    dynmap:
+      enabled: true
+    rpg:
+      villages: true
       
-# allocation
-  a world has a weight of 200, player 100
-  instance can carry 5 * 1024 = 5120
-  instance is available or will be available
-
-# todo
-  make sure each request won't double up (worker start, world start)
-  recover from failures to start world, worker
-  recover from timeouts
-  regularly sweep workers
-
-
-# mapper
-worker: bundle exec rake resque:work QUEUE=worlds_to_map
+minefold-env-gamepacks
+  minecraft/
+    HEAD.tar.gz/
+      run.sh
+    1.1/
+      run.sh
+      server.jar
+    1.0/
+      run.sh
+      server.jar
 
 
-# logs
-ssh -i .ssh/minefold2.pem ubuntu@mars.minefold.com -t "sudo tail -fn 500 /var/log/syslog"
-ssh -i .ssh/minefold2.pem ubuntu@mars.minefold.com -t "sudo tail -fn 500 /var/log/syslog | grep total\:"
-ssh -i .ssh/minefold2.pem ubuntu@mars.minefold.com -t "sudo tail -fn 500 /var/log/syslog | grep chat_message"
+ENV:
+  MIN_HEAP_SIZE
+  MAX_HEAP_SIZE
 
 
 
-# messaging design:
-
-each process has one mailbox (eg. mailbox:prism)
-jobs get pushed onto queue (eg. jobs:player_connection)
-each job has a unique id for RPC purposes
-
-eg.
-
-reddy.pop 'mailbox:prism' do |name, data|
-
-end
-
-reddy.queue 'jobs:prism_back', {
-  callback: 'mailbox:prism',
-  name: 'player_connection',
-  data: {
-    username: 'whatupdave',
-    remote_ip: '1'
-  }
-} # 4ed2a69c2013df05d8000001
-
-
-reddy.rpc 'jobs:prism_back', 'player_connection', username: 'whatupdave', remote_ip: '1' do |result|
-  ...
-end
