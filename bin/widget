@@ -244,12 +244,7 @@ module Widget
   
   EM.run do
     EM.stop_gracefully
-    
-    EM.error_handler do |e| 
-      Toadhopper(AIRBRAKE_TOKEN).post!(e) if AIRBRAKE_TOKEN
-      raise
-    end
-    
+        
     instance_id = ARGV.shift || ENV['INSTANCE_ID']
            host = ARGV.shift || ENV['INSTANCE_IP']
 
