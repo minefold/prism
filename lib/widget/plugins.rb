@@ -23,3 +23,5 @@ module Widget
     def player_disconnected username; end
   end
 end
+
+Dir[File.expand_path('../plugins/*.rb', __FILE__)].each { |f| require f }

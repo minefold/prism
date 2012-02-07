@@ -54,7 +54,7 @@ example game pack
 
 World:
   _id: 1234
-  game: 
+  runpack:
     name: minecraft
     version: HEAD
     plugins:

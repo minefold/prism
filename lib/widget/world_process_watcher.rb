@@ -1,4 +1,4 @@
-module Widget
+  module Widget
   class WorldProcessWatcher
     def self.poll pid, *args
       watcher = new *args
@@ -16,7 +16,7 @@ module Widget
   
     attr_accessor :on_process_exit, :on_world_stopped, :on_players_listed, :on_player_connected, :on_player_disconnected
     
-    attr_reader :stdin, :stdout, :world_id, :instance_id, :host, :port, :redis, :stdin_queues, :stop_queues, :plugins
+    attr_reader :runpack, :stdin, :stdout, :world_id, :instance_id, :host, :port, :redis, :stdin_queues, :stop_queues, :plugins
     
     def stop_queue
       stop_queues[world_id]
@@ -26,7 +26,8 @@ module Widget
       stdin_queues["workers:#{instance_id}:worlds:#{world_id}:stdin"]
     end
   
-    def initialize stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues
+    def initialize runpack, stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues
+      @runpack = runpack
       @stdin, @stdout = stdin, stdout
       @world_id, @instance_id, @host, @port = world_id, instance_id, host, port
       @stdin_queues, @stop_queues = stdin_queues, stop_queues
@@ -37,15 +38,14 @@ module Widget
       stop_queue.pop { stop_world }
     
       EM.add_timer(10) { send_line "list" }
-      @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
       
-      EM.file_tail(stdout, Widget::WorldLineReader) do |reader| 
+      EM.file_tail(stdout, Widget::WorldLineReader, 0) do |reader| 
         reader.on_line = proc do |line|
           info ["mc", world_id, line.type], line.log_entry
 
           case line.type
           when :chat_message
-            Resque.push('high', :class => 'ProcessChatJob', :args => [ "#{world_id}", line.chat_user, line.chat_message ])
+            Resque.push('high', :class => 'ProcessChatJob', :args => [ world_id.to_s, line.chat_user, line.chat_message ])
           when :connected_players
             plugins.each {|p| p.players_listed line.players }
             on_players_listed.call line.players
@@ -77,56 +77,19 @@ module Widget
     end
   
     def send_line line
-      File.open(stdin, 'a') {|f| f.puts line }
+      runpack.send_line line
     end
   
     def unbind
-      @backup_timer.cancel if @backup_timer
+      runpack.world_stopped do
+        on_world_stopped.call 
+        plugins.each &:world_backed_up
+      end
+      
       on_process_exit.call
       plugins.each &:world_stopped
-      
-      @backup_waiter = EM.add_periodic_timer(10) do
-        unless @backup_in_progress
-          @backup_waiter.cancel
-          EM.defer(proc { 
-              begin
-                Process.waitpid fork { LocalWorld.new(world_id).backup! }
-              rescue => e
-                info "ERROR: backup on world stop failed: #{e.message}\n#{e.backtrace}"
-              end
-            },
-            proc { 
-              on_world_stopped.call 
-              plugins.each &:world_backed_up
-            })
-        end 
-      end
-      
     end
-  
-    def backup_world
-      @backup_in_progress = true
-      info "starting backup"
-      send_line "save-off"
-      send_line "save-all"
-      EM.add_timer 3 do
-        EM.defer(
-          proc { 
-            begin
-              StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.backup"
-              Process.waitpid fork { LocalWorld.new(world_id).backup! }
-            rescue => e
-              info "ERROR: backup failed: #{e.message}\n#{e.backtrace}"
-            end
-            }, 
-          proc { 
-            send_line "save-on"
-            @backup_in_progress = false
-            plugins.each &:world_backed_up
-          })
-      end
-    end
-  
+    
     def process_stdin
       stdin_queue.pop { |message| send_line message; EM.next_tick { process_stdin } }
     end

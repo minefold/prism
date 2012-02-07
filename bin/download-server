@@ -1,8 +1,0 @@
-#!/usr/bin/env ruby
-require 'fileutils'
-
-worlds_root = ARGV.shift
-
-FileUtils.mkdir_p worlds_root
-
-`curl -L https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar -o '#{worlds_root}/server.jar'`

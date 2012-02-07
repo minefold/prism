@@ -57,10 +57,13 @@ module Widget
           puts "Found running world:#{pid_file}"
           world_id, port = File.basename(pid_file).split('.')
           port = port.to_i
+          world_path = "#{WORLDS}/#{world_id}"
 
           Prism.redis.store_running_world instance_id, world_id, host, port
           create_world_in_queues world_id
-          watch_world pid_file
+          
+          runpack = Widget::Runpack.deserialize world_path, world_id, port
+          watch_world runpack, pid_file
         else
           puts "Found dead world:#{pid_file}"
           FileUtils.rm_f pid_file
@@ -79,7 +82,7 @@ module Widget
       puts "started #{Fold.env} mode"
     end
     
-    def watch_world pid_file
+    def watch_world runpack, pid_file
       pid = read_pid_file pid_file
       world_id, port = File.basename(pid_file).split('.')
       port = port.to_i
@@ -88,7 +91,7 @@ module Widget
       world_path = "#{WORLDS}/#{world_id}"
       stdin, stdout = "#{world_path}/world.stdin", "#{world_path}/world.stdout"
 
-      Widget::WorldProcessWatcher.poll pid, stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues do |ww|
+      Widget::WorldProcessWatcher.poll pid, runpack, stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues do |ww|
         ww.on_process_exit = proc do
           # EM.start_work 
           info "process exited. Starting backup"
@@ -139,31 +142,26 @@ module Widget
 
         RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
 
-        EM.defer(
-          proc { 
-            begin
-              StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.prepared"
-              pid = fork { LocalWorld.prepare world_id, port }
-              Process.waitpid pid
-              port
-            rescue => e
-              puts "ERROR: failed to prepare:#{world_id} #{e}"
-              nil
-            end
-          },
-          proc { |port|
-            begin
-              if port
-                create_world_in_queues world_id
-                spawn_world world_id, port, world_start['min_heap_size'], world_start['max_heap_size']
-              else
-                redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
-              end
-            rescue => e
-              puts "ERROR: failed to spawn minecraft:#{e}"
-              redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
-            end
-        })
+        info world_id, "preparing local world on port:#{port}"
+        
+        runpack = Widget::Runpack.create world_id, port, world_start['runpack']
+        
+        op = runpack.prepare
+        op.errback do |error|
+          puts "ERROR: failed to prepare:#{world_id} #{error}\n#{error.backtrace}"
+          redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
+        end
+        op.callback do
+          begin
+            info world_id, "finished preparing local world"
+            
+            create_world_in_queues world_id
+            runpack.start(port, world_start['heap_size'], world_start['heap_size']) {|pid| watch_world runpack, pid }
+          rescue => e
+            puts "ERROR: failed to spawn minecraft:#{e}\n#{e.backtrace}"
+            redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
+          end
+        end
       end
     end
     
@@ -198,22 +196,10 @@ module Widget
         end
       rescue => e
         redis.hdel "worlds:busy", world_id
-        puts "ERROR: failed to stop world:#{e}"
+        puts "ERROR: failed to stop world #{e}\n#{e.backtrace}"
       end
     end
-    
-    def spawn_world world_id, port, min_heap_size, max_heap_size
-      world_path = "#{WORLDS}/#{world_id}"
-      pid_file = "#{PID_PATH}/#{world_id}.#{port}"
-      cmd = "java -Xmx#{max_heap_size}M -Xms#{min_heap_size}M -jar server.jar nogui"
-
-      StatsD.increment "boxes.#{instance_id}.worlds.#{world_id}.spawned"
-      
-      Pot.spawn_pot_process world_path, pid_file, cmd, "world.stdin", "world.stdout", "world.stdout" do
-        watch_world pid_file
-      end
-    end
-    
+        
     def world_count
       RUNNING_WORLDS.size
     end
@@ -244,11 +230,6 @@ module Widget
   
   EM.run do
     EM.stop_gracefully
-    
-    EM.error_handler do |e| 
-      Toadhopper(AIRBRAKE_TOKEN).post!(e) if AIRBRAKE_TOKEN
-      raise
-    end
     
     instance_id = ARGV.shift || ENV['INSTANCE_ID']
            host = ARGV.shift || ENV['INSTANCE_IP']

@@ -13,26 +13,24 @@ module Prism
     end
 
     class Local < Base
-      def self.create options = {}
-        @deferrable = EM::DefaultDeferrable.new
-    
-        if @local_box
-          @deferrable.succeed @local_box
-        else
-          @deferrable.succeed @local_box = begin
-            local_instance_id = `hostname`.strip
-            puts "starting local box"
-            EM.popen3 "#{BIN}/widget '#{local_instance_id}' '0.0.0.0'", LocalWidgetHandler
-      
-            Local.new local_instance_id
-          end
+      def self.local_box
+        @local_box ||= begin
+          local_instance_id = `hostname`.strip
+          puts "starting local box"
+          Local.new local_instance_id
         end
-        @deferrable
+      end
+      
+      def self.create options = {}
+        op = EM::DefaultDeferrable.new
+        EM.next_tick { op.succeed local_box }
+        op
       end
   
       def self.all *c, &b
-        handler = EM::Callback(*c, &b)
-        handler.call Array(@local_box)
+        cb = EM::Callback(*c, &b)
+        cb.call Array(local_box)
+        cb
       end
   
       def initialize instance_id
@@ -45,6 +43,7 @@ module Prism
       def query_state *c,&b
         cb = EM::Callback(*c,&b)
         cb.call 'running'
+        cb
       end
       
     end

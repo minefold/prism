@@ -50,6 +50,19 @@ module Prism
       end
     end
     
+    def op_ids world
+      [world['creator_id']] + 
+       world['memberships'].
+         select {|m| m['role'] == 'op' }.
+            map {|m| m['user_id']}
+    end
+    
+    def op_usernames world
+      MinefoldDb.connection['users'].
+        find('_id' => { '$in' => op_ids(world) }).
+        map {|u| u['username']}
+    end
+    
     def start_world
       debug "getting world:#{world_id} started"
       
@@ -60,6 +73,27 @@ module Prism
             if world
               mongo_connect.collection('users').find_one({"_id"  => BSON::ObjectId(user_id) }) 
               start_options = WorldAllocator.new(universe).find_box_for_new_world world
+              start_options.merge! world_id: world_id,
+                runpack: (world['runpack'] || {
+                           name: 'Minecraft',
+                        version: 'HEAD',
+
+                      data_file: world['world_data_file'] || "#{world_id}.tar.gz",
+                            ops: op_usernames(world),
+
+              # TODO: move these into a nested hash
+                           seed: world['seed'],
+                     level_type: world['level_type'],
+                    online_mode: world['online_mode'],
+                     difficulty: world['difficulty'],
+                      game_mode: world['game_mode'],
+                            pvp: world['pvp'],
+                  spawn_animals: world['spawn_animals'],
+                 spawn_monsters: world['spawn_monsters'],
+                      
+                        plugins: []
+                })
+
             
               if start_options[:instance_id]
                 start_world_on_started_worker start_options
@@ -79,11 +113,7 @@ module Prism
       debug "starting world:#{world_id} on worker:#{instance_id} heap:#{options[:heap_size]}"
       
       redis.hset_hash "worlds:busy", world_id, state:'starting'
-      redis.lpush_hash "workers:#{instance_id}:worlds:requests:start",
-          instance_id: instance_id, 
-             world_id: world_id, 
-        min_heap_size: options[:heap_size], 
-        max_heap_size: options[:heap_size]
+      redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", options 
       
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
         if world['failed']
