@@ -52,24 +52,19 @@ workers:not_responding
 
 example game pack
 
-minecraft:
-  version: (HEAD | 1.1 | bukkit-1.1)
-  plugins:
-    dynmap:
-      enabled: true
-    rpg:
-      villages: true
-      
-minefold-env-gamepacks
-  minecraft/
-    HEAD.tar.gz/
-      run.sh
-    1.1/
-      run.sh
-      server.jar
-    1.0/
-      run.sh
-      server.jar
+World:
+  _id: 1234
+  game: 
+    name: minecraft
+    version: HEAD
+    plugins:
+      worldguard:
+        enabled: true
+      dynmap:
+        enabled: true
+      rpg:
+        villages: true
+
 
 
 ENV:
