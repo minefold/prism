@@ -39,7 +39,7 @@ module Widget
       EM.add_timer(10) { send_line "list" }
       @backup_timer = EM.add_periodic_timer(10 * 60) { backup_world }
       
-      EM.file_tail(stdout, Widget::WorldLineReader) do |reader| 
+      EM.file_tail(stdout, Widget::WorldLineReader, 0) do |reader|
         reader.on_line = proc do |line|
           info ["mc", world_id, line.type], line.log_entry
 

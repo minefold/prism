@@ -245,8 +245,8 @@ module Widget
   EM.run do
     EM.stop_gracefully
         
-    instance_id = ARGV.shift || ENV['INSTANCE_ID']
-           host = ARGV.shift || ENV['INSTANCE_IP']
+    instance_id = ARGV.shift || ENV['INSTANCE_ID'] || `hostname`.strip
+           host = ARGV.shift || ENV['INSTANCE_IP'] || '0.0.0.0'
 
     raise "specify INSTANCE_ID and INSTANCE_IP" unless instance_id && host
     
