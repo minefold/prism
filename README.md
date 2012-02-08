@@ -50,6 +50,14 @@ workers:not_responding
 
 # game packs
 
+GameServers:
+  type: minecraft
+  versions:
+    name: 1.1
+    etag: 12345678
+    
+minefold-production-game-servers/minecraft/1.1/server.jar
+
 example game pack
 
 World:

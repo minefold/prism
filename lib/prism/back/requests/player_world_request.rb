@@ -76,7 +76,7 @@ module Prism
               start_options.merge! world_id: world_id,
                 runpack: (world['runpack'] || {
                            name: 'Minecraft',
-                        version: 'HEAD',
+                        version: 'HEAD', #'HEAD',
 
                       data_file: world['world_data_file'] || "#{world_id}.tar.gz",
                             ops: op_usernames(world),

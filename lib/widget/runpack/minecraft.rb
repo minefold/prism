@@ -2,7 +2,7 @@ require 'fileutils'
 require 'targz'
 
 WORLD_OPS = %W(chrislloyd whatupdave)
-SERVER_JAR = 'https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar'
+HEAD_SERVER_JAR = 'https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar'
 
 module Widget
   module Runpack
@@ -213,7 +213,13 @@ module Widget
       end
       
       def download_server
-        puts `curl --silent --show-error -RL #{SERVER_JAR} -o '#{world_path}/server.jar'`
+        info "downloading minecraft server version:#{options['version']}"
+        if options['version'] == 'HEAD'
+          info `curl --silent --show-error -RL #{HEAD_SERVER_JAR} -o '#{world_path}/server.jar'`
+        else
+          server_key = Storage.new.game_servers.files.get("minecraft/#{options['version']}/server.jar")
+          File.write("#{world_path}/server.jar", server_key.body)
+        end
       end
       
       def server_properties
@@ -235,13 +241,21 @@ module Widget
           "white-list"       => false
         }
       end
-            
+      
+      def mongo
+        @mongo ||= MinefoldDb.connection
+      end
+      
       def mongo_worlds
-        MinefoldDb.connection['worlds']
+        mongo['worlds']
       end
 
       def mongo_world world_id
         mongo_worlds.find_one('_id' => BSON::ObjectId(world_id))
+      end
+      
+      def server_versions
+        mongo['game_servers'].find(name: 'minecraft')
       end
       
       def set_backup_info backup_file, backup_time
