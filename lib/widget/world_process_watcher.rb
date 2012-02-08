@@ -39,7 +39,7 @@
     
       EM.add_timer(10) { send_line "list" }
       
-      EM.file_tail(stdout, Widget::WorldLineReader, 0) do |reader| 
+      EM.file_tail(stdout, Widget::WorldLineReader, 0) do |reader|
         reader.on_line = proc do |line|
           info ["mc", world_id, line.type], line.log_entry
 
