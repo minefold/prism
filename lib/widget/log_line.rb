@@ -11,8 +11,6 @@ module Widget
     
       @log_entry = message || line
       
-      puts "message: #{message}"
-    
       if message =~ /^\<(\w+)\> (.*)/
         @type = :chat_message
         @user = $1

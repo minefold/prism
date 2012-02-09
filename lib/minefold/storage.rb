@@ -8,6 +8,6 @@ class Storage
   end
   
   def game_servers
-    Storage.provider.directories.create :key => "minefold-#{Fold.env}-game-servers", :public => false
+    Storage.provider.directories.create :key => "minefold-runpacks", :public => false
   end
 end  

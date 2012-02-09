@@ -138,119 +138,23 @@ namespace :graphite do
 end
 
 namespace :servers do
-  
+  require 'yaml'
   require 'prism/back'
+  require 'minefold/game_server_updater'
+  
   include Prism::Mongo
   def mongo
     @mongo ||= mongo_connect
   end
   
-  namespace :bukkit do
-    desc "update bukkit server"
-    task :update do
-      server_url = 'http://repo.bukkit.org/service/local/artifact/maven/redirect?g=org.bukkit&a=craftbukkit&v=RELEASE&r=releases'
-      jar_info = `curl -IL --silent --show-error '#{server_url}'`.strip.split("\n").each_with_object({}) do |line, h| 
-        if line.include? ':'
-          key, value = line.split(':', 2)
-          h[key] = value.strip.gsub('"', '')
-        end
-      end
-      
-      # p jar_info
-
-      current_etag = jar_info['ETag']
-
-      minecraft_servers = mongo['game_servers'].find_one({:name => 'minecraft'})
-      unless minecraft_servers and minecraft_servers['versions'].any?{|v| v['etag'] == current_etag }
-        # download server
-        puts "downloading new bukkit server #{jar_info['Last-Modified']}"
-        local_file = "tmp/bukkit/#{current_etag}/server.jar"
-        FileUtils.mkdir_p File.dirname(local_file)
-        
-        puts `curl --silent --show-error -L '#{server_url}' -o #{local_file}`
-
-        # determine server version
-        version = ENV['VERSION']
-        version = "bukkit-#{version}" unless version.include? 'bukkit'
-        raise 'Need VERSION' unless version
-
-        # upload server
-        remote_file = "minecraft/#{version}/server.jar"
-        puts "uploading #{remote_file}"
-        bucket = Storage.new.game_servers
-
-        bucket.files.create(
-          key: remote_file,
-          body: File.read(local_file),
-          public: false
-        )
-
-        version_info = { 
-          'name' => version,
-          'etag' => current_etag,
-          'created_at' => Time.parse(jar_info['Last-Modified'])
-        }
-
-        # record server in database
-        mongo['game_servers'].update({
-          name: 'minecraft'
-        }, {
-          '$push' => { 'versions' => version_info }
-        }, upsert: true)
-        puts "saved #{version_info.inspect}"
-      end
-    end
-  end
-  
-  desc "store latest server"
+  desc "download and store latest servers"
   task :update do
-    server_url = 'https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar'
-    jar_info = `curl -I --silent --show-error #{server_url}`.strip.split("\n").each_with_object({}) do |line, h| 
-      if line.include? ':'
-        key, value = line.split(':', 2)
-        h[key] = value.strip.gsub('"', '')
-      end
-    end
-  
-    current_etag = jar_info['ETag']
+    mongo['game_servers'].remove
     
-    minecraft_servers = mongo['game_servers'].find_one({:name => 'minecraft'})
-    unless minecraft_servers and minecraft_servers['versions'].any?{|v| v['etag'] == current_etag }
-      local_file = "tmp/#{current_etag}/server.jar"
-      FileUtils.mkdir_p File.dirname(local_file)
-      
-      # download server
-      puts "downloading new minecraft server #{jar_info['Last-Modified']} #{local_file}"
-      `curl --silent --show-error -L #{server_url} -o #{local_file}`
-      
-      # determine server version
-      version = ENV['VERSION']
-      raise 'Need VERSION' unless version
-      
-      # upload server
-      remote_file = "minecraft/#{version}/bukkit.jar"
-      puts "uploading #{remote_file}"
-      bucket = Storage.new.game_servers
-      
-      bucket.files.create(
-        key: remote_file,
-        body: File.read(local_file),
-        public: false
-      )
-      
-      version_info = { 
-        'name' => version,
-        'etag' => current_etag,
-        'created_at' => Time.parse(jar_info['Last-Modified'])
-      }
-      
-      # record server in database
-      mongo['game_servers'].update({
-        name: 'minecraft'
-      }, {
-        '$push' => { 'versions' => version_info }
-      }, upsert: true)
-      puts "saved #{version_info.inspect}"
+    servers = YAML.load File.read('servers.yaml')
+    
+    servers['games'].each do |game|
+      GameServerUpdater.new(game).update
     end
   end
 end

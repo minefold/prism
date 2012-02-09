@@ -1,0 +1,16 @@
+---
+games:
+- name: minecraft
+  
+  versions:
+  - name: HEAD
+    url: https://s3.amazonaws.com/MinecraftDownload/launcher/minecraft_server.jar
+    
+  - name: bukkit-1.1-R3
+    url: http://repo.bukkit.org/service/local/artifact/maven/redirect?g=org.bukkit&a=craftbukkit&v=RELEASE&r=releases
+
+    plugins:
+    - name: WorldEdit
+      version: 5.1.1
+      url: http://dev.bukkit.org/media/files/569/223/worldedit-5.1.1.zip
+      file: WorldEdit.jar

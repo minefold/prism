@@ -44,6 +44,7 @@ module Widget
             remove_ban_list
             truncate_server_log
             download_server
+            configure_plugins
             Widget::Runpack.serialize world_path, self
 
             op.succeed
@@ -180,6 +181,15 @@ module Widget
         end
       end
       
+      def configure_plugins
+        options['plugins'].each do |plugin|
+          name, version = plugin['name'], plugin['version']
+          
+          info "adding plugin #{name} #{version}"
+          download_pack_file "plugins/#{name}/#{version}/#{name}.jar", "plugins/#{name}.jar"
+        end
+      end
+      
       def create_server_properties
         properties = server_properties.map {|values| values.join('=')}
         info "world settings #{properties.join ' '}"
@@ -217,9 +227,16 @@ module Widget
         if options['version'] == 'HEAD'
           info `curl --silent --show-error -RL #{HEAD_SERVER_JAR} -o '#{world_path}/server.jar'`
         else
-          server_key = Storage.new.game_servers.files.get("minecraft/#{options['version']}/server.jar")
-          File.write("#{world_path}/server.jar", server_key.body)
+          download_pack_file 'server.jar', 'server.jar'
         end
+      end
+      
+      def download_pack_file remote_file, local_file
+        remote_path = "minecraft/#{options['version']}/#{remote_file}"
+        server_key = Storage.new.game_servers.files.get(remote_path)
+        raise "File not found: #{remote_path}" unless server_key
+        
+        File.write("#{world_path}/#{local_file}", server_key.body)
       end
       
       def server_properties
