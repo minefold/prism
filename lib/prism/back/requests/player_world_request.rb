@@ -73,32 +73,26 @@ module Prism
             if world
               mongo_connect.collection('users').find_one({"_id"  => BSON::ObjectId(user_id) }) 
               start_options = WorldAllocator.new(universe).find_box_for_new_world world
-              start_options.merge! world_id: world_id,
-                runpack: (world['runpack'] || {
-                           name: 'Minecraft',
-                        version: 'bukkit-1.1-R3', # HEAD, 1.1, bukkit-1.1-R3
+              runpack_defaults = {
+                         name: 'Minecraft',
+                      version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
 
-                      data_file: world['world_data_file'] || "#{world_id}.tar.gz",
-                            ops: op_usernames(world),
+                    data_file: world['world_data_file'] || "#{world_id}.tar.gz",
+                          ops: op_usernames(world),
 
-              # TODO: move these into a nested hash
-                           seed: world['seed'],
-                     level_type: world['level_type'],
-                    online_mode: world['online_mode'],
-                     difficulty: world['difficulty'],
-                      game_mode: world['game_mode'],
-                            pvp: world['pvp'],
-                  spawn_animals: world['spawn_animals'],
-                 spawn_monsters: world['spawn_monsters'],
-                      
-                        plugins: [{
-                          name: 'WorldEdit',
-                          version: '5.1.1'
-                        }, {
-                          name: 'WorldGuard',
-                          version: '5.4'
-                        }]
-                })
+                         seed: world['seed'],
+                   level_type: world['level_type'],
+                  online_mode: world['online_mode'],
+                   difficulty: world['difficulty'],
+                    game_mode: world['game_mode'],
+                          pvp: world['pvp'],
+                spawn_animals: world['spawn_animals'],
+               spawn_monsters: world['spawn_monsters'],
+                    
+                      plugins: []
+              }
+              
+              start_options.merge! world_id: world_id, runpack: runpack_defaults.merge(world['runpack'] || {})
 
             
               if start_options[:instance_id]

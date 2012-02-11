@@ -90,6 +90,8 @@ module Widget
       world_state = RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
       world_path = "#{WORLDS}/#{world_id}"
       stdin, stdout = "#{world_path}/world.stdin", "#{world_path}/world.stdout"
+      
+      [stdin, stdout].each {|f| File.write(f, '') }
 
       Widget::WorldProcessWatcher.poll pid, runpack, stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues do |ww|
         ww.on_process_exit = proc do
