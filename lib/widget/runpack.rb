@@ -10,7 +10,12 @@ module Widget
     end
     
     def self.deserialize world_path, world_id, port
-      json = JSON.parse File.read("#{world_path}/runpack.json")
+      json = {
+        'name' => 'Minecraft'
+      }
+      if File.exist? "#{world_path}/runpack.json"
+        json = JSON.parse File.read("#{world_path}/runpack.json")
+      end
       klass = json['name'].constantize
       klass.new(world_id, port, json['options'])
     end
