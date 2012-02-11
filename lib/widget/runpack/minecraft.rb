@@ -138,6 +138,7 @@ module Widget
         world_archive = "#{ROOT}/backups/#{world_id}.tar.gz"
 
         # having this file present lets others know there is a backup in process
+        FileUtils.mkdir_p File.dirname(world_archive)
         FileUtils.touch world_archive
 
         # tar gz world
