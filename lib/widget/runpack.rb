@@ -3,10 +3,11 @@ Dir[File.expand_path('../runpack/*.rb', __FILE__)].each { |f| require f }
 module Widget
   module Runpack
     def self.serialize world_path, runpack
-      File.write("#{world_path}/runpack.json", {
+      File.open("#{world_path}/runpack.json", 'w') {|f| f.write({
         name: runpack.class.name,
         options: runpack.options
-      }.to_json)
+      }.to_json) }
+      # File.write("#{world_path}/runpack.json", )
     end
     
     def self.deserialize world_path, world_id, port

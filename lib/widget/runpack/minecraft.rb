@@ -235,8 +235,9 @@ module Widget
         remote_path = "minecraft/#{options['version']}/#{remote_file}"
         server_key = Storage.new.game_servers.files.get(remote_path)
         raise "File not found: #{remote_path}" unless server_key
-        
-        File.write("#{world_path}/#{local_file}", server_key.body)
+
+        File.open("#{world_path}/#{local_file}", 'w') {|f| f.write(server_key.body) }
+        # File.write("#{world_path}/#{local_file}", server_key.body)
       end
       
       def server_properties
