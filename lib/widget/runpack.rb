@@ -11,7 +11,7 @@ module Widget
     
     def self.deserialize world_path, world_id, port
       json = {
-        'name' => 'Minecraft'
+        'name' => 'Widget::Runpack::Minecraft'
       }
       if File.exist? "#{world_path}/runpack.json"
         json = JSON.parse File.read("#{world_path}/runpack.json")
