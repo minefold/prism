@@ -96,7 +96,7 @@ module Widget
       Widget::WorldProcessWatcher.poll pid, runpack, stdin, stdout, world_id, instance_id, host, port, stdin_queues, stop_queues do |ww|
         ww.on_process_exit = proc do
           # EM.start_work 
-          info "process exited. Starting backup"
+          info world_id, "process exited. Starting backup"
           redis.hset_hash "worlds:busy", world_id, state:'stopping'
           RUNNING_WORLDS.delete world_id
           stdin_queues.delete world_id
@@ -105,7 +105,7 @@ module Widget
         end
         
         ww.on_world_stopped = proc do
-          info "world stop completed  [worlds:busy #{world_id.class} #{world_id}]"
+          info world_id, "world stop completed  [worlds:busy #{world_id.class} #{world_id}]"
           redis.hdel "worlds:busy", world_id
           redis.del "worlds:#{world_id}:connected_players"
           redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
