@@ -39,7 +39,7 @@ class User
   end
   
   def has_credit?
-    unlimited? || credits > 0
+    plan_or_unlimited? || credits > 0
   end
   
   def plan_or_unlimited?
