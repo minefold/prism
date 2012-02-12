@@ -10,25 +10,12 @@ module Prism
       op = redis.hget "usernames", username
       op.callback do |user_id|
         User.find user_id do |user|
-          EM.defer(proc {
-            update = {
-              '$push' => {'credit_events' => { 'created_at' => Time.now.utc, 'delta' => -1 } },
-              '$inc'  => {'minutes_played' => 1 }
-            }
-
-            unless user.unlimited?
-              update['$inc'].merge! 'credits' => -1
-            end
-
-            User.new mongo_connect.collection('users').find_and_modify({ query: {"_id"  => BSON::ObjectId(user_id) }, update:update })
-          }, proc { |user|
-            if user.unlimited?
-              info "played:#{user.minutes_played} minutes [UNLIMITED]"
-            else
-              info "deducting 1 credit. #{user.credits} remaining. Played:#{user.minutes_played} minutes"
-              credits_updated user_id, user.credits
-            end
-          })
+          info "played 1 minute [#{user.plan_status}]"
+          
+          unless user.plan_or_unlimited?
+            user.update '$inc' => { 'credits' => -1 }
+            credits_updated user_id, user.credits - 1
+          end
         end
       end
     end

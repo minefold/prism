@@ -28,6 +28,12 @@ class User
     @doc = doc
   end
   
+  def update options
+    EM.defer do
+      self.class.collection.update({'_id' => id}, options)
+    end
+  end
+  
   def id
     @doc['_id']
   end
@@ -36,8 +42,12 @@ class User
     unlimited? || credits > 0
   end
   
+  def plan_or_unlimited?
+    valid_plan? or unlimited?
+  end
+  
   def unlimited?
-    valid_plan? or @doc['unlimited'] or @doc['beta']
+    @doc['unlimited'] or @doc['beta']
   end
   
   def valid_plan?
@@ -54,5 +64,16 @@ class User
   
   def minutes_played
     @doc['minutes_played']
+  end
+  
+  def plan_status
+    case
+    when unlimited?
+      "UNLIMITED"
+    when valid_plan?
+      "Plan expires: #{@doc['plan_expires_at'].strftime('%d %b %Y')}"
+    else
+      "#{credits} credits remaining"
+    end
   end
 end

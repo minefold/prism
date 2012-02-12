@@ -1,2 +1,2 @@
-require 'jobs/credit_mailer'
+require 'jobs/user_mailer'
 require 'jobs/map_world'
