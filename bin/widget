@@ -63,6 +63,7 @@ module Widget
           create_world_in_queues world_id
           
           runpack = Widget::Runpack.deserialize world_path, world_id, port
+          runpack.monitor
           watch_world runpack, pid_file
         else
           puts "Found dead world:#{pid_file}"

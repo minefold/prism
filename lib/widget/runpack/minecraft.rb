@@ -58,13 +58,17 @@ module Widget
       def start port, min_heap_size, max_heap_size, *a, &b
         cmd = "java -Xmx#{max_heap_size}M -Xms#{min_heap_size}M -jar server.jar nogui"
 
-        @backup_timer = EM.add_periodic_timer(10 * 60) { backup { info "backup completed" } }
-
         cb = EM::Callback *a, &b
         Pot.spawn_pot_process world_path, pid_file, cmd, "world.stdin", "world.stdout", "world.stdout" do
+          monitor
           cb.call pid_file
         end
+        
         cb
+      end
+      
+      def monitor
+        @backup_timer = EM.add_periodic_timer(10 * 60) { backup { info "backup completed" } }
       end
       
       def world_stopped *a, &b
