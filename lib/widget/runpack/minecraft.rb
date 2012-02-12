@@ -71,8 +71,12 @@ module Widget
         cb = EM::Callback *a, &b
         @backup_timer.cancel if @backup_timer
         
-        @backup_waiter = EM.add_periodic_timer(10) do
-          unless @backup_in_progress
+        waited = 0
+        @backup_waiter = EM.add_periodic_timer(1) do
+          waited += 1
+          if @backup_in_progress && (waited < 60)
+            info "Shutdown backup waiting for backup in progress #{waited}"
+          else
             @backup_waiter.cancel
             backup { cb.call }
           end 
