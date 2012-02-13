@@ -123,7 +123,10 @@ module Widget
       def prepare_world_dir
         if data_file = Storage.new.worlds.files.get(options['data_file'])
           archive = "#{backup_dir}/#{world_id}.tar.gz"
+          info "downloading world backup:#{options['data_file']} => #{archive}"
           File.open(archive, "w") {|tar| tar.write data_file.body }
+          
+          info "extracting world:#{archive}"
           TarGz.new.extract backup_dir, archive
 
           # find world and level dirs
@@ -132,7 +135,7 @@ module Widget
           @level_name = File.basename level_dir
 
           # move to world_path
-          puts "extracted world dir:#{extracted_world_dir} => #{world_path}"
+          info "extracted world dir:#{extracted_world_dir} => #{world_path}"
           FileUtils.rm_rf world_path
           FileUtils.mv extracted_world_dir, world_path
 
