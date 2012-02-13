@@ -76,7 +76,13 @@ namespace :jobs do
 end
 
 def ssh cmd
-  ssh_cmd = %Q{ssh -i #{ENV['EC2_SSH']} ubuntu@#{ENV['HOST']} "#{cmd}"}
+  ssh_options={ 'BatchMode' => 'yes', 
+    'CheckHostIP' => 'no', 
+    'ForwardAgent' => 'yes',
+    'StrictHostKeyChecking' => 'no',
+    'UserKnownHostsFile' => '/dev/null' }.map{|k, v| "-o #{k}=#{v}"}.join(' ')
+    
+  ssh_cmd = %Q{ssh -i #{ENV['EC2_SSH']} #{ssh_options} ubuntu@#{ENV['HOST']} "#{cmd}"}
   puts `#{ssh_cmd}`
 end
 

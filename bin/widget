@@ -137,11 +137,11 @@ module Widget
       world_id = world_start['world_id']
     
       if world = RUNNING_WORLDS[world_id]
-        puts "world:#{world_id} is already running"
+        info world_id, "world is already running"
         redis.store_running_world instance_id, world_id, host, world[:port]
       else
         port = find_available_port
-        puts "starting world:#{world_id} process on port:#{port}"
+        info world_id, "starting world process on port:#{port}"
 
         RUNNING_WORLDS[world_id] = { instance_id: instance_id, host:host, port:port }
 
@@ -151,7 +151,7 @@ module Widget
         
         op = runpack.prepare
         op.errback do |error|
-          puts "ERROR: failed to prepare:#{world_id} #{error}\n#{error.backtrace}"
+          info world_id, "ERROR: failed to prepare #{error}\n#{error.backtrace}"
           redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
         end
         op.callback do
@@ -161,7 +161,7 @@ module Widget
             create_world_in_queues world_id
             runpack.start(port, world_start['heap_size'], world_start['heap_size']) {|pid| watch_world runpack, pid }
           rescue => e
-            puts "ERROR: failed to spawn minecraft:#{e}\n#{e.backtrace}"
+            info world_id, "ERROR: failed to spawn minecraft:#{e}\n#{e.backtrace}"
             redis.publish_json "worlds:requests:start:#{world_id}", failed:'prepare_world'
           end
         end
@@ -195,11 +195,11 @@ module Widget
           redis.hdel "worlds:busy", world_id
           redis.del "worlds:#{world_id}:connected_players"
           redis.publish_json "worlds:requests:stop:#{world_id}", world_id:world_id, instance_id:instance_id
-          puts "world:#{world_id} stop request recieved but world is not running here"
+          info world_id, "world stop request recieved but world is not running here"
         end
       rescue => e
         redis.hdel "worlds:busy", world_id
-        puts "ERROR: failed to stop world #{e}\n#{e.backtrace}"
+        info world_id, "ERROR: failed to stop world #{e}\n#{e.backtrace}"
       end
     end
         

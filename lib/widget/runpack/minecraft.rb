@@ -121,11 +121,9 @@ module Widget
       end
       
       def prepare_world_dir
-        if data_file = Storage.new.worlds.files.get(options['data_file'])
-          archive = "#{backup_dir}/#{world_id}.tar.gz"
-          info "downloading world backup:#{options['data_file']} => #{archive}"
-          File.open(archive, "w") {|tar| tar.write data_file.body }
-          
+        info "downloading world backup:#{options['data_file']}"
+        if archive = Storage.worlds.download(options['data_file'], "#{backup_dir}/#{world_id}.tar.gz")
+
           info "extracting world:#{archive}"
           TarGz.new.extract backup_dir, archive
 
@@ -158,31 +156,18 @@ module Widget
         info result unless $?.exitstatus == 0
         raise "error archiving world" unless $?.exitstatus == 0
 
-        directory = Storage.new.worlds
+        directory = Storage.worlds
 
         backup_time = Time.now
         backup_file = "#{world_id}.#{backup_time.to_i}.tar.gz"
         upload_retries = 10
         begin
           # TODO: stop storing this file
-          File.open(world_archive) do |world_archive_file|
-            key = "#{world_id}.tar.gz"
-            info "Uploading #{key} #{upload_retries}"
-            file = directory.files.create(
-              :key    => key,
-              :body   => world_archive_file,
-              :public => false
-            )
-          end
+          info "Uploading #{world_id}.tar.gz #{upload_retries}"
+          directory.upload world_archive, "#{world_id}.tar.gz"
 
-          File.open(world_archive) do |world_archive_file|
-            info "Uploading #{backup_file} #{upload_retries}"
-            file = directory.files.create(
-              :key    => backup_file,
-              :body   => world_archive_file,
-              :public => false
-            )
-          end
+          info "Uploading #{backup_file} #{upload_retries}"
+          directory.upload world_archive, backup_file
 
           set_backup_info backup_file, backup_time
 
@@ -245,11 +230,8 @@ module Widget
       
       def download_pack_file remote_file, local_file
         remote_path = "minecraft/#{options['version']}/#{remote_file}"
-        server_key = Storage.new.game_servers.files.get(remote_path)
-        raise "File not found: #{remote_path}" unless server_key
-
-        File.open("#{world_path}/#{local_file}", 'w') {|f| f.write(server_key.body) }
-        # File.write("#{world_path}/#{local_file}", server_key.body)
+        download = Storage.game_servers.download(remote_path, "#{world_path}/#{local_file}")
+        raise "File not found: #{remote_path}" unless download
       end
       
       def server_properties

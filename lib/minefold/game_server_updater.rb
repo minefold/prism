@@ -71,13 +71,9 @@ class GameServerUpdater
   
   def upload local_file, remote_file
     puts "uploading #{remote_file}"
-    bucket = Storage.new.game_servers
+    bucket = Storage.game_servers
     
-    bucket.files.create(
-      key: remote_file,
-      body: File.read(local_file),
-      public: false
-    )
+    bucket.upload local_file, remote_file, public: false
   end
   
   def stored_version? etag
