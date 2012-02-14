@@ -11,7 +11,7 @@ module Prism
       op.callback do |user_id|
         User.find user_id do |user|
           info "played 1 minute [#{user.plan_status}]"
-          
+
           unless user.plan_or_unlimited?
             user.update '$inc' => { 'credits' => -1 }
             credits_updated user_id, user.credits - 1
@@ -25,7 +25,7 @@ module Prism
         15 => "15 minefold minutes left",
         5  =>  "5 minefold minutes left!"
       }.freeze
-      
+
       EM.add_timer(60) { redis.publish "players:disconnect:#{username}", "no credit" } if credits_remaining < 1
 
       if (message = messages[credits_remaining]) || credits_remaining < 1

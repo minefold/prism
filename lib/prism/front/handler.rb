@@ -1,7 +1,7 @@
 module Prism
   class Handler
     include Debugger
-    
+
     attr_reader :connection, :buffered_data, :redis
 
     def init; end
@@ -14,33 +14,33 @@ module Prism
       @redis = Prism.redis
       init *args
     end
-    
+
     def change_handler &blk
       @on_change_handler = blk
     end
-    
+
     def new_handler klass, *args
       exit
       @on_change_handler.call klass, *args
     end
-    
+
     def send_data data
       connection.send_data data
     end
-    
+
     def unbind
       client_unbound
       exit
     end
-    
+
     def remote_ip
-      @remote_ip ||= begin 
+      @remote_ip ||= begin
         if connection.get_peername
           port, ip = Socket.unpack_sockaddr_in(connection.get_peername)
           ip
         end
       end
     end
-    
+
   end
 end

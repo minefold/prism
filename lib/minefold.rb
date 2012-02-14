@@ -3,15 +3,15 @@ ENV['FOLD_ENV'] ||= 'development'
 module Fold
   class << self
     attr_accessor :workers, :worker_tags, :worker_user
-    
+
     def env
       ENV['FOLD_ENV'].to_sym
     end
-    
+
     def region
       ENV['EC2_REGION'] || 'us-east-1'
     end
-    
+
     def compute_cloud
       @@compute_cloud ||= Fog::Compute.new({
         :provider                 => 'AWS',
@@ -20,7 +20,7 @@ module Fold
         :region                   => region
       })
     end
-    
+
     def root
       @root ||= File.expand_path File.join File.dirname(__FILE__), '../'
     end

@@ -2,10 +2,10 @@
 module Prism
   class UnknownConnectionHandler < Handler
     include EM::P::Minecraft::Packets::Server
-    
+
     def receive_data data
       connection.buffered_data << data
-      
+
       header = data.unpack('C').first
       if header == 0x02
         username = data[3..-1].force_encoding('UTF-16BE').encode('UTF-8')

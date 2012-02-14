@@ -5,7 +5,7 @@ module EventMachine
     module Minecraft
       include Packets::Server
       include Packets::Client
-      
+
       def receive_packet header, packet; end
       def parse_packet data; end
       def create_packet header, body; end
@@ -17,7 +17,7 @@ module EventMachine
 
         begin
           header, packet, raw, remainder = parse_packet remainder
-          
+
           receive_packet header, packet
         end while remainder.size > 0 && header > 0
 
@@ -29,28 +29,28 @@ module EventMachine
         p " > #{header} #{body.inspect}  #{pkt}"
         send_data pkt
       end
-      
+
       module Client
         include EM::P::Minecraft
-      
+
         def parse_packet data
           parse_server_packet data
         end
-      
+
         def create_packet header, body
           pkt = client_packet header, body
           p "client_packet #{pkt}"
           pkt
         end
       end
-    
+
       module Server
         include EM::P::Minecraft
-      
+
         def parse_packet data
           parse_client_packet data
         end
-      
+
         def create_packet header, body
           pkt = server_packet header, body
           p "client_packet #{pkt}"

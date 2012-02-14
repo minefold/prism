@@ -1,9 +1,9 @@
 module Helpers #:nodoc:
 
   module NumberHelper
-    
+
     STORAGE_UNITS = [:byte, :kb, :mb, :gb, :tb].freeze
-    
+
     UNIT_NAMES = {
       byte: {
         one:   "Byte",
@@ -14,7 +14,7 @@ module Helpers #:nodoc:
       gb: "GB",
       tb: "TB"
     }.freeze
-    
+
     # Formats the bytes in +number+ into a more understandable representation
     # (e.g., giving it 1500 yields 1.5 KB). This method is useful for
     # reporting file sizes to users. You can customize the

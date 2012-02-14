@@ -1,23 +1,23 @@
 module Prism
-  class Sweeper 
+  class Sweeper
     include Debugger
-    
-    attr_reader :redis_universe, 
+
+    attr_reader :redis_universe,
                 :boxes, :running_boxes, :working_boxes, :broken_boxes,
                 :running_worlds
-    
+
     def redis; Prism.redis; end
-    
+
     def perform_sweep
       Prism::RedisUniverse.collect do |universe|
         @redis_universe = universe
         Box.all method(:query_boxes)
       end
     end
-    
+
     def query_boxes boxes
       @boxes = boxes
-      
+
       @running_boxes, @working_boxes, @broken_boxes, @running_worlds = [], [], [], {}
       EM::Iterator.new(boxes).each(proc{ |box,iter|
         box.query_state do |state|
@@ -27,7 +27,7 @@ module Prism
             op.callback do |worlds|
               @working_boxes << box
               @running_worlds.merge! worlds
-              
+
               iter.next
             end
             op.errback do
@@ -45,7 +45,7 @@ module Prism
       update_boxes
       lost_boxes
       lost_busy_boxes
-      
+
       found_worlds
       lost_worlds
       lost_busy_worlds
@@ -55,20 +55,20 @@ module Prism
       shutdown_idle_worlds
       EM.add_timer(10) do
         # wait 10 seconds so redis is definitely up to date
-        RedisUniverse.collect do |universe| 
+        RedisUniverse.collect do |universe|
           @redis_universe = universe
           WorldAllocator.new(universe).rebalance_boxes
         end
       end
     end
-    
+
     def update_boxes
       running_boxes.each do |box|
-        debug "found box:#{box.instance_id}" unless redis_universe.boxes[:running].keys.include? box.instance_id 
+        debug "found box:#{box.instance_id}" unless redis_universe.boxes[:running].keys.include? box.instance_id
         redis.store_running_box box
       end
     end
-    
+
     def lost_boxes
       lost_box_ids = redis_universe.boxes[:running].keys - running_boxes.map(&:instance_id)
       lost_box_ids.each do |instance_id|
@@ -77,7 +77,7 @@ module Prism
         redis.unstore_running_box instance_id, host
       end
     end
-    
+
     def lost_busy_boxes
       lost_busy_box_ids = redis_universe.boxes[:busy].keys - running_boxes.map(&:instance_id)
       lost_busy_box_ids.each do |instance_id|
@@ -85,7 +85,7 @@ module Prism
         redis.hdel "workers:busy", instance_id
       end
     end
-    
+
     def found_worlds
       new_worlds = running_worlds.reject{|world_id, world| redis_universe.worlds[:running].keys.include? world_id }
       new_worlds.each do |world_id, world|
@@ -93,17 +93,17 @@ module Prism
         redis.store_running_world world['instance_id'], world_id, world['host'], world['port']
       end
     end
-    
+
     def lost_worlds
       lost_world_ids = redis_universe.worlds[:running].keys - running_worlds.keys
       lost_world_ids.each do |world_id|
         instance_id = redis_universe.worlds[:running][world_id]['instance_id']
-        
+
         debug "lost world:#{world_id} instance:#{instance_id}"
         redis.unstore_running_world instance_id, world_id
       end
     end
-    
+
     def lost_busy_worlds
       lost_busy_world_ids = redis_universe.worlds[:busy].keys - running_worlds.keys
       lost_busy_world_ids.each do |world_id|
@@ -111,14 +111,14 @@ module Prism
         redis.hdel "worlds:busy", world_id
       end
     end
-    
+
     def fix_broken_boxes
       broken_boxes.each do |box|
         debug "ignoring broken box:#{box.instance_id}"
         # redis.lpush "workers:requests:fix", box.instance_id
       end
     end
-    
+
     def shutdown_idle_worlds
       running_worlds.select {|world_id, world| world['players'] && world['players'].size == 0 }.each do |world_id, world|
         if redis_universe.worlds[:busy].keys.include? world_id
@@ -129,7 +129,7 @@ module Prism
         end
       end
     end
-    
+
     def record_stats
       running_boxes = redis_universe.boxes[:running]
       StatsD.measure "boxes.count", running_boxes.size
@@ -139,6 +139,6 @@ module Prism
       StatsD.measure "players.count", redis_universe.players.size
       StatsD.measure "worlds.count",  redis_universe.worlds[:running].size
     end
-    
+
   end
 end

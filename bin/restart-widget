@@ -1,3 +1,0 @@
-#!/bin/sh
-
-ps -eF | grep '[r]uby' | awk '{print $2}' | sudo xargs kill

@@ -20,7 +20,7 @@ module Prism
 
     def server_unbound
       stop_keepalive
-      
+
       debug 'server disconnected during authentication'
       connection.close_connection
     end

@@ -9,17 +9,17 @@ require 'cli'
 def usage
   puts <<-EOS
     usage: minefold <args>
-      
+
       player:[username]
       player:[username] add-minutes:[amount]
-  
+
       proxy tail-log
-  
+
       world:[world_id]
       world:[world_id] download
-  
+
       workers
-      
+
       worker:[instance_id]
       worker:[instance_id] stop
       worker:[instance_id] terminate

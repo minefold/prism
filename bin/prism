@@ -14,7 +14,7 @@ module Prism
   EM.run do
     puts "Initialising"
     redis = Prism.redis
-    
+
     subscription = PrismRedis.connect
     subscription.psubscribe "players:connection_request:*"
     subscription.psubscribe "players:disconnect:*"
@@ -22,15 +22,15 @@ module Prism
       puts " • [#{channel}] #{message}"
       Prism::Messaging.deliver_message channel, message
     end
-    
+
     op = redis.keys("worlds:*:connected_players")
     op.callback {|key| redis.del key }
-    
+
     redis.del("players:playing") do
       EM.start_server '0.0.0.0', 25565, Client
       puts "#{Fold.env} mode. listening on 0.0.0.0:25565"
     end
-    
+
     # EM.add_periodic_timer(1) { puts EM.connection_count }
   end
 end

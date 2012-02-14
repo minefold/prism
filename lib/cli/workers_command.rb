@@ -1,7 +1,7 @@
 
 class WorkersCommand
   def show
-    
+
     info = Worker.running.map do |w|
       worlds = w.worlds || []
       uptime_minutes = w.uptime_minutes
@@ -12,9 +12,9 @@ class WorkersCommand
         uptime: "#{uptime_minutes / 60}:#{uptime_minutes % 60}"
       }
     end
-    
+
     puts Hirb::Helpers::AutoTable.render(info)
   end
-  
+
 end
 

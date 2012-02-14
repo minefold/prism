@@ -5,7 +5,7 @@ module EventMachine
         def self.hex num
           "0x%02X" % num
         end
-    
+
         def self.easy_fields
           { byte:[1, "C"], short:[2, "n"], int:[4, "N"], long:[8, "Q"], float:[4, "g"], double:[8, "G"] }
         end
@@ -45,7 +45,7 @@ module EventMachine
               str_byte_length = (str_char_length * 2)
               raw = packet[index..(index + str_byte_length - 1)]
               value = raw.force_encoding('UTF-16BE').encode('UTF-8')
-      
+
               [value, 2 + str_byte_length]
             when :bool
               value, bytes_read = read_field(:byte, packet, index); index += bytes_read
@@ -59,8 +59,8 @@ module EventMachine
               ["...", total_bytes_read]
             when :inventory_payload
               count, bytes_read = read_field :short, packet, index; index += bytes_read
-              count.times { 
-                item_id, bytes_read = read_field :short, packet, index; index += bytes_read 
+              count.times {
+                item_id, bytes_read = read_field :short, packet, index; index += bytes_read
                 if item_id != -1
                   count, bytes_read = read_field :byte, packet, index; index += bytes_read
                   count, bytes_read = read_field :short, packet, index; index += bytes_read
@@ -75,9 +75,9 @@ module EventMachine
 
         def self.create_packet schema, header, values
           data = pack_field(:byte, header)
-          schema.each{|name, type| 
+          schema.each{|name, type|
             raise "no value provided for #{name}" unless values[name]
-            data << pack_field(type, values[name]) 
+            data << pack_field(type, values[name])
           }
           data
         end
@@ -86,9 +86,9 @@ module EventMachine
           # null if packet not long enough otherwise the parsed info plus the rest of the packet
           i = 0
           header, bytes_read = read_field :byte, packet, i; i += bytes_read
-  
+
           schema = schemas[header]
-  
+
           raise "Unknown packet:#{hex(header)}" unless schema
 
           body = schema.inject({}) do |hash, (name, type)|
@@ -99,27 +99,27 @@ module EventMachine
 
           [header, body, packet[0...i], packet[i..-1]]
         end
-    
+
         # these are the originators. ie. client sent a client packet, server sent a server packet
         module Client
           def self.client header, schema = {}
             client_packet_schemas[header] = schema
           end
-      
+
           def client_packet header, values = {}
             Packets.create_packet Client.client_packet_schemas[header], header, values
           end
-      
+
           def parse_client_packet data
             Packets.parse_packet Client.client_packet_schemas, data
           end
-      
+
           def self.client_packet_schemas
             @@client_schemas ||= {}
           end
-      
+
           client 0x00, :keepalive_id => :int
-          client 0x01, :protocol_version => :int, :username => :string16, 
+          client 0x01, :protocol_version => :int, :username => :string16,
                        :unused1 => :long, :unused2 => :int, :unused3 => :byte, :unused4 => :byte, :unused5 => :byte, :unused6 => :byte
           client 0x02, :username => :string16
           client 0x07, :user => :int, :target => :int, :left_click => :bool
@@ -133,27 +133,27 @@ module EventMachine
           client 0x10, :slot_id => :short
           client 0x13, :eid => :int, :action_id => :byte
           client 0xFE
-      
+
         end
-    
+
         module Server
           def self.server header, schema = {}
             server_packet_schemas[header] = schema
           end
-      
+
           def server_packet header, values = {}
             Packets.create_packet Server.server_packet_schemas[header], header, values
           end
-      
+
           def parse_server_packet data
             Packets.parse_packet Server.server_packet_schemas, data
           end
-      
-      
+
+
           def self.server_packet_schemas
             @@server_schemas ||= {}
-          end    
-      
+          end
+
           server 0x00, :keepalive_id => :int
           server 0x01, :entity_id => :int, :unknown => :string16, :map_seed => :long, :server_mode => :int, :dimension => :byte, :difficulty => :byte, :world_height => :byte, :max_players => :byte
           server 0x02, :server_id => :string16
@@ -197,9 +197,9 @@ module EventMachine
           server 0x68, :window_id => :byte, :payload => :inventory_payload
           server 0x69, :window_id => :byte, :progress_bar => :short, :value => :short
           server 0x6A, :window_id => :byte, :action_number => :short, :accepted => :bool
-      
+
           server 0xFF, :reason => :string16
-      
+
         end
       end
     end

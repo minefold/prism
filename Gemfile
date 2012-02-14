@@ -1,26 +1,24 @@
 source :rubygems
 
-gem 'file-tail', :require => 'file/tail'
-gem 'fog', git: 'https://github.com/whatupdave/fog-1' #'~> 1.1.1'
-gem 'httparty'
-gem 'mongo'
-gem 'bson_ext'
-gem 'parallel'
+gem 'rake'
+
 gem 'eventmachine', '1.0.0.beta.3'
 gem 'eventmachine-tail'
 gem 'em-http-request'
-gem 'rake'
+
+gem 'fog', git: 'https://github.com/whatupdave/fog-1' #'~> 1.1.1'
+
+gem 'mongo'
+gem 'bson_ext'
+
 gem "hiredis", "~> 0.3.1"
 gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
 gem 'em-hiredis', git:'https://github.com/mloughran/em-hiredis'
 gem 'resque'
-gem 'resque-lock', require:'resque/plugins/lock'
 gem "resque-loner", git: 'https://github.com/whatupdave/resque-loner'
-gem 'hirb'
 gem 'statsd-instrument', git:'https://github.com/Shopify/statsd-instrument.git'
-gem 'pusher'
 
-gem 'i18n'
+gem 'hirb'
 
 group :test do
   gem "autotest-fsevent"

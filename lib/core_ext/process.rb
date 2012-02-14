@@ -7,7 +7,7 @@ module Process
       false
     end
   end
-  
+
   def self.spawn_detached dir, cmd
     process = fork do
       Dir.chdir dir

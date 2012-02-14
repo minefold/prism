@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 
-ssh_options={ 'BatchMode' => 'yes', 
-  'CheckHostIP' => 'no', 
+ssh_options={ 'BatchMode' => 'yes',
+  'CheckHostIP' => 'no',
   'ForwardAgent' => 'yes',
   'StrictHostKeyChecking' => 'no',
   'UserKnownHostsFile' => '/dev/null' }.map{|k, v| "-o #{k}=#{v}"}.join(' ')
-  
+
 exec "ssh -i $EC2_SSH ubuntu@$(ec2-describe-instances --hide-tags | grep #{ARGV.first} | cut -f4) #{ssh_options}"

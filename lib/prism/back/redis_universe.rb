@@ -7,7 +7,7 @@ module Prism
       redis = Prism.redis
 
       op = redis.keys("worlds:*:connected_players")
-      op.callback do |connected_players_keys| 
+      op.callback do |connected_players_keys|
         multi = EventMachine::Multi.new
         multi.add :running_boxes,  redis.hgetall_json('workers:running')
         multi.add :busy_boxes,     redis.hgetall_json('workers:busy')
@@ -24,19 +24,19 @@ module Prism
     attr_reader :boxes, :worlds, :players
 
     def initialize results = {}
-      @boxes = { 
+      @boxes = {
          running: results[:running_boxes],
             busy: results[:busy_boxes]
       }
 
-      @worlds = { 
+      @worlds = {
         running: results[:running_worlds],
            busy: results[:busy_worlds]
       }
 
       @players = {}
-      
-      world_players = results.each_with_object({}) do |(key, player_ids), hash| 
+
+      world_players = results.each_with_object({}) do |(key, player_ids), hash|
         key =~ /worlds:(.*):connected_players/
         if world_id = $1
           hash[world_id] ||= []
@@ -45,7 +45,7 @@ module Prism
           @players.merge! player_ids.each_with_object({}) {|player_id, hash| hash[player_id] = world_id  }
         end
       end
-      
+
       @worlds[:running].each do |world_id, world|
         @worlds[:running][world_id][:players] = world_players[world_id] || []
       end

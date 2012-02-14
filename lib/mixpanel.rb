@@ -2,13 +2,13 @@ require 'base64'
 
 module Mixpanel
   module EventTracker
-    
+
     IGNORE_USERS = %w(system-check)
-    
+
     def mixpanel
       Mixpanel::Tracker.new MIXPANEL_TOKEN, remote_ip
     end
-    
+
     def mixpanel_track event, properties = {}
       mp_name = @mp_name ? @mp_name.downcase.strip : nil
       unless IGNORE_USERS.include? mp_name
@@ -17,14 +17,14 @@ module Mixpanel
       end
     end
   end
-  
+
   class Tracker
     attr_reader :token, :ip
-    
+
     def initialize token, ip
       @token, @ip = token, ip
     end
-    
+
     def track event, properties = {}
       params = all_properties event, properties
       if token
@@ -42,22 +42,22 @@ module Mixpanel
         token: token
       }
     end
-    
+
     def all_properties event, properties
       {
-             event: event, 
+             event: event,
         properties: default_properties.merge(properties)
       }
     end
-    
+
     def encoded_data hash
       base64(JSON.generate(hash))
     end
-    
+
     def base64 string
       Base64.encode64(string).gsub(/\n/, '')
     end
-    
+
   end
-  
+
 end

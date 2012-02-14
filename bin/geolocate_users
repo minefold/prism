@@ -15,11 +15,11 @@ mongo['users'].find({ '$or' => [
                           {'geo_location' => {'$exists' => false}}
                           # {'geo_location.success' => false},
                       ]}).select{|user| user['last_sign_in_ip'] && user['last_sign_in_ip'].size > 0 }.each do |user|
-  
-  g = Geokit::Geocoders::MultiGeocoder.geocode(user['last_sign_in_ip']) 
+
+  g = Geokit::Geocoders::MultiGeocoder.geocode(user['last_sign_in_ip'])
   puts [user['username'], user['last_sign_in_ip'], g.country_code,g.state,g.city].join(", ")
-  
+
   mongo['users'].update({'_id' => user['_id']}, {'$set' => {:geo_location => g.to_hash}})
-  
+
   sleep 1
 end

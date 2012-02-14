@@ -1,16 +1,16 @@
 module Prism
   class PlayerDisconnectionEvent < Request
     include Messaging
-    include Mixpanel::EventTracker    
-    
+    include Mixpanel::EventTracker
+
     process "players:disconnection_request", :username, :remote_ip, :started_at, :ended_at
-    
+
     def run
       op = redis.hget "players:playing", username
       op.callback do |world_id|
         debug "removing player:#{username} from world:#{world_id}"
         redis.hdel "players:playing", username
-        
+
         op = redis.hget "usernames", username
         op.callback do |user_id|
           record_session user_id
@@ -27,7 +27,7 @@ module Prism
         end
       end
     end
-    
+
     def stop_world world_id
       redis.hget_json "worlds:busy", world_id do |busy_world|
         if busy_world
@@ -46,7 +46,7 @@ module Prism
         end
       end
     end
-    
+
     def stop_busy_world world_id, busy_world
       if busy_world['state'].include? 'starting'
         debug "world:#{world_id} is starting. Will request stop when started"
@@ -58,9 +58,9 @@ module Prism
       else
         debug "world:#{world_id} is already stopping."
       end
-      
+
     end
-    
+
     def record_session user_id
       if started_at
         @mp_id, @mp_name = user_id, username

@@ -3,11 +3,11 @@ module StatsD
     measure_timer start_time, key
     increment_counter key
   end
-  
+
   def self.increment_counter key
     StatsD.increment "counters.#{key}"
   end
-  
+
   def self.measure_timer start_time, key
     time = Time.now - start_time
     ms = time * 1000

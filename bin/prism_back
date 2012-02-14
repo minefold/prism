@@ -12,11 +12,11 @@ EM.epoll
 
 module Prism
   EM.run do
-    # EM.error_handler do |e| 
+    # EM.error_handler do |e|
     #   Toadhopper(AIRBRAKE_TOKEN).post!(e) if AIRBRAKE_TOKEN
     #   raise
     # end
-    
+
     subscription = PrismRedis.connect
     subscription.psubscribe "worlds:requests:*"
     subscription.psubscribe "workers:requests:*"
@@ -25,17 +25,17 @@ module Prism
       Prism::Messaging.deliver_message channel, message
     end
 
-    [ PlayerConnectionRequest, 
-      PlayerDisconnectionEvent, 
-      PlayerMinutePlayedEvent, 
-      PlayerWorldRequest, 
-      WorkerStopRequest, 
-      WorkerFixRequest, 
+    [ PlayerConnectionRequest,
+      PlayerDisconnectionEvent,
+      PlayerMinutePlayedEvent,
+      PlayerWorldRequest,
+      WorkerStopRequest,
+      WorkerFixRequest,
       WorkerCreateRequest].each do |klass|
         QueueProcessor.new klass
     end
-    
+
     puts "Started. #{Fold.env} mode"
-    
+
   end
 end
