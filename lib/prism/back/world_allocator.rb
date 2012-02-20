@@ -6,7 +6,7 @@ module Prism
   OS_RAM_BUFFER = 0.2 # let the OS have this much ram
 
   INSTANCE_PLAYER_BUFFER = 5 # needs to be space for 5 players to start a world on a box
-  WORLD_BUFFER = 1  # there must be room for 3 more worlds at any time
+  WORLD_BUFFER = 3  # there must be room for 3 more worlds at any time
 
   AMIS = {
     '32bit' => 'ami-28489b41',
