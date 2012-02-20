@@ -3,17 +3,25 @@ require 'time'
 module Prism
   ECUS_PER_WORLD = 2
   RAM_PER_PLAYER = 128
-  INSTANCE_PLAYER_BUFFER = 5 # needs to be space for this many players to start a world
-  INSTANCE_WORLD_BUFFER  = 3  # there must be room for 3 more worlds at any time
   OS_RAM_BUFFER = 0.2 # let the OS have this much ram
 
+  INSTANCE_PLAYER_BUFFER = 5 # needs to be space for 5 players to start a world on a box
+  WORLD_BUFFER = 1  # there must be room for 3 more worlds at any time
+
+  AMIS = {
+    '32bit' => 'ami-28489b41',
+    '64bit' => 'ami-844b98ed',
+      'HVM' => 'ami-844b98ed'
+  }
+
   INSTANCE_DEFS = {
-    'c1.medium'  => { ram:  1.7 * 1024, ecus:  5.0, image_id: 'ami-3f0ec156' },   # worlds:  3  players:  14
-    'c1.xlarge'  => { ram:  7.0 * 1024, ecus: 20.0, image_id: 'ami-f964a890' },   # worlds: 10  players:  56
-    'm1.large'   => { ram:  7.5 * 1024, ecus:  4.0, image_id: 'ami-f964a890' },   # worlds:  2  players:  60
-    'm2.xlarge'  => { ram: 17.1 * 1024, ecus:  6.5, image_id: 'ami-f964a890' },   # worlds:  3  players: 137
-    'm2.2xlarge' => { ram: 34.2 * 1024, ecus: 13.0, image_id: 'ami-f964a890' },   # worlds:  7  players: 274
-    'm2.4xlarge' => { ram: 68.4 * 1024, ecus: 26.0, image_id: 'ami-f964a890' }    # worlds: 13  players: 547
+    'm1.small'   => { ram:  1.7 * 1024, ecus:  1.0, image_id: AMIS['32bit'] },   # worlds:  3  players:  14
+    'c1.medium'  => { ram:  1.7 * 1024, ecus:  5.0, image_id: AMIS['32bit'] },   # worlds:  3  players:  14
+    'c1.xlarge'  => { ram:  7.0 * 1024, ecus: 20.0, image_id: AMIS['64bit'] },   # worlds: 10  players:  56
+    'm1.large'   => { ram:  7.5 * 1024, ecus:  4.0, image_id: AMIS['64bit'] },   # worlds:  2  players:  60
+    'm2.xlarge'  => { ram: 17.1 * 1024, ecus:  6.5, image_id: AMIS['64bit'] },   # worlds:  3  players: 137
+    'm2.2xlarge' => { ram: 34.2 * 1024, ecus: 13.0, image_id: AMIS['64bit'] },   # worlds:  7  players: 274
+    'm2.4xlarge' => { ram: 68.4 * 1024, ecus: 26.0, image_id: AMIS['64bit'] }    # worlds: 13  players: 547
   }.freeze
 
   class BoxType
@@ -84,7 +92,7 @@ module Prism
     end
 
     def shutdown_idle_boxes
-      excess_capacity = total_world_slots - INSTANCE_WORLD_BUFFER
+      excess_capacity = total_world_slots - WORLD_BUFFER
 
       idles_close_to_end_of_hour = idle_boxes.select{|instance_id, box| close_to_end_of_hour box }
 
@@ -188,7 +196,7 @@ module Prism
     end
 
     def at_capacity?
-      total_world_slots < INSTANCE_WORLD_BUFFER
+      total_world_slots < WORLD_BUFFER
     end
 
     # helpers
