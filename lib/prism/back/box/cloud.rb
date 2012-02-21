@@ -79,7 +79,6 @@ chef-solo -c ~/chef/ec2/solo.rb -j ~/chef/ec2/attributes.json
               options = {
                 :private_key_path => SSH_PRIVATE_KEY_PATH,
                 :username => 'ubuntu',
-                :image_id => 'ami-28489b41',
                 :groups => %W{default box},
                 :flavor_id => 'm1.large',
                 :user_data => cloud_init_script,

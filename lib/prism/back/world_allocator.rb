@@ -9,7 +9,7 @@ module Prism
   WORLD_BUFFER = 3  # there must be room for 3 more worlds at any time
 
   AMIS = {
-    '32bit' => 'ami-28489b41',
+    '32bit' => 'ami-1c60b375',
     '64bit' => 'ami-844b98ed',
       'HVM' => 'ami-844b98ed'
   }

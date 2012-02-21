@@ -97,7 +97,6 @@ end
 namespace :prism do
   task :deploy do
     ssh "cd /opt/prism && sudo GIT_SSH=/home/fold/.ssh/deploy-wrapper git pull origin #{ENV['BRANCH']} && sudo bundle --binstubs --without test && sudo chown -R fold ."
-    ssh "cd /opt/prism; sudo cp conf/prism.conf /etc/init/prism.conf; sudo cp conf/prism_back.conf /etc/init/prism_back.conf; sudo cp conf/sweeper.conf /etc/init/sweeper.conf"
     ssh "sudo stop prism_back; sudo start prism_back; sudo stop sweeper; sudo start sweeper"
   end
 
