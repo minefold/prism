@@ -63,11 +63,11 @@ restart rsyslog
 sync
 echo 3 > /proc/sys/vm/drop_caches
 
-cat<<EOF > ~/chef/attributes.json
+cat<<EOF > /tmp/attributes.json
 {"run_list":["recipe[widget::deploy]"]}
 EOF
 
-chef-solo -c ~/chef/ec2/solo.rb -j ~/chef/ec2/attributes.json
+chef-solo -c /home/ubuntu/chef/ec2/solo.rb -j /tmp/attributes.json
         EOS
       end
 
