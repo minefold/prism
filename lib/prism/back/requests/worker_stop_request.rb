@@ -3,7 +3,7 @@ module Prism
     process "workers:requests:stop", :instance_id
 
     def busy_hash
-      ["workers:busy", instance_id, state:'stopping']
+      ["workers:busy", instance_id, 'stopping', expires_after: 30]
     end
 
     def perform_operation

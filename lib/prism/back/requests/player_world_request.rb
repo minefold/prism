@@ -31,7 +31,9 @@ module Prism
 
 
     def start_busy_world busy_world
-      if busy_world['state'].include? 'starting'
+      state = busy_world['state']
+      case
+      when state.include?('starting')
         debug "world:#{world_id} start already requested"
         listen_once_json "worlds:requests:start:#{world_id}" do |world|
           if world['failed']
@@ -40,13 +42,15 @@ module Prism
             connect_player_to_world world['instance_id'], world['host'], world['port']
           end
         end
-      else
+      when state.include?('stopping')
         debug "world:#{world_id} is stopping. will request start when stopped"
-        redis.hset_hash "worlds:busy", world_id, state:'stopping => starting'
+        redis.set_busy "worlds:busy", world_id, 'stopping => starting', expires_after: 120
         listen_once "worlds:requests:stop:#{world_id}" do
           debug "world:#{world_id} stopped. Requesting restart"
           start_world
         end
+      else
+        get_world_started
       end
     end
 
@@ -98,43 +102,27 @@ module Prism
               if start_options[:instance_id]
                 start_world_on_started_worker start_options
               else
-                start_world_on_new_worker start_options
+                info "no instances available for user:#{username} world:#{world_id}"
+                redis.publish_json "players:connection_request:#{username}", rejected:'no_instances_available'
+                # start_world_on_new_worker start_options
               end
             else
-              info "user:#{username} world:#{world_id} does not exist"
               redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
             end
           })
       end
     end
 
-    def start_world_on_running_worker options
-      instance_id = options[:instance_id]
-      debug "starting world:#{world_id} on worker:#{instance_id} heap:#{options[:heap_size]}"
-
-      redis.hset_hash "worlds:busy", world_id, state:'starting'
-      redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", options
-
-      listen_once_json "worlds:requests:start:#{world_id}" do |world|
-        if world['failed']
-          redis.hdel "worlds:busy", world_id
-          redis.publish_json "players:connection_request:#{username}", rejected:'500'
-        else
-          connect_player_to_world world['instance_id'], world["host"], world["port"]
-        end
-      end
-    end
-
-    def start_world_on_new_worker options
-      request_id = `uuidgen`.strip
-      debug "starting world:#{world_id} on new worker"
-      redis.lpush_hash "workers:requests:create", options.merge( request_id:request_id )
-      listen_once_json "workers:requests:create:#{request_id}" do |worker|
-        debug "created new worker:#{worker['instance_id']}"
-
-        start_world_on_started_worker options
-      end
-    end
+    # def start_world_on_new_worker options
+    #   request_id = `uuidgen`.strip
+    #   debug "starting world:#{world_id} on new worker"
+    #   redis.lpush_hash "workers:requests:create", options.merge( request_id:request_id )
+    #   listen_once_json "workers:requests:create:#{request_id}" do |worker|
+    #     debug "created new worker:#{worker['instance_id']}"
+    # 
+    #     start_world_on_started_worker options
+    #   end
+    # end
 
     def start_world_on_started_worker options
       # player still around?
@@ -147,6 +135,25 @@ module Prism
         end
       end
     end
+    
+    def start_world_on_running_worker options
+      instance_id = options[:instance_id]
+      debug "starting world:#{world_id} on worker:#{instance_id} heap:#{options[:heap_size]}"
+
+      redis.set_busy "worlds:busy", world_id, 'starting', expires_after: 120
+      redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", options
+
+      listen_once_json "worlds:requests:start:#{world_id}" do |world|
+        redis.hdel "worlds:busy", world_id
+
+        if world['failed']
+          redis.publish_json "players:connection_request:#{username}", rejected:'500'
+        else
+          connect_player_to_world world['instance_id'], world["host"], world["port"]
+        end
+      end
+    end
+    
 
     def connect_player_to_world instance_id, host, port
       puts "connecting to #{host}:#{port}"

@@ -8,11 +8,13 @@ module Prism
 
     def redis; Prism.redis; end
 
-    def perform_sweep
+    def perform_sweep *a, &b
+      @sweep_op = EM::Callback *a, &b
       Prism::RedisUniverse.collect do |universe|
         @redis_universe = universe
         Box.all method(:query_boxes)
       end
+      @sweep_op
     end
 
     def query_boxes boxes
@@ -53,11 +55,16 @@ module Prism
       fix_broken_boxes
 
       shutdown_idle_worlds
-      EM.add_timer(10) do
-        # wait 10 seconds so redis is definitely up to date
+
+      # wait 5 seconds so redis is definitely up to date
+      # this would be better as a multi query, waiting for all of these
+      # tasks to finish
+
+      EM.add_timer(5) do
         RedisUniverse.collect do |universe|
           @redis_universe = universe
           WorldAllocator.new(universe).rebalance_boxes
+          @sweep_op.call
         end
       end
     end
@@ -81,8 +88,14 @@ module Prism
     def lost_busy_boxes
       lost_busy_box_ids = redis_universe.boxes[:busy].keys - running_boxes.map(&:instance_id)
       lost_busy_box_ids.each do |instance_id|
-        debug "lost busy box:#{instance_id}"
-        redis.hdel "workers:busy", instance_id
+        busy_hash = redis_universe.boxes[:busy][instance_id]
+        busy_length = Time.now - Time.at(busy_hash['at'])
+        if busy_length > busy_hash['expires_after']
+          debug "lost busy box:#{instance_id}"
+          redis.hdel "workers:busy", instance_id
+        else
+          debug "busy box:#{instance_id} (#{busy_hash['state']} #{busy_length} seconds)"
+        end
       end
     end
 
@@ -107,25 +120,43 @@ module Prism
     def lost_busy_worlds
       lost_busy_world_ids = redis_universe.worlds[:busy].keys - running_worlds.keys
       lost_busy_world_ids.each do |world_id|
-        debug "lost busy world:#{world_id}"
-        redis.hdel "worlds:busy", world_id
+        busy_hash = redis_universe.worlds[:busy][world_id]
+        busy_length = Time.now - Time.at(busy_hash['at'])
+        if busy_length > busy_hash['expires_after']
+          debug "lost busy world:#{world_id}"
+          redis.hdel "worlds:busy", world_id
+        else
+          debug "busy world:#{world_id} (#{busy_hash['state']} #{busy_length} seconds)"
+        end
       end
     end
 
     def fix_broken_boxes
       broken_boxes.each do |box|
         debug "ignoring broken box:#{box.instance_id}"
-        # redis.lpush "workers:requests:fix", box.instance_id
       end
     end
 
     def shutdown_idle_worlds
+      # if any worlds previously declared as empty have become unempty, clear busy state
+      running_worlds.select {|world_id, world| world['players'] && world['players'].size > 0 }.each do |world_id, world|
+        if busy_hash = redis_universe.worlds[:busy][world_id]
+          redis.hdel 'worlds:busy', world_id if busy_hash['state'] == 'empty'
+        end
+      end
+      
       running_worlds.select {|world_id, world| world['players'] && world['players'].size == 0 }.each do |world_id, world|
-        if redis_universe.worlds[:busy].keys.include? world_id
-          puts "box:#{world['instance_id']} world:#{world_id} is empty busy:#{redis_universe.worlds[:busy][:world_id]}"
+        if busy_hash = redis_universe.worlds[:busy][world_id]
+          busy_length = Time.now - Time.at(busy_hash['at'])
+          debug "busy world:#{world_id} (#{busy_hash['state']} #{busy_length} seconds)"
+          
+          if busy_length > busy_hash['expires_after']
+            debug "box:#{world['instance_id']} world:#{world_id} stopping empty world"
+            redis.lpush "workers:#{world['instance_id']}:worlds:requests:stop", world_id
+          end
         else
-          puts "box:#{world['instance_id']} world:#{world_id} stopping empty"
-          redis.lpush "workers:#{world['instance_id']}:worlds:requests:stop", world_id
+          debug "box:#{world['instance_id']} world:#{world_id} is empty"
+          redis.set_busy "worlds:busy", world_id, 'empty', expires_after: 20
         end
       end
     end

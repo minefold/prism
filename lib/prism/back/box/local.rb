@@ -22,7 +22,7 @@ module Prism
       end
 
       def initialize instance_id
-        @instance_id, @instance_type, @host = instance_id, 'm1.large', '0.0.0.0'
+        @instance_id, @instance_type, @host = instance_id, 'm2.4xlarge', '0.0.0.0'
         @state = 'running'
         @started_at = Time.now
         @tags = {}

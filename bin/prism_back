@@ -30,7 +30,6 @@ module Prism
       PlayerMinutePlayedEvent,
       PlayerWorldRequest,
       WorkerStopRequest,
-      WorkerFixRequest,
       WorkerCreateRequest].each do |klass|
         QueueProcessor.new klass
     end

@@ -11,11 +11,20 @@ STDOUT.sync = true
 EM.epoll
 
 module Prism
+
+  class Sweepy
+    def self.start_sweepin
+      sweeper = Sweeper.new
+      sweeper.perform_sweep do
+        sweeper.record_stats
+        EM.add_timer(1) { start_sweepin }
+      end
+    end
+  end
+
   EM.run do
     puts "Started. #{Fold.env} mode"
-    sweeper = Sweeper.new
-    sweeper.perform_sweep
-    EM.add_periodic_timer(3 * 60) { sweeper.perform_sweep }
-    EM.add_periodic_timer(10)     { sweeper.record_stats }
+    
+    Sweepy.start_sweepin
   end
 end

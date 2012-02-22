@@ -80,6 +80,10 @@ module Prism
     def hset_hash channel, key, value
       hset channel, key, value.to_json
     end
+    
+    def set_busy key, field, state, options = {}
+      hset_hash key, field, { state: state, at: Time.now.to_i }.merge(options)
+    end
 
     def lpush_hash list, value
       lpush list, value.to_json
