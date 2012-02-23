@@ -17,7 +17,7 @@ module Prism
       sweeper = Sweeper.new
       sweeper.perform_sweep do
         sweeper.record_stats
-        EM.add_timer(1) { start_sweepin }
+        EM.add_timer(5) { start_sweepin }
       end
     end
   end
