@@ -28,6 +28,10 @@ module Prism
           })
         cb
       end
+      
+      def self.widget_branch
+        Fold.env == :staging ? 'dev' : 'master'
+      end
 
       def self.cloud_init_script
         <<-EOS
@@ -64,7 +68,10 @@ sync
 echo 3 > /proc/sys/vm/drop_caches
 
 cat<<EOF > /tmp/attributes.json
-{"run_list":["recipe[widget::deploy]"]}
+{
+  "widget": { "branch": "#{widget_branch}"},
+  "run_list":["recipe[widget::deploy]"]
+}
 EOF
 
 chef-solo -c /home/ubuntu/chef/ec2/solo.rb -j /tmp/attributes.json
