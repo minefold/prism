@@ -82,7 +82,7 @@ module Prism
     end
     
     def set_busy key, field, state, options = {}
-      hset_hash key, field, { state: state, at: Time.now.to_i }.merge(options)
+      hset_hash key, field, { state: state }.merge(options).merge({at: Time.now.to_i})
     end
 
     def lpush_hash list, value
