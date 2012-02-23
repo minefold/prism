@@ -131,7 +131,7 @@ module Prism
 
     def print_box_status
       upcoming_boxes.each do |request_id, box|
-        box_type = BoxType.new(box['instance_id'])
+        box_type = BoxType.new(box['instance_type'])
         puts "box:#{request_id} worlds:0/#{box_type.world_cap} players:0/#{box_type.player_cap} creating..."
       end
 
