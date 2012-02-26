@@ -15,6 +15,7 @@ module Prism
         op.callback do |user_id|
           record_session user_id
           redis.srem "worlds:#{world_id}:connected_players", user_id
+          redis.hdel "usernames", username
         end
       end
     end
