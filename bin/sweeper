@@ -13,10 +13,13 @@ EM.epoll
 module Prism
 
   class Sweepy
-    def self.start_sweepin
-      sweeper = Sweeper.new
-      sweeper.perform_sweep do
-        sweeper.record_stats
+    def initialize
+      @sweeper = Sweeper.new
+    end
+    
+    def start_sweepin
+      @sweeper.perform_sweep do
+        @sweeper.record_stats
         EM.add_timer(5) { start_sweepin }
       end
     end
@@ -25,6 +28,6 @@ module Prism
   EM.run do
     puts "Started. #{Fold.env} mode"
     
-    Sweepy.start_sweepin
+    Sweepy.new.start_sweepin
   end
 end
