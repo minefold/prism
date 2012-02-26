@@ -28,7 +28,7 @@ module Prism
           })
         cb
       end
-      
+
       def self.widget_branch
         Fold.env == :staging ? 'dev' : 'master'
       end
@@ -155,9 +155,16 @@ chef-solo -c /home/ubuntu/chef/ec2/solo.rb -j /tmp/attributes.json
       end
 
 
-      def query_state *c,&b
+      def query_state timeout = 20, *c,&b
+        @timeout = EM.add_periodic_timer(timeout) do 
+          puts "timeout querying box"
+          cb.call nil
+        end
         cb = EM::Callback(*c,&b)
-        EM.defer(proc { vm.state }, proc { |state| cb.call state })
+        EM.defer(proc { vm.state }, proc { |state| 
+          @timeout.cancel
+          cb.call state 
+        })
       end
 
       def kill_process_command matcher

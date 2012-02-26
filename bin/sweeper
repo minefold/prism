@@ -16,18 +16,24 @@ module Prism
     def initialize
       @sweeper = Sweeper.new
     end
-    
+
     def start_sweepin
+      @timeout = EM.add_periodic_timer(60) do
+        puts "Sweep took too long"
+        EM.stop
+      end
+
       @sweeper.perform_sweep do
         @sweeper.record_stats
         EM.add_timer(5) { start_sweepin }
+        @timeout.cancel
       end
     end
   end
 
   EM.run do
     puts "Started. #{Fold.env} mode"
-    
+
     Sweepy.new.start_sweepin
   end
 end

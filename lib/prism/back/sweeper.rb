@@ -19,7 +19,7 @@ module Prism
 
     def query_boxes boxes
       @boxes = boxes
-
+      
       @running_boxes, @working_boxes, @broken_boxes, @running_worlds = [], [], [], {}
       EM::Iterator.new(boxes).each(proc{ |box,iter|
         box.query_state do |state|
@@ -36,6 +36,9 @@ module Prism
               @broken_boxes << box
               iter.next
             end
+          elsif state.nil?
+            @broken_boxes << box
+            iter.next
           else
             iter.next
           end
@@ -144,12 +147,12 @@ module Prism
           redis.hdel 'worlds:busy', world_id if busy_hash['state'] == 'empty'
         end
       end
-      
+
       running_worlds.select {|world_id, world| world['players'] && world['players'].size == 0 }.each do |world_id, world|
         if busy_hash = redis_universe.worlds[:busy][world_id]
           busy_length = Time.now - Time.at(busy_hash['at'])
           debug "busy world:#{world_id} (#{busy_hash['state']} #{busy_length} seconds)"
-          
+
           if busy_length > busy_hash['expires_after']
             debug "box:#{world['instance_id']} world:#{world_id} stopping empty world"
             redis.lpush "workers:#{world['instance_id']}:worlds:requests:stop", world_id

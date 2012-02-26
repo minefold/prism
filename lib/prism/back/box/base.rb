@@ -1,6 +1,7 @@
 module Prism
   module WorldCollector
-    def initialize df
+    def initialize timeout, df
+      @timeout = timeout
       @df = df
     end
 
@@ -11,11 +12,15 @@ module Prism
     def receive_data data
       @world_data = JSON.parse data
       @df.succeed @world_data
+      @timeout.cancel
       close_connection
     end
 
     def unbind
-      @df.fail unless @world_data
+      unless @world_data
+        @timeout.cancel
+        @df.fail 
+      end
     end
   end
 
@@ -49,10 +54,15 @@ module Prism
         ((Time.now - started_at) / 60).to_i
       end
 
-      def query_worlds
+      def query_worlds timeout = 20
+        @timeout = EM.add_periodic_timer(timeout) do
+          puts "timeout querying worlds instance_id:#{instance_id} host:#{host}"
+          df.fail "timeout"
+        end
+
         df = EM::DefaultDeferrable.new
         begin
-          c = EM.connect host, 3000, WorldCollector, df
+          c = EM.connect host, 3000, WorldCollector, @timeout, df
           c.pending_connect_timeout = 2
         rescue => e
           df.fail e

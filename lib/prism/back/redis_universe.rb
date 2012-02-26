@@ -2,10 +2,15 @@ require 'eventmachine/multi'
 
 module Prism
   class RedisUniverse
-    def self.collect *c, &b
+    def self.collect timeout = 10, *c, &b
       cb = EM::Callback(*c, &b)
       redis = Prism.redis
 
+      @timeout = EM.add_periodic_timer(timeout) { 
+        puts "timeout colecting redis state"
+        EM.stop
+      }
+      
       op = redis.keys("worlds:*:connected_players")
       op.callback do |connected_players_keys|
         multi = EventMachine::Multi.new
@@ -16,7 +21,10 @@ module Prism
 
         connected_players_keys.each {|key| multi.add key, redis.smembers(key) }
 
-        multi.callback { |results| cb.call RedisUniverse.new results }
+        multi.callback do |results| 
+          @timeout.cancel
+          cb.call RedisUniverse.new results
+        end
       end
       cb
     end
