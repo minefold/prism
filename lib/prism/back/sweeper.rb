@@ -19,7 +19,7 @@ module Prism
 
     def query_boxes boxes
       @boxes = boxes
-      
+
       @running_boxes, @working_boxes, @broken_boxes, @running_worlds = [], [], [], {}
       EM::Iterator.new(boxes).each(proc{ |box,iter|
         box.query_state do |state|
@@ -27,6 +27,10 @@ module Prism
             @running_boxes << box
             op = box.query_worlds
             op.callback do |worlds|
+              # TODO: change widgets return json format so we dont dance around the disk key
+              disk = worlds['disk']
+              worlds.delete('disk')
+
               @working_boxes << box
               @running_worlds.merge! worlds
 
@@ -54,6 +58,7 @@ module Prism
       found_worlds
       lost_worlds
       lost_busy_worlds
+      players_changed
 
       fix_broken_boxes
 
@@ -108,6 +113,17 @@ module Prism
         debug "found world:#{world_id}"
         redis.store_running_world world['instance_id'], world_id, world['host'], world['port']
       end
+    end
+
+    def players_changed
+      # current_worlds = running_worlds.select{|world_id, world| redis_universe.worlds[:running].keys.include? world_id }
+      # current_worlds.each do |world_id, world|
+      #   redis_world = redis_universe.worlds[:running][world_id]
+      #
+      #   p "#{world_id}", "real world:", world['players'], "", "redis world:", redis_world
+      #
+      #   # new_players = world['players'] - redis_world
+      # end
     end
 
     def lost_worlds

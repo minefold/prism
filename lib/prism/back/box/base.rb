@@ -19,7 +19,7 @@ module Prism
     def unbind
       unless @world_data
         @timeout.cancel
-        @df.fail 
+        @df.fail
       end
     end
   end
