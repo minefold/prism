@@ -1,3 +1,5 @@
+require 'core_ext'
+
 module Prism
   class Sweeper
     include Debugger
@@ -28,8 +30,10 @@ module Prism
             op = box.query_worlds
             op.callback do |worlds|
               # TODO: change widgets return json format so we dont dance around the disk key
-              disk = worlds['disk']
+              used, available = (worlds['disk']['used'] || '0').to_i, (worlds['disk']['available'] || '1').to_i
               worlds.delete('disk')
+
+              puts "#{box.instance_id} disk:#{used.to_human_size} used  #{available.to_human_size} free (#{"%.1f" % (used/(used+available).to_f * 100)}%)"
 
               @working_boxes << box
               @running_worlds.merge! worlds

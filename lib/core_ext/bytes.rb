@@ -1,5 +1,4 @@
-module Helpers #:nodoc:
-
+module Bytes #:nodoc:
   module NumberHelper
 
     STORAGE_UNITS = [:byte, :kb, :mb, :gb, :tb].freeze
@@ -30,22 +29,22 @@ module Helpers #:nodoc:
     # * <tt>:delimiter</tt>  - Sets the thousands delimiter (defaults to "").
     # * <tt>:strip_insignificant_zeros</tt>  - If +true+ removes insignificant zeros after the decimal separator (defaults to +true+)
     # ==== Examples
-    #  number_to_human_size(123)                                          # => 123 Bytes
-    #  number_to_human_size(1234)                                         # => 1.21 KB
-    #  number_to_human_size(12345)                                        # => 12.1 KB
-    #  number_to_human_size(1234567)                                      # => 1.18 MB
-    #  number_to_human_size(1234567890)                                   # => 1.15 GB
-    #  number_to_human_size(1234567890123)                                # => 1.12 TB
-    #  number_to_human_size(1234567, :precision => 2)                     # => 1.2 MB
-    #  number_to_human_size(483989, :precision => 2)                      # => 470 KB
-    #  number_to_human_size(1234567, :precision => 2, :separator => ',')  # => 1,2 MB
+    #  to_human_size(123)                                          # => 123 Bytes
+    #  to_human_size(1234)                                         # => 1.21 KB
+    #  to_human_size(12345)                                        # => 12.1 KB
+    #  to_human_size(1234567)                                      # => 1.18 MB
+    #  to_human_size(1234567890)                                   # => 1.15 GB
+    #  to_human_size(1234567890123)                                # => 1.12 TB
+    #  to_human_size(1234567, :precision => 2)                     # => 1.2 MB
+    #  to_human_size(483989, :precision => 2)                      # => 470 KB
+    #  to_human_size(1234567, :precision => 2, :separator => ',')  # => 1,2 MB
     #
     # Non-significant zeros after the fractional separator are stripped out by default (set
     # <tt>:strip_insignificant_zeros</tt> to +false+ to change that):
-    #  number_to_human_size(1234567890123, :precision => 5)        # => "1.1229 TB"
-    #  number_to_human_size(524288000, :precision=>5)              # => "500 MB"
-    def number_to_human_size(number, options = {})
-      number = Float(number)
+    #  to_human_size(1234567890123, :precision => 5)        # => "1.1229 TB"
+    #  to_human_size(524288000, :precision=>5)              # => "500 MB"
+    def to_human_size(options = {})
+      number = Float(self)
 
       storage_units_format = "%n %u"
 
@@ -66,4 +65,8 @@ module Helpers #:nodoc:
       end
     end
   end
+end
+
+class Numeric
+  include Bytes::NumberHelper
 end
