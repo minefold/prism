@@ -183,7 +183,7 @@ module Prism
           end
         else
           debug "box:#{world['instance_id']} world:#{world_id} is empty"
-          redis.set_busy "worlds:busy", world_id, 'empty', expires_after: 20
+          redis.set_busy "worlds:busy", world_id, 'empty', expires_after: 60
         end
       end
     end

@@ -10,7 +10,7 @@ module Prism
         connection_time = Time.now - started_at
         debug "ping - #{connection_time} seconds"
         connection.send_data server_packet 0x00, :keepalive_id => 1337
-        if connection_time > 120
+        if connection_time > 300
           redis.publish_json "players:connection_request:#{username}", rejected:'500'
         end
       end
