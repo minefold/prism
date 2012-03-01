@@ -2,7 +2,7 @@ module Prism
   class PlayerConnectionRequest < Request
     include Mixpanel::EventTracker
 
-    process "players:connection_request", :username, :remote_ip
+    process "players:connection_request", :username, :target_host, :remote_ip
 
     def log_tag; username; end
 

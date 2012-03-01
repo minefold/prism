@@ -18,8 +18,8 @@ module Prism
 
     def log_tag; username; end
 
-    def init username
-      @username = username
+    def init username, target_host = nil
+      @username, @target_host = username, target_host
       @connection_active = true
 
       start_keepalive username
@@ -45,7 +45,7 @@ module Prism
         end
       end
 
-      redis.lpush_hash "players:connection_request", username:username, remote_ip:remote_ip
+      redis.lpush_hash "players:connection_request", username:username, remote_ip:remote_ip, target_host:target_host
     end
 
     def exit

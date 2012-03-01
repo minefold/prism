@@ -9,7 +9,11 @@ module Prism
       header = data.unpack('C').first
       if header == 0x02
         username = data[3..-1].force_encoding('UTF-16BE').encode('UTF-8')
-        new_handler KnownPlayerHandler, username
+        target_host = nil
+        if username.include?(';')
+          username, target_host = username.split(';', 2)
+        end
+        new_handler KnownPlayerHandler, username, target_host
       elsif header == 0xFE
         connection.send_data server_packet 0xFF, :reason => "Change worlds at minefold.com"
         connection.close_connection_after_writing
