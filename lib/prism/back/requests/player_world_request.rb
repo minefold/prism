@@ -140,7 +140,7 @@ module Prism
       instance_id = options[:instance_id]
       debug "starting world:#{world_id} on worker:#{instance_id} heap:#{options[:heap_size]}"
 
-      redis.set_busy "worlds:busy", world_id, 'starting', expires_after: 300
+      redis.set_busy "worlds:busy", world_id, 'starting', expires_after: 600
       redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", options
 
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
