@@ -31,14 +31,16 @@ module Prism
             op = box.query_worlds
             op.callback do |worlds|
               # TODO: change widgets return json format so we dont dance around the disk key
-              used, available =
-                (worlds['disk']['used'] || '0').to_i.megabytes,
-                (worlds['disk']['available'] || '1').to_i.megabytes
+              if worlds['disk']
+                used, available =
+                  (worlds['disk']['used'] || '0').to_i.megabytes,
+                  (worlds['disk']['available'] || '1').to_i.megabytes
 
-              worlds.delete('disk')
+                worlds.delete('disk')
               
-              puts "#{box.instance_id} disk:#{used.to_human_size} used  #{available.to_human_size} free (#{"%.1f" % (used/(used+available).to_f * 100)}%)"
-
+                puts "#{box.instance_id} disk:#{used.to_human_size} used  #{available.to_human_size} free (#{"%.1f" % (used/(used+available).to_f * 100)}%)"
+              end
+              
               @working_boxes << box
               @running_worlds.merge! worlds
 
@@ -160,7 +162,7 @@ module Prism
           redis.hdel 'worlds:busy', world_id if busy_hash['state'] == 'empty'
         end
       end
-      
+        
       running_worlds.select {|world_id, world| world[:players].empty? }.each do |world_id, world|
         if busy_hash = redis_universe.worlds[:busy][world_id]
           busy_length = Time.now - Time.at(busy_hash['at'])
