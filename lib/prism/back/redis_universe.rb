@@ -57,7 +57,7 @@ module Prism
       @worlds[:running].each do |world_id, world|
         @worlds[:running][world_id][:players] = world_players[world_id] || []
       end
-
+      
       @boxes[:running].each do |instance_id, box|
         @boxes[:running][instance_id][:worlds]  = @worlds[:running].select {|world_id, world| world['instance_id'] == instance_id }
         @boxes[:running][instance_id][:players] = @boxes[:running][instance_id][:worlds].inject([]) do |acc, (world_id, world)|

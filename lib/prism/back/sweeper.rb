@@ -36,7 +36,7 @@ module Prism
                 (worlds['disk']['available'] || '1').to_i.megabytes
 
               worlds.delete('disk')
-
+              
               puts "#{box.instance_id} disk:#{used.to_human_size} used  #{available.to_human_size} free (#{"%.1f" % (used/(used+available).to_f * 100)}%)"
 
               @working_boxes << box
@@ -66,7 +66,6 @@ module Prism
       found_worlds
       lost_worlds
       lost_busy_worlds
-      players_changed
 
       fix_broken_boxes
 
@@ -123,17 +122,6 @@ module Prism
       end
     end
 
-    def players_changed
-      # current_worlds = running_worlds.select{|world_id, world| redis_universe.worlds[:running].keys.include? world_id }
-      # current_worlds.each do |world_id, world|
-      #   redis_world = redis_universe.worlds[:running][world_id]
-      #
-      #   p "#{world_id}", "real world:", world['players'], "", "redis world:", redis_world
-      #
-      #   # new_players = world['players'] - redis_world
-      # end
-    end
-
     def lost_worlds
       lost_world_ids = redis_universe.worlds[:running].keys - running_worlds.keys
       lost_world_ids.each do |world_id|
@@ -166,13 +154,14 @@ module Prism
 
     def shutdown_idle_worlds
       # if any worlds previously declared as empty have become unempty, clear busy state
-      running_worlds.select {|world_id, world| world['players'] && world['players'].size > 0 }.each do |world_id, world|
+      running_worlds = redis_universe.worlds[:running]
+      running_worlds.select {|world_id, world| world[:players].any? }.each do |world_id, world|
         if busy_hash = redis_universe.worlds[:busy][world_id]
           redis.hdel 'worlds:busy', world_id if busy_hash['state'] == 'empty'
         end
       end
-
-      running_worlds.select {|world_id, world| world['players'] && world['players'].size == 0 }.each do |world_id, world|
+      
+      running_worlds.select {|world_id, world| world[:players].empty? }.each do |world_id, world|
         if busy_hash = redis_universe.worlds[:busy][world_id]
           busy_length = Time.now - Time.at(busy_hash['at'])
           debug "busy world:#{world_id} (#{busy_hash['state']} #{busy_length} seconds)"
