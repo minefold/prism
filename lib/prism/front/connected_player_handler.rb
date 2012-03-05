@@ -4,13 +4,13 @@ module Prism
 
     attr_reader :username, :host, :port, :user_id, :world_id
 
-    def log_tag; username; end
+    def log_tag; [world_id, username]; end
 
     def init server, username, host, port, user_id, world_id
       @server = server
       @server.client = self
 
-      @username, @host, @port, @user_id, @world_id = username, host, port
+      @username, @host, @port, @user_id, @world_id = username, host, port, user_id, world_id
       @minecraft_session_started_at = Time.now
 
       # EM.add_timer(20) { disconnect_and_reconnect }
