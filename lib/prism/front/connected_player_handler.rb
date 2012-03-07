@@ -38,7 +38,7 @@ module Prism
                                                         ended_at: Time.now.to_i
 
       StatsD.measure_timer @minecraft_session_started_at, "sessions.minecraft"
-      Resque.push 'high', class: 'PlayerDisconnectedJob', args: [username, Time.now.utc]
+      Resque.push 'high', class: 'PlayerDisconnectedJob', args: [user_id, world_id, @minecraft_session_started_at, Time.now.utc]
     end
 
     def receive_data data

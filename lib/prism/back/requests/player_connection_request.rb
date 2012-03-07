@@ -11,7 +11,7 @@ module Prism
 
       User.find_by_username username do |user|
         if user
-          @mp_id, @mp_name = user.id.to_s, username
+          @mp_id, @mp_name = user.mpid.to_s, user.email
           if user.has_credit?
             recognised_player_connecting user
           else

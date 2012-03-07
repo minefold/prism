@@ -37,6 +37,14 @@ class User
   def id
     @doc['_id']
   end
+  
+  def email
+    @doc['email']
+  end
+  
+  def mpid
+    @doc['mpid'] || id
+  end
 
   def has_credit?
     plan_or_unlimited? || credits > 0

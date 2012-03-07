@@ -13,18 +13,9 @@ module Prism
 
         op = redis.hget "usernames", username
         op.callback do |user_id|
-          record_session user_id
           redis.srem "worlds:#{world_id}:connected_players", user_id
           redis.hdel "usernames", username
         end
-      end
-    end
-
-    def record_session user_id
-      if started_at
-        @mp_id, @mp_name = user_id, username
-        seconds = ended_at - started_at
-        mixpanel_track 'played', seconds: seconds, minutes: (seconds / 60.0).to_i, hours: (seconds / 60.0 / 60.0).to_i
       end
     end
   end
