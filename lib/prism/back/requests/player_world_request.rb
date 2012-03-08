@@ -3,7 +3,7 @@ module Prism
     include Messaging
     include ChatMessaging
 
-    process "players:world_request", :username, :user_id, :world_id, :credits
+    process "players:world_request", :username, :user_id, :world_id
 
     attr_reader :instance_id
 
@@ -99,7 +99,6 @@ module Prism
               else
                 info "no instances available for user:#{username} world:#{world_id}"
                 redis.publish_json "players:connection_request:#{username}", rejected:'no_instances_available'
-                # start_world_on_new_worker start_options
               end
             else
               redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
@@ -107,17 +106,6 @@ module Prism
           })
       end
     end
-
-    # def start_world_on_new_worker options
-    #   request_id = `uuidgen`.strip
-    #   debug "starting world:#{world_id} on new worker"
-    #   redis.lpush_hash "workers:requests:create", options.merge( request_id:request_id )
-    #   listen_once_json "workers:requests:create:#{request_id}" do |worker|
-    #     debug "created new worker:#{worker['instance_id']}"
-    # 
-    #     start_world_on_started_worker options
-    #   end
-    # end
 
     def start_world_on_started_worker options
       # player still around?

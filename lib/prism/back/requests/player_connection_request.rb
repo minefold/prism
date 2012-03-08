@@ -11,12 +11,27 @@ module Prism
 
       User.find_by_username username do |user|
         if user
+          debug "found user:#{user.id} #{user.email}"
           @mp_id, @mp_name = user.mpid.to_s, user.email
-          if user.has_credit?
-            recognised_player_connecting user
+          
+          if user.current_world_id
+            World.find user.current_world_id do |world|
+              if world
+                debug "found world:#{world.id} #{world.slug}"
+                if user.has_credit?
+                  recognised_player_connecting user, world
+                else
+                  mixpanel_track 'bounced'
+                  no_credit_player_connecting
+                end
+              else
+                info "world:#{user.current_world_id} doesn't exist"
+                redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
+              end
+            end
           else
-            mixpanel_track 'bounced'
-            no_credit_player_connecting
+            info "user has no current_world"
+            redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
           end
         else
           mixpanel_track 'rejected'
@@ -25,24 +40,17 @@ module Prism
       end
     end
 
-    def recognised_player_connecting user
-      user_id, world_id = user.id.to_s, user.current_world_id.to_s
-      debug "found user:#{user_id} world:#{world_id}"
+    def recognised_player_connecting user, world
+      user_id, world_id = user.id.to_s, world.id.to_s
 
-      if world_id && world_id.size > 0
-        redis.hset "usernames", username, user_id
-        redis.hset "players:playing", username, world_id
-        redis.lpush_hash "players:world_request",
-          username: username,
-           user_id: user_id,
-          world_id: world_id,
-           credits: user.credits
+      redis.hset "usernames", username, user_id
+      redis.hset "players:playing", username, world_id
+      redis.lpush_hash "players:world_request",
+        username: username,
+         user_id: user_id,
+        world_id: world_id
 
-        record_connection user_id, world_id
-      else
-        info "user:#{username} has no world"
-        redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
-      end
+      record_connection user_id, world_id
     end
 
     def unrecognised_player_connecting

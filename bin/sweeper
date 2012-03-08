@@ -19,8 +19,7 @@ module Prism
 
     def start_sweepin
       @timeout = EM.add_periodic_timer(60) do
-        puts "Sweep took too long"
-        EM.stop
+        raise "Sweep took too long"
       end
 
       @sweeper.perform_sweep do

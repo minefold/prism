@@ -33,7 +33,5 @@ require 'debugger'
 require 'minefold/minefold_db'
 require 'minefold/redis'
 require 'minefold/storage'
-require 'minefold/worlds'
-require 'minefold/world'
 require 'jobs'
 require "#{Fold.env}"

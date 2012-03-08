@@ -37,11 +37,11 @@ class User
   def id
     @doc['_id']
   end
-  
+
   def email
     @doc['email']
   end
-  
+
   def mpid
     @doc['mpid'] || id
   end
