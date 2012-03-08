@@ -19,6 +19,7 @@ gem "resque-loner", git: 'https://github.com/whatupdave/resque-loner'
 gem 'statsd-instrument', git:'https://github.com/Shopify/statsd-instrument.git'
 
 gem 'hirb'
+gem 'exceptional'
 
 group :test do
   gem "autotest-fsevent"

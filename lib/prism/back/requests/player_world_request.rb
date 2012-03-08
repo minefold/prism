@@ -35,13 +35,8 @@ module Prism
       case
       when state.include?('starting')
         debug "world:#{world_id} start already requested"
-        listen_once_json "worlds:requests:start:#{world_id}" do |world|
-          if world['failed']
-            redis.publish_json "players:connection_request:#{username}", rejected:'500'
-          else
-            connect_player_to_world world['instance_id'], world['host'], world['port']
-          end
-        end
+        respond_to_world_start_event
+        
       when state.include?('stopping')
         debug "world:#{world_id} is stopping. will request start when stopped"
         redis.set_busy "worlds:busy", world_id, 'stopping => starting', expires_after: 120
@@ -143,10 +138,16 @@ module Prism
       redis.set_busy "worlds:busy", world_id, 'starting', expires_after: 600
       redis.lpush_hash "workers:#{instance_id}:worlds:requests:start", options
 
+      respond_to_world_start_event
+    end
+    
+    def respond_to_world_start_event
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
         redis.hdel "worlds:busy", world_id
 
         if world['failed']
+          Exceptional.rescue { raise "World start failed: #{world['failed']}" }
+          
           redis.publish_json "players:connection_request:#{username}", rejected:'500'
         else
           connect_player_to_world world['instance_id'], world["host"], world["port"]

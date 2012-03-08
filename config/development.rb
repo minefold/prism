@@ -31,3 +31,6 @@ Storage.provider = Fog::Storage.new({
 
 StatsD.logger = Logger.new('/dev/null')
 StatsD.mode = :development
+
+ENV['RACK_ENV'] = 'production' # exceptional gem looks at this ENV
+Exceptional::Config.load("#{ROOT}/config/exceptional.yml")

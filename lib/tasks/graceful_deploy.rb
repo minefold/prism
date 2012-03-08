@@ -1,4 +1,8 @@
 namespace :prism do
+  desc 'notifies players in game'
+  task :message_players do
+  end
+  
   desc 'notifies players about restart, waits, restarts'
   task :graceful do
     require 'prism/back'

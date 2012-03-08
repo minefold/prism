@@ -73,6 +73,8 @@ GEM
     eventmachine (1.0.0.beta.3)
     eventmachine-tail (0.6.3)
       eventmachine
+    exceptional (2.0.32)
+      rack
     excon (0.7.6)
     ffi (1.0.9)
     foreman (0.19.0)
@@ -152,6 +154,7 @@ DEPENDENCIES
   em-spec!
   eventmachine (= 1.0.0.beta.3)
   eventmachine-tail
+  exceptional
   fog!
   foreman
   geokit

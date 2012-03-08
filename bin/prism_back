@@ -12,10 +12,10 @@ EM.epoll
 
 module Prism
   EM.run do
-    # EM.error_handler do |e|
-    #   Toadhopper(AIRBRAKE_TOKEN).post!(e) if AIRBRAKE_TOKEN
-    #   raise
-    # end
+    EM.error_handler do |e|
+      Exceptional.handle(e)
+      raise
+    end
 
     subscription = PrismRedis.connect
     subscription.psubscribe "worlds:requests:*"

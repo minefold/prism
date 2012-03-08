@@ -14,6 +14,11 @@ module Prism
   EM.run do
     puts "Initialising"
     redis = Prism.redis
+    
+    EM.error_handler do |e|
+      Exceptional.handle(e)
+      raise
+    end
 
     subscription = PrismRedis.connect
     subscription.psubscribe "players:connection_request:*"
@@ -34,3 +39,4 @@ module Prism
     # EM.add_periodic_timer(1) { puts EM.connection_count }
   end
 end
+
