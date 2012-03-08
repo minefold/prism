@@ -132,3 +132,9 @@ namespace :servers do
     end
   end
 end
+
+namespace :world do
+  namespace :backups do
+  end
+end
+  

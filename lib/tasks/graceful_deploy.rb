@@ -20,7 +20,7 @@ namespace :prism do
         op.callback do |worlds|
           puts "Messaging #{worlds.count} worlds"
           worlds.each do |world_id, world|
-            @redis.publish "workers:#{world['instance_id']}:worlds:#{world_id}:stdin", message
+            @redis.publish "workers:#{world['instance_id']}:worlds:#{world_id}:stdin", "say #{message}"
             puts message
           end
           cb.call worlds

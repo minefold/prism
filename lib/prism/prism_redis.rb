@@ -59,7 +59,6 @@ module Prism
 
     def unstore_running_world instance_id, world_id
       hdel "worlds:running", world_id
-      del "worlds:#{world_id}:connected_players", user_id
     end
 
     def hget_json key, field
