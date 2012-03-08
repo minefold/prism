@@ -3,6 +3,10 @@ require 'fog'
 class Storage
   class << self; attr_accessor :provider; end
 
+  def self.old_worlds
+    new provider.directories.create(:key => OLD_WORLDS_BUCKET, :public => false)
+  end
+
   def self.worlds
     new provider.directories.create(:key => WORLDS_BUCKET, :public => false)
   end
@@ -15,6 +19,10 @@ class Storage
 
   def initialize directory
     @directory = directory
+  end
+  
+  def exists? remote_file
+    directory.files.head(remote_file)
   end
 
   def download remote_file, local_file

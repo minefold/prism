@@ -15,20 +15,30 @@ class World
     })
     cb
   end
-  
+
   def self.collection
     mongo_connect.collection('worlds')
   end
-  
+
   def initialize doc
     @doc = doc
   end
-  
+
   def id
     @doc['_id']
   end
-  
+
   def slug
     @doc['slug']
+  end
+
+  def data_file
+    @doc['world_data_file']
+  end
+
+  def has_data_file?
+    return true if data_file.nil?
+
+    Storage.worlds.exists?("#{id}/#{data_file}") || Storage.old_worlds.exists?(data_file)
   end
 end

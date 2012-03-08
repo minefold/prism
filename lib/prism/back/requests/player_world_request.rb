@@ -76,7 +76,7 @@ module Prism
                          name: 'Minecraft',
                       version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
 
-                    data_file: world['world_data_file'] || "#{world_id}.tar.gz",
+                    data_file: world['world_data_file'],
                           ops: op_usernames(world),
 
                          seed: world['seed'],

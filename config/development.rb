@@ -1,11 +1,4 @@
 ROOT = File.expand_path "../..", __FILE__
-BIN = "#{ROOT}/bin"
-LIB = "#{ROOT}/lib"
-WORLDS = "#{ROOT}/worlds"
-LOG_PATH = "#{ROOT}/log"
-
-JAR = "#{WORLDS}/server.jar"
-PIDS = "#{ROOT}/tmp/pids"
 
 EC2_SECRET_KEY="4VI8OqUBN6LSDP6cAWXUo0FM1L/uURRGIGyQCxvq"
 EC2_ACCESS_KEY="AKIAJPN5IJVEBB2QE35A"
@@ -13,8 +6,7 @@ MONGOHQ_URL='mongodb://localhost/'
 REDISTOGO_URL="redis://localhost:6379/"
 MAPPER = "~/code/minefold/pigmap/pigmap"
 MIXPANEL_TOKEN = nil
-AIRBRAKE_TOKEN = nil
-WORLDS_BUCKET = ENV['WORLDS_BUCKET'] || 'minefold-development-worlds'
+WORLDS_BUCKET = OLD_WORLDS_BUCKET = ENV['WORLDS_BUCKET'] || 'minefold-development-worlds'
 
 Fold.workers = :local
 Fold.worker_user = ENV['USER']

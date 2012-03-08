@@ -13,16 +13,24 @@ module Prism
         if user
           debug "found user:#{user.id} #{user.email}"
           @mp_id, @mp_name = user.mpid.to_s, user.email
-          
+
           if user.current_world_id
             World.find user.current_world_id do |world|
               if world
                 debug "found world:#{world.id} #{world.slug}"
-                if user.has_credit?
-                  recognised_player_connecting user, world
+
+                if world.has_data_file?
+                  debug "world is valid"
+
+                  if user.has_credit?
+                    recognised_player_connecting user, world
+                  else
+                    mixpanel_track 'bounced'
+                    no_credit_player_connecting
+                  end
                 else
-                  mixpanel_track 'bounced'
-                  no_credit_player_connecting
+                  info "world:#{world.id} data_file:#{world.data_file} does not exist"
+                  redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
                 end
               else
                 info "world:#{user.current_world_id} doesn't exist"
