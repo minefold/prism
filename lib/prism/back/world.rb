@@ -33,7 +33,8 @@ class World
   end
 
   def data_file
-    @doc['world_data_file']
+    # TODO: remove this later due to world_id in file bug
+    File.split(@doc['world_data_file']).last if @doc['world_data_file']
   end
 
   def has_data_file?
