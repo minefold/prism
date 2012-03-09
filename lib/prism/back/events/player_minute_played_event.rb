@@ -9,6 +9,8 @@ module Prism
     def run
       op = redis.hget "usernames", username
       op.callback do |user_id|
+        raise "unknown username #{username}" unless user_id
+        
         User.find user_id do |user|
           info "played 1 minute [#{user.plan_status}]"
 

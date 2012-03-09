@@ -9,7 +9,7 @@ module Prism
     def run
       debug "processing #{username}"
 
-      User.find_by_slug(username.downcase.strip) do |user|
+      User.find_by_username(username) do |user|
         if user
           debug "found user:#{user.id} #{user.email}  host:#{target_host}"
           @mp_id, @mp_name = user.mpid.to_s, user.email

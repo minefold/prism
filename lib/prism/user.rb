@@ -9,6 +9,10 @@ class User
     find_one({slug: slug}, *a, &b)
   end
 
+  def self.find_by_username username, *a, &b
+    find_one({safe_username: username.downcase.strip}, *a, &b)
+  end
+
   def self.find_one options, *a, &b
     cb = EM::Callback *a, &b
     EM.defer(proc {
