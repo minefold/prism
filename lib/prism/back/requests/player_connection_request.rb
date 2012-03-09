@@ -34,7 +34,7 @@ module Prism
 
     def connect_to_world user, world
       if world
-        debug "found world:#{world.id} #{user.slug}/#{world.slug}"
+        debug "found world:#{world.id} #{world.name}"
 
         if world.has_data_file?
           debug "world is valid"
@@ -64,7 +64,7 @@ module Prism
         username: username,
          user_id: user_id,
         world_id: world_id,
-        description: "#{user.slug}/#{world.slug}"
+        description: world.name
 
       record_connection user_id, world_id
     end

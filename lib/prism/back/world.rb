@@ -4,7 +4,7 @@ class World
   def self.find id, *a, &b
     find_one({"_id" => BSON::ObjectId(id.to_s)}, *a, &b)
   end
-  
+
   def self.find_by_slug creator_slug, world_slug, *a, &b
     cb = EM::Callback *a, &b
     User.find_by_slug(creator_slug) do |user|
@@ -43,6 +43,10 @@ class World
 
   def id
     @doc['_id']
+  end
+  
+  def name
+    @doc['name']
   end
 
   def slug
