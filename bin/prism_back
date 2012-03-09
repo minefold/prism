@@ -14,7 +14,7 @@ module Prism
   EM.run do
     EM.error_handler do |e|
       Exceptional.handle(e)
-      raise
+      raise e
     end
 
     subscription = PrismRedis.connect

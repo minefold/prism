@@ -12,6 +12,7 @@ module Prism
       def self.all *c, &b
         cb = EM::Callback(*c, &b)
         EM.defer( proc {
+            # TODO set timeout
             compute_cloud.servers.select {|s| tags.all? {|k,v| s.tags[k.to_s] == v.to_s} }.map {|s| Cloud.new s }
           }, proc{ |cloud_boxes|
             cb.call cloud_boxes
@@ -156,14 +157,14 @@ chef-solo -c /home/ubuntu/chef/ec2/solo.rb -j /tmp/attributes.json
 
 
       def query_state timeout = 20, *c,&b
-        @timeout = EM.add_periodic_timer(timeout) do 
+        @timeout = EM.add_periodic_timer(timeout) do
           puts "timeout querying box"
           cb.call nil
         end
         cb = EM::Callback(*c,&b)
-        EM.defer(proc { vm.state }, proc { |state| 
+        EM.defer(proc { vm.state }, proc { |state|
           @timeout.cancel
-          cb.call state 
+          cb.call state
         })
       end
 

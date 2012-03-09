@@ -6,7 +6,7 @@ gem 'eventmachine', '1.0.0.beta.3'
 gem 'eventmachine-tail'
 gem 'em-http-request'
 
-gem 'fog', git: 'https://github.com/whatupdave/fog-1' #'~> 1.1.1'
+gem 'fog', '~> 1.1.2'
 
 gem 'mongo'
 gem 'bson_ext'
