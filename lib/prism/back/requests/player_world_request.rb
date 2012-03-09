@@ -3,7 +3,7 @@ module Prism
     include Messaging
     include ChatMessaging
 
-    process "players:world_request", :username, :user_id, :world_id
+    process "players:world_request", :username, :user_id, :world_id, :description
 
     attr_reader :instance_id
 
@@ -36,7 +36,7 @@ module Prism
       when state.include?('starting')
         debug "world:#{world_id} start already requested"
         respond_to_world_start_event
-        
+
       when state.include?('stopping')
         debug "world:#{world_id} is stopping. will request start when stopped"
         redis.set_busy "worlds:busy", world_id, 'stopping => starting', expires_after: 120
@@ -118,7 +118,7 @@ module Prism
         end
       end
     end
-    
+
     def start_world_on_running_worker options
       instance_id = options[:instance_id]
       debug "starting world:#{world_id} on worker:#{instance_id} heap:#{options[:heap_size]}"
@@ -128,36 +128,41 @@ module Prism
 
       respond_to_world_start_event
     end
-    
+
     def respond_to_world_start_event
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
         redis.hdel "worlds:busy", world_id
 
         if world['failed']
           Exceptional.rescue { raise "World start failed: #{world['failed']}" }
-          
+
           redis.publish_json "players:connection_request:#{username}", rejected:'500'
         else
           connect_player_to_world world['instance_id'], world["host"], world["port"]
         end
       end
     end
-    
+
 
     def connect_player_to_world instance_id, host, port
       puts "connecting to #{host}:#{port}"
       redis.publish_json "players:connection_request:#{username}", host:host, port:port, user_id:user_id, world_id:world_id
 
-      op = redis.hget "usernames", username
-      op.callback do |user_id|
-        redis.sadd "worlds:#{world_id}:connected_players", user_id
-
-        op = redis.scard "worlds:#{world_id}:connected_players"
-        op.callback do |player_count|
-          @instance_id = instance_id
-          send_delayed_message 7, "Hi #{username} welcome to minefold!"
-          send_delayed_message 13, "There #{player_count == 1 ? 'is' : 'are'} #{pluralize player_count, "player"} in this world"
+      op = redis.hgetall "players:playing"
+      op.callback do |players|
+        world_players = players.each_with_object({}) do |(username, world_id), h|
+          h[world_id] ||= []
+          h[world_id] += [username]
         end
+        
+        player_count = world_players[world_id].size
+
+        @instance_id = instance_id
+        send_delayed_message 4, "Hi #{username} welcome to minefold.com!"
+        send_delayed_message 7, "You're playing in #{description}"
+        send_delayed_message 10, player_count == 1 ? 
+          "It's just you, invite some friends!" : 
+          "There #{player_count == 2 ? 'is' : 'are'} #{pluralize (player_count - 1), "other player"} in this world"
       end
     end
   end

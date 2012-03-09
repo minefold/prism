@@ -1,43 +1,21 @@
-if ENV['COVERAGE']
-  puts "running with coverage"
-  require "simplecov"
-  SimpleCov.start do
-    add_filter '/spec/'
-  end
-end
-require 'spork'
+require 'bundler/setup'
+Bundler.require :default, :test
 
-Spork.prefork do
-  ENV["FOLD_ENV"] ||= 'test'
-  
-  require 'bundler/setup'
-  Bundler.require :default, :test
-  
-  REDISTOGO_URL = nil
+ENV["FOLD_ENV"] ||= 'test'
+require 'minefold'
+require 'prism/front'
+require 'prism/back'
 
-  RSpec.configure do |c|
-    Fog.mock!
-    c.mock_with :rr
-  end
+Dir["#{Fold.root}/spec/support/**/*.rb"].each {|f| require f}
+
+module Debugger
+  # def debug *args; end
+  def info *args; end
+  def error *args; end
 end
 
-Spork.each_run do
-  require 'minefold'
-  require 'prism/front'
-  require 'prism/back'
-  Dir[File.join File.dirname(__FILE__), "support/**/*.rb"].each {|f| require f}
-  
-  module Debugger
-    # def debug *args; end
-    def info *args; end
-    def error *args; end
-  end
-  
-  RSpec.configure do  |c|
-    c.before(:each) do 
-      Prism.redis = nil 
-      EM::FakeRedis.reset
-    end
-  end
-end
+RSpec.configure do |config|
+  config.mock_with :rspec
 
+  Fog.mock!
+end

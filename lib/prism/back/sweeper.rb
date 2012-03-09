@@ -73,8 +73,6 @@ module Prism
 
       shutdown_idle_worlds
 
-      fix_players_bug
-
       # wait 5 seconds so redis is definitely up to date
       # this would be better as a multi query, waiting for all of these
       # tasks to finish
@@ -177,21 +175,6 @@ module Prism
         else
           debug "box:#{world['instance_id']} world:#{world_id} is empty"
           redis.set_busy "worlds:busy", world_id, 'empty', expires_after: 60
-        end
-      end
-    end
-
-    def fix_players_bug
-      # TEMP 
-      # we have connected player sets with empty strings?
-      # worlds:4f5519f9f4a00a0001000013:connected_players [set]
-      # [""]
-      # TODO: fix the blank string bug
-      
-      op = redis.keys("worlds:*:connected_players")
-      op.callback do |connected_players_keys|
-        connected_players_keys.each do |key| 
-          redis.srem key, ""
         end
       end
     end

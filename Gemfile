@@ -28,14 +28,10 @@ group :test do
   gem 'launchy'
   gem 'rr', '~> 1.0.3'
   gem 'rspec', '~> 2.6.0'
-  gem 'simplecov', '>= 0.4.0', :require => false
-  gem 'spork', '~> 0.9.0.rc'
   gem 'timecop', '~> 0.3.5'
-  gem "virtualbox"
-  gem "ZenTest", "~> 4.4.2"
   gem 'em-spec', git:'https://github.com/joshbuddy/em-spec.git', require:'em-spec/rspec'
-  gem 'awesome_print'
-  gem 'capistrano'
+  gem 'fakeredis'
+  gem "ZenTest", "~> 4.4.2"
 end
 
 group :geo do

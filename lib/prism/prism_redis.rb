@@ -70,8 +70,17 @@ module Prism
     def hgetall_json key
       df = EM::DefaultDeferrable.new
 
-      op = hgetall key
+      op = redis.hgetall key
       op.callback {|data| df.succeed data.each_slice(2).each_with_object({}) {|w, hash| hash[w[0]] = JSON.parse w[1] } }
+      op.errback  { df.errback }
+      df
+    end
+
+    def hgetall key
+      df = EM::DefaultDeferrable.new
+
+      op = redis.hgetall key
+      op.callback {|data| df.succeed data.each_slice(2).each_with_object({}) {|w, hash| hash[w[0]] = w[1] } }
       op.errback  { df.errback }
       df
     end
@@ -79,7 +88,7 @@ module Prism
     def hset_hash channel, key, value
       hset channel, key, value.to_json
     end
-    
+
     def set_busy key, field, state, options = {}
       hset_hash key, field, { state: state }.merge(options).merge({at: Time.now.to_i})
     end
@@ -96,7 +105,7 @@ module Prism
       redis.send sym, *args, &blk
     end
 
-    %w[brpop hexists hget hgetall hset lpush publish scard sadd srem smembers sunion zadd zcard zcount].each do |cmd|
+    %w[brpop hexists hget hset lpush publish scard sadd srem smembers sunion zadd zcard zcount].each do |cmd|
       define_method(:"#{cmd}") do |*args, &blk|
         op = redis.send cmd, *args
         op.errback {|e| handle_error e }

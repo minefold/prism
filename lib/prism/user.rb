@@ -5,8 +5,8 @@ class User
     find_one({"_id" => BSON::ObjectId(id.to_s)}, *a, &b)
   end
 
-  def self.find_by_username username, *a, &b
-    find_one({:safe_username => username.downcase.strip}, *a, &b)
+  def self.find_by_slug slug, *a, &b
+    find_one({slug: slug}, *a, &b)
   end
 
   def self.find_one options, *a, &b
@@ -41,6 +41,15 @@ class User
   def email
     @doc['email']
   end
+
+  def username
+    @doc['username']
+  end
+
+  def slug
+    username.downcase
+  end
+
 
   def mpid
     @doc['mpid'] || id
