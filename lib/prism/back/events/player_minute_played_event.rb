@@ -7,17 +7,13 @@ module Prism
     def log_tag; username; end
 
     def run
-      op = redis.hget "usernames", username
-      op.callback do |user_id|
-        raise "unknown username #{username}" unless user_id
-        
-        User.find user_id do |user|
-          info "played 1 minute [#{user.plan_status}]"
+      User.find_by_username(username) do |user|
+        raise "unknown user:#{username}" unless user
+        info "played 1 minute [#{user.plan_status}]"
 
-          unless user.plan_or_unlimited?
-            user.update '$inc' => { 'credits' => -1 }
-            credits_updated user_id, user.credits - 1
-          end
+        unless user.plan_or_unlimited?
+          user.update '$inc' => { 'credits' => -1 }
+          credits_updated user.id, user.credits - 1
         end
       end
     end

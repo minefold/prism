@@ -10,11 +10,6 @@ module Prism
       op.callback do |world_id|
         debug "removing player:#{username} from world:#{world_id}"
         redis.hdel "players:playing", username
-
-        op = redis.hget "usernames", username
-        op.callback do |user_id|
-          redis.hdel "usernames", username
-        end
       end
     end
   end
