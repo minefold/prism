@@ -54,13 +54,13 @@ class World
   end
 
   def data_file
-    # TODO: remove this later due to world_id in file bug
-    File.split(@doc['world_data_file']).last if @doc['world_data_file']
+    @doc['world_data_file']
   end
 
   def has_data_file?
     return true if data_file.nil?
-
-    Storage.worlds.exists?("#{id}/#{data_file}") || Storage.old_worlds.exists?(data_file)
+    
+    # TODO: world data_file's should include the full path world_id/world_id.tar.gz
+    Storage.worlds.exists?("#{data_file}") || Storage.worlds.exists?("#{id}/#{data_file}") || Storage.old_worlds.exists?(data_file)
   end
 end
