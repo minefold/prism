@@ -15,7 +15,7 @@ Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.
 SSH_PRIVATE_KEY_PATH=ENV['EC2_SSH'] || "#{ROOT}/.ec2/east/minefold2.pem"
 
 Fold.workers = :cloud
-Fold.worker_tags = { :environment => :production, :git_branch => :master }
+Fold.worker_tags = { :environment => :production }
 Fold.worker_user = 'ubuntu'
 
 Storage.provider = Fog::Storage.new({

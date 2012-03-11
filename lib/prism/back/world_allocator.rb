@@ -1,7 +1,7 @@
 require 'time'
 
 module Prism
-  ECUS_PER_WORLD = 2
+  ECUS_PER_WORLD = 1.5
   RAM_PER_PLAYER = 128
   OS_RAM_BUFFER = 0.2 # let the OS have this much ram
 
@@ -9,14 +9,13 @@ module Prism
   WORLD_BUFFER = 3  # there must be room for 3 more worlds at any time
 
   AMIS = {
-    '32bit' => 'ami-1c60b375',
-    '64bit' => 'ami-844b98ed',
+    '64bit' => 'ami-9ed905f7',
       'HVM' => 'ami-844b98ed'
   }
 
   INSTANCE_DEFS = {
-    'm1.small'   => { ram:  1.7 * 1024, ecus:  1.0, image_id: AMIS['32bit'] },   # worlds:  3  players:  14
-    'c1.medium'  => { ram:  1.7 * 1024, ecus:  5.0, image_id: AMIS['32bit'] },   # worlds:  3  players:  14
+    'm1.small'   => { ram:  1.7 * 1024, ecus:  1.0, image_id: AMIS['64bit'] },   # worlds:  3  players:  14
+    'c1.medium'  => { ram:  1.7 * 1024, ecus:  5.0, image_id: AMIS['64bit'] },   # worlds:  3  players:  14
     'c1.xlarge'  => { ram:  7.0 * 1024, ecus: 20.0, image_id: AMIS['64bit'] },   # worlds: 10  players:  56
     'm1.large'   => { ram:  7.5 * 1024, ecus:  4.0, image_id: AMIS['64bit'] },   # worlds:  2  players:  60
     'm2.xlarge'  => { ram: 17.1 * 1024, ecus:  6.5, image_id: AMIS['64bit'] },   # worlds:  3  players: 137
@@ -57,13 +56,13 @@ module Prism
     def new_instance_type
       # make the first one small, then the other ones bigger
       # boxes_with_capacity.size == 0 ? 'c1.medium' : 'c1.xlarge'
-      'c1.medium'
+      'c1.xlarge'
     end
 
     def find_box_for_new_world world
       # find a box with the least amount of world slots and the most player slots
       # this means we fill boxes with smaller worlds and (in theory) allow larger
-      # worlds to grow larger still. This might be complete bullshit...
+      # worlds to grow larger still. This might be complete bullshit…
 
       # check world['whitelisted_player_ids']
       start_options = BoxType.new(new_instance_type).to_hash

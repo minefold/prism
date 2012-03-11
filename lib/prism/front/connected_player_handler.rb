@@ -19,10 +19,13 @@ module Prism
       @credit_muncher = EventMachine::PeriodicTimer.new(60) do
         debug "recording minute played"
         redis.lpush_hash "players:minute_played", username:username, timestamp:Time.now.utc
+        # TODO: player_id, world_id
         Resque.push 'high', class: 'MinutePlayedJob', args: [user_id, world_id, Time.now.utc]
       end
 
       listen_once("players:disconnect:#{username}") { exit }
+
+      # TODO: player_id, world_id
       Resque.push 'high', class: 'PlayerConnectedJob', args: [username, Time.now.utc]
     end
 
@@ -38,6 +41,7 @@ module Prism
                                                         ended_at: Time.now.to_i
 
       StatsD.measure_timer @minecraft_session_started_at, "sessions.minecraft"
+      # TODO: player_id, world_id
       Resque.push 'high', class: 'PlayerDisconnectedJob', args: [user_id, world_id, @minecraft_session_started_at, Time.now.utc]
     end
 
