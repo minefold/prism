@@ -163,8 +163,6 @@ module Prism
           send_delayed_message 10, player_count == 1 ? 
             "It's just you, invite some friends!" : 
             "There #{player_count == 2 ? 'is' : 'are'} #{pluralize (player_count - 1), "other player"} in this world"
-        else
-          puts "unknown world players! #{players}"
         end
       end
     end

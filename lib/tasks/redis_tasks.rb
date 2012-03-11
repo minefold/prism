@@ -7,17 +7,17 @@ namespace "redis" do
       sleep 1
     end
   end
-  
-  
+
+
   desc "Dump minefold specific keys"
   task "state" do
     redis = redis_connect
     puts "clients: #{redis.info['connected_clients']}"
     redis.keys.sort.each do |key|
       type = redis.type key
-      
+
       puts "#{key} [#{type}]"
-      
+
       case type
       when 'string'
         p redis.get(key)
@@ -34,14 +34,14 @@ namespace "redis" do
       puts
     end
   end
-  
+
   desc "deletes all keys"
   task :flush_all do
     raise 'this is fucking dangerous!'
-    
+
     redis_connect.flushall
   end
-  
+
   desc "gets rid of loner keys"
   task :delete_loners do
     redis = redis_connect
