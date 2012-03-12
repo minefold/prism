@@ -7,20 +7,32 @@ module Prism
     def log_tag; username; end
 
     def run
-      debug "processing #{username}"
+      debug "processing #{username} #{target_host}"
 
+      Player.upsert_by_username(username) do |player|
+        # TODO: support other hosts besides fold.to
+        if target_host =~ /^([\w-]+)\.([\w-]+)\.(localhost\.)?fold\.to\:?(\d+)?$/
+          connect_to_target $1.downcase, $2.downcase
+        else
+          # connecting to pluto, old sk00l
+          connect_to_current_world player
+        end
+      end
+    end
+
+    def connect_to_target world_slug, creator_slug
+      World.find_by_slug(creator_slug, world_slug) do |world|
+        connect_to_world player, world
+      end
+    end
+
+    def connect_to_current_world player
+      # TODO: don't load user after we migrate
       User.find_by_username(username) do |user|
         if user
-          debug "found user:#{user.id} #{user.email}  host:#{target_host}"
-          @mp_id, @mp_name = user.mpid.to_s, user.email
-
-          # eg. minebnb.whatupdave.fold.to
-          if target_host =~ /^([\w-]+)\.([\w-]+)\.(localhost\.)?fold\.to\:?(\d+)?$/
-            world_slug, creator_slug = $1.downcase, $2.downcase
-            World.find_by_slug(creator_slug, world_slug) {|world| connect_to_world user, world }
-
-          elsif user.current_world_id
-            World.find(user.current_world_id) {|world| connect_to_world user, world }
+          debug "found user:#{user.id} host:#{target_host}"
+          if user.current_world_id
+            World.find(user.current_world_id) {|world| connect_to_world player, world }
           else
             info "user has no current_world"
             redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
@@ -31,38 +43,62 @@ module Prism
         end
       end
     end
-
-    def connect_to_world user, world
+    
+    def has_credit? player, user
+      if user
+        debug "user:#{user.id} #{user.plan_status}"
+        user.has_credit?
+      else
+        debug "player:#{player.id} has played for #{player.minutes_played} minutes"
+        player.has_credit?
+      end
+    end
+    
+    def connect_to_world player, world
       if world
         debug "found world:#{world.id} #{world.name}"
-
-        if world.has_data_file?
-          debug "world is valid"
-
-          if user.has_credit?
-            recognised_player_connecting user, world
-          else
-            mixpanel_track 'bounced'
-            no_credit_player_connecting
+        if player.user_id
+          User.find(player.user_id) do |user|
+            if user
+              connect_user_to_world player, user, world
+            else
+              info "no user found for player.user_id:#{player.user_id}"
+              redis.publish_json "players:connection_request:#{username}", rejected:'500'
+            end
           end
         else
-          info "world:#{world.id} data_file:#{world.data_file} does not exist"
-          redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
+          info "player:#{player.id} has no user"
+          recognised_player_connecting player, world
         end
       else
         info "world:#{user.current_world_id} doesn't exist"
         redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
       end
     end
+    
+    def connect_user_to_world player, user, world
+      if world.has_data_file?
+        debug "world is valid"
 
-    def recognised_player_connecting user, world
-      user_id, world_id = user.id.to_s, world.id.to_s
+        if has_credit?(player, user)
+          recognised_player_connecting player, world
+        else
+          mixpanel_track 'bounced'
+          no_credit_player_connecting
+        end
+      else
+        info "world:#{world.id} data_file:#{world.data_file} does not exist"
+        redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
+      end
+    end
 
-      redis.hset "usernames", username, user_id
-      redis.hset "players:playing", username, world_id
+    def recognised_player_connecting player, world
+      player_id, world_id = player.id.to_s, world.id.to_s
+
+      redis.hset "players:playing", player_id, world_id
       redis.lpush_hash "players:world_request",
         username: username,
-         user_id: user_id,
+       player_id: player_id,
         world_id: world_id,
         description: world.name
 

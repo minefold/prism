@@ -108,8 +108,11 @@ module Prism
     def found_worlds
       new_worlds = running_worlds.reject{|world_id, world| redis_universe.worlds[:running].keys.include? world_id }
       new_worlds.each do |world_id, world|
-        debug "found world:#{world_id}"
-        redis.store_running_world world['instance_id'], world_id, world['host'], world['port']
+        
+        if world_id != 'disk' # TODO: this line is temp
+          debug "found world:#{world_id}"
+          redis.store_running_world world['instance_id'], world_id, world['host'], world['port']
+        end
       end
     end
 

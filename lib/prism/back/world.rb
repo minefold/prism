@@ -45,10 +45,6 @@ class World
     @doc['_id']
   end
   
-  def name
-    @doc['name']
-  end
-
   def slug
     @doc['slug']
   end
