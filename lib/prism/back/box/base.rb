@@ -12,6 +12,12 @@ module Prism
     def receive_data data
       @data ||= ""
       @data << data
+
+      # TODO: this is here temporarily as currently widget won't hang up
+      json_data = JSON.parse @data rescue nil
+      if json_data
+        close_connection
+      end
     end
 
     def unbind
