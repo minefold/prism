@@ -136,6 +136,25 @@ module Prism
 
       running_box_capacities.each do |box|
         box_type = BoxType.new(box['instance_type'])
+        widget = universe.widgets[box['instance_id']]
+
+        puts "box:#{box['instance_id']} world_players: #{box[:worlds].values.map{|w| w[:players].size}.join(', ')}"
+        if widget
+          puts widget.inspect
+          if pi = widget['pi']
+            cpu_values = pi.values.map{|i| i['cpu'] }
+            cpu_total = cpu_values.inject(0) {|sum, val| sum + val }
+            puts "box:#{box['instance_id']} cpu: #{cpu_values.map{|cpu| "#{cpu}%"}.join(', ')}  total: #{cpu_total}%"
+
+            mem_values = pi.values.map{|i| i['mem'] * 1024 }
+            mem_total = mem_values.inject(0) {|sum, val| sum + val }
+            puts "box:#{box['instance_id']} mem: #{mem_values.map{|mem| "#{mem.to_human_size}"}.join(', ')}  total: #{mem_total.to_human_size}"
+          end
+          if disk = widget['disk']
+            puts "box:#{box['instance_id']} disk: #{disk.values.map{|d| ((d['used'] / d['total'].to_f) * 100).to_i.to_s + "%" }.join(', ')}"
+          end
+        end
+
         message = "box:#{box['instance_id']} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime:#{friendly_time uptime box}"
         message += " not accepting" if worlds_accepted box
         puts message

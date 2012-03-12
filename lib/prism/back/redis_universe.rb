@@ -11,22 +11,26 @@ module Prism
         EM.stop
       }
 
-      multi = EventMachine::Multi.new
-      multi.add :running_boxes,   redis.hgetall_json('workers:running')
-      multi.add :busy_boxes,      redis.hgetall_json('workers:busy')
-      multi.add :running_worlds,  redis.hgetall_json( 'worlds:running')
-      multi.add :busy_worlds,     redis.hgetall_json( 'worlds:busy')
-      multi.add :players,         redis.hgetall('players:playing')
-      multi.add :usernames,       redis.hgetall('usernames')
+      redis.keys("widget:*:heartbeat") do |heartbeats|
+        multi = EventMachine::Multi.new
+        multi.add :running_boxes,   redis.hgetall_json('workers:running')
+        multi.add :busy_boxes,      redis.hgetall_json('workers:busy')
+        multi.add :running_worlds,  redis.hgetall_json( 'worlds:running')
+        multi.add :busy_worlds,     redis.hgetall_json( 'worlds:busy')
+        multi.add :players,         redis.hgetall('players:playing')
+        multi.add :usernames,       redis.hgetall('usernames')
 
-      multi.callback do |results|
-        @timeout.cancel
-        cb.call RedisUniverse.new results
+        heartbeats.each {|key| multi.add key, redis.get(key) }
+
+        multi.callback do |results|
+         @timeout.cancel
+         cb.call RedisUniverse.new results
+        end
       end
       cb
     end
 
-    attr_reader :boxes, :worlds, :players
+    attr_reader :boxes, :worlds, :players, :widgets
 
     def initialize results = {}
       @boxes = {
@@ -58,6 +62,13 @@ module Prism
         @boxes[:running][instance_id][:worlds]  = @worlds[:running].select {|world_id, world| world['instance_id'] == instance_id }
         @boxes[:running][instance_id][:players] = @boxes[:running][instance_id][:worlds].inject([]) do |acc, (world_id, world)|
           acc | world[:players]
+        end
+      end
+      
+      @widgets = results.each_with_object({}) do |(key, heartbeat), h|
+        key =~ /widget:(.*):heartbeat/
+        if id = $1
+          h[id] = JSON.parse heartbeat
         end
       end
     end
