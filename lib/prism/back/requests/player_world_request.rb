@@ -3,7 +3,9 @@ module Prism
     include Messaging
     include ChatMessaging
 
-    process "players:world_request", :username, :user_id, :world_id, :description
+    process "players:world_request", :username, :player_id, :world_id, :description
+    
+    info_tag { [player_id, world_id] }
 
     attr_reader :instance_id
 
@@ -70,7 +72,6 @@ module Prism
             mongo_connect['worlds'].find_one({"_id"  => BSON::ObjectId(world_id) })
           }, proc { |world|
             if world
-              mongo_connect.collection('users').find_one({"_id"  => BSON::ObjectId(user_id) })
               start_options = WorldAllocator.new(universe).find_box_for_new_world world
               runpack_defaults = {
                          name: 'Minecraft',
@@ -97,7 +98,7 @@ module Prism
               if start_options[:instance_id]
                 start_world_on_started_worker start_options
               else
-                info "no instances available for user:#{username} world:#{world_id}"
+                info "no instances available"
                 redis.publish_json "players:connection_request:#{username}", rejected:'no_instances_available'
               end
             else
@@ -146,7 +147,7 @@ module Prism
 
     def connect_player_to_world instance_id, host, port
       puts "connecting to #{host}:#{port}"
-      redis.publish_json "players:connection_request:#{username}", host:host, port:port, user_id:user_id, world_id:world_id
+      redis.publish_json "players:connection_request:#{username}", host:host, port:port, player_id:player_id, world_id:world_id
 
       op = redis.hgetall "players:playing"
       op.callback do |players|

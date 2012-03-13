@@ -26,7 +26,6 @@ module Prism
     end
 
     [ PlayerConnectionRequest,
-      PlayerDisconnectionEvent,
       PlayerMinutePlayedEvent,
       PlayerWorldRequest,
       WorkerStopRequest,

@@ -1,5 +1,0 @@
-require 'cli/player_command'
-require 'cli/proxy_command'
-require 'cli/world_command'
-require 'cli/worker_command'
-require 'cli/workers_command'

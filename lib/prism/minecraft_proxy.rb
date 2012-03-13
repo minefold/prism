@@ -1,7 +1,5 @@
 module Prism
   module MinecraftProxy
-    include Debugger
-
     attr_accessor :client
 
     def initialize client, buffered_data
@@ -17,7 +15,6 @@ module Prism
     end
 
     def unbind
-      debug "server connection closed"
       @client.server_unbound
     end
   end

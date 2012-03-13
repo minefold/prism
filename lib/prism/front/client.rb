@@ -1,6 +1,6 @@
 module Prism
   module Client
-    include Debugger
+    extend Debugger
 
     attr_reader :handler, :buffered_data
 

@@ -48,6 +48,10 @@ class World
   def slug
     @doc['slug']
   end
+  
+  def name
+    @doc['name']
+  end
 
   def data_file
     @doc['world_data_file']

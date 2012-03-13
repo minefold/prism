@@ -5,6 +5,7 @@ module Prism
     include EM::P::Minecraft::Packets::Server
 
     attr_reader :username
+    info_tag { username }
 
     def friendly_kick_messages
       {
@@ -16,7 +17,6 @@ module Prism
       }.freeze
     end
 
-    def log_tag; username; end
 
     def init username, target_host = nil
       @username, @target_host = username, target_host
@@ -33,8 +33,22 @@ module Prism
             info "connection time:#{connection_time_ms}"
             StatsD.increment_and_measure_from started_connection, "players.connection_request.successful"
 
-            server = EM.connect response["host"], response["port"], MinecraftProxy, connection, connection.buffered_data
-            new_handler ConnectedPlayerHandler, server, username, response["host"], response["port"], response["user_id"], response["world_id"]
+            host, port, player_id, world_id = response["host"], response["port"], response["player_id"], response["world_id"]
+
+            server = EM.connect host,
+                                port,
+                                MinecraftProxy,
+                                connection,
+                                connection.buffered_data
+
+            new_handler ConnectedPlayerHandler,
+                        server,
+                        username,
+                        host,
+                        port,
+                        player_id,
+                        world_id
+
           elsif response['rejected']
             connection.send_data server_packet(0xFF, :reason => friendly_kick_messages[response['rejected']])
             connection.close_connection_after_writing
@@ -55,7 +69,7 @@ module Prism
 
     def client_unbound
       @connection_active = false
-      redis.lpush_hash "players:disconnection_request", username: username, remote_ip:remote_ip
+      # redis.lpush_hash "players:disconnection_request", username: username, remote_ip:remote_ip
       debug "client disconnected"
     end
   end

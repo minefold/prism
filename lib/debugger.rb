@@ -16,7 +16,7 @@ module Debugger
   end
 
   def tagged_message message, tag = nil
-    @tag = (Array(log_tag) + Array(tag)).compact
+    @tag = (Array(tag) | Array(self.class.info_tag && self.class.info_tag.call)).compact
     if @tag.any?
       "[#{@tag.join('|')}] #{message}"
     else
@@ -24,7 +24,15 @@ module Debugger
     end
   end
 
-  def log_tag
+  def self.included klass
+    klass.extend ClassMethods
   end
 
+  module ClassMethods
+    attr_accessor :info_tag
+
+    def info_tag &blk
+      @info_tag = blk
+    end
+  end
 end

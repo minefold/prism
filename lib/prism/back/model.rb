@@ -35,7 +35,11 @@ class Model
   end
 
   def collection
-    self.class.collection
+    self.class.mongo_collection
+  end
+  
+  def update options
+    collection.update({'_id' => id}, options)
   end
 
   def id
