@@ -50,7 +50,7 @@ module Bytes #:nodoc:
 
       if number.to_i < 1024
         unit = UNIT_NAMES[:byte][:other]
-        storage_units_format.gsub(/%n/, number.to_i.to_s).gsub(/%u/, unit).html_safe
+        storage_units_format.gsub(/%n/, number.to_i.to_s).gsub(/%u/, unit)
       else
         max_exp  = STORAGE_UNITS.size - 1
         exponent = (Math.log(number) / Math.log(1024)).to_i # Convert to base 1024
