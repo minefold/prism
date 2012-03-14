@@ -3,7 +3,7 @@ require 'bytes'
 
 module Prism
   class Sweeper
-    include Debugger
+    include Logging
 
     attr_reader :redis_universe,
                 :boxes, :running_boxes, :working_boxes, :broken_boxes,

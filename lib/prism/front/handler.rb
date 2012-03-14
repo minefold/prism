@@ -1,7 +1,5 @@
 module Prism
   class Handler
-    include Debugger
-
     attr_reader :connection, :buffered_data, :redis
 
     def init; end

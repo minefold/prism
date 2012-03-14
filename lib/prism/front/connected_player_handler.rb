@@ -1,10 +1,11 @@
 module Prism
   class ConnectedPlayerHandler < Handler
     include Messaging
+    include Logging
 
     attr_reader :username, :host, :port, :player_id, :world_id
 
-    info_tag {[world_id, username]}
+    log_tags :world_id, :username
 
     def init server, username, host, port, player_id, world_id
       @server = server

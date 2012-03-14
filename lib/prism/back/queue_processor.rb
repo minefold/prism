@@ -1,6 +1,6 @@
 module Prism
   class QueuePopper
-    include Debugger
+    include Logging
 
     def initialize queue, *a, &b
       @queue = queue
@@ -29,7 +29,7 @@ module Prism
   end
 
   class QueueProcessor
-    include Debugger
+    include Logging
 
     def initialize klass
       @queue, @klass = klass.queue, klass

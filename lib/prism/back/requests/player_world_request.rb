@@ -2,10 +2,11 @@ module Prism
   class PlayerWorldRequest < Request
     include Messaging
     include ChatMessaging
+    include Logging
 
     process "players:world_request", :username, :player_id, :world_id, :description
-    
-    info_tag { [player_id, world_id] }
+
+    log_tags :player_id, :world_id
 
     attr_reader :instance_id
 
@@ -22,10 +23,10 @@ module Prism
     def get_world_started
       redis.hget_json "worlds:running", world_id do |world|
         if world
-          debug "world:#{world_id} is already running"
+          debug "world is already running"
           connect_player_to_world world['instance_id'], world['host'], world['port']
         else
-          debug "world:#{world_id} is not running"
+          debug "world not running"
           start_world
         end
       end
@@ -36,11 +37,11 @@ module Prism
       state = busy_world['state']
       case
       when state.include?('starting')
-        debug "world:#{world_id} start already requested"
+        debug "world start already requested"
         respond_to_world_start_event
 
       when state.include?('stopping')
-        debug "world:#{world_id} is stopping. will request start when stopped"
+        debug "world is stopping. will request start when stopped"
         redis.set_busy "worlds:busy", world_id, 'stopping => starting', expires_after: 120
         listen_once "worlds:requests:stop:#{world_id}" do
           debug "world:#{world_id} stopped. Requesting restart"
@@ -155,14 +156,14 @@ module Prism
           h[world_id] ||= []
           h[world_id] += [username]
         end
-        
+
         @instance_id = instance_id
         send_delayed_message 4, "Hi #{username} welcome to minefold.com!"
         send_delayed_message 7, "You're playing in #{description}"
         if world_players[world_id]
           player_count = world_players[world_id].size
-          send_delayed_message 10, player_count == 1 ? 
-            "It's just you, invite some friends!" : 
+          send_delayed_message 10, player_count == 1 ?
+            "It's just you, invite some friends!" :
             "There #{player_count == 2 ? 'is' : 'are'} #{pluralize (player_count - 1), "other player"} in this world"
         end
       end

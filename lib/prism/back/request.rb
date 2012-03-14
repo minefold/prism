@@ -1,6 +1,5 @@
 module Prism
   class Request
-    include Debugger
     include Mongo
 
     class << self

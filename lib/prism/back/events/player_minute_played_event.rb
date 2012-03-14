@@ -1,10 +1,11 @@
 module Prism
   class PlayerMinutePlayedEvent < Request
     include ChatMessaging
+    include Logging
 
     process "players:minute_played", :world_id, :player_id, :username, :timestamp
 
-    info_tag { [world_id, player_id, username] }
+    log_tags :world_id, :player_id, :username
 
     MESSAGES = {
       15 => "15 minefold minutes left",

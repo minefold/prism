@@ -3,9 +3,11 @@ module Prism
     include MinecraftKeepalive
     include Messaging
     include EM::P::Minecraft::Packets::Server
+    
+    include Logging
 
     attr_reader :username
-    info_tag { username }
+    log_tags :username
 
     def friendly_kick_messages
       {
@@ -70,6 +72,7 @@ module Prism
     def client_unbound
       @connection_active = false
       # redis.lpush_hash "players:disconnection_request", username: username, remote_ip:remote_ip
+      # p self.class.log_tags_cb
       debug "client disconnected"
     end
   end

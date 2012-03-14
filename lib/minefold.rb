@@ -29,7 +29,7 @@ end
 
 $:.unshift File.join File.dirname(__FILE__), '../config'
 
-require 'debugger'
+require 'Logging'
 require 'minefold/minefold_db'
 require 'minefold/redis'
 require 'minefold/storage'

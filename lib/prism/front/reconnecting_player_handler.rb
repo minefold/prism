@@ -5,7 +5,7 @@ module Prism
 
     attr_reader :username, :host, :port
 
-    info_tag { username }
+    log_tags :username
 
     def init server, username, host, port
       start_keepalive username

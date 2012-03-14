@@ -1,6 +1,6 @@
 module Prism
   module Mongo
-    extend Debugger
+    extend Logging
 
     def mongo_connect
       @connection ||= begin

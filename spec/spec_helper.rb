@@ -8,7 +8,7 @@ require 'prism/back'
 
 Dir["#{Fold.root}/spec/support/**/*.rb"].each {|f| require f}
 
-module Debugger
+module Logging
   # def debug *args; end
   def info *args; end
   def error *args; end

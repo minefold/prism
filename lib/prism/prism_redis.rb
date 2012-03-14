@@ -14,7 +14,7 @@ module Prism
   end
 
   class PrismRedis
-    include Debugger
+    include Logging
 
     attr_reader :redis
 

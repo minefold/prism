@@ -2,8 +2,6 @@ module Prism
   module MinecraftKeepalive
     include EM::P::Minecraft::Packets::Server
 
-    extend Debugger
-
     def start_keepalive username
       started_at = Time.now
       @keepalive = EM::PeriodicTimer.new 15 do
