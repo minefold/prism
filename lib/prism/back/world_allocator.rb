@@ -47,6 +47,8 @@ module Prism
   end
 
   class WorldAllocator
+    include Logging
+
     attr_reader :universe
 
     def initialize universe
@@ -68,11 +70,11 @@ module Prism
       start_options = BoxType.new(new_instance_type).to_hash
 
       if box = running_box_capacities.find{|box| Array(worlds_accepted(box)).include? world['_id'] }
-        puts "using dedicated box:#{box['instance_id']}"
+        debug "using dedicated box:#{box['instance_id']}"
         start_options[:instance_id] = box['instance_id']
       else
         boxes_with_capacity.each do |box|
-          puts "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
+          debug "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
         end
 
         start_box_if_at_capacity
@@ -95,7 +97,7 @@ module Prism
 
       idles_close_to_end_of_hour = idle_boxes.select{|instance_id, box| close_to_end_of_hour box }
 
-      puts "available world slots:#{total_world_slots} idle boxes:#{idle_boxes.size} killable:#{idles_close_to_end_of_hour.size}"
+      debug "available world slots:#{total_world_slots} idle boxes:#{idle_boxes.size} killable:#{idles_close_to_end_of_hour.size}"
 
       idles_close_to_end_of_hour.each do |instance_id, box|
         box_type = BoxType.new(box['instance_type'])
@@ -104,7 +106,7 @@ module Prism
           box = idles_close_to_end_of_hour[instance_id]
 
           message = "box:#{instance_id} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime_minutes:#{uptime box}"
-          puts "#{message} terminating idle"
+          info "#{message} terminating idle"
           Prism.redis.lpush "workers:requests:stop", instance_id
         end
       end
@@ -113,7 +115,7 @@ module Prism
     def shutdown_boxes_not_in_use
       unusable_boxes.select {|box| box[:worlds].size == 0 && box[:players].size == 0 && close_to_end_of_hour(box) }.each do |box|
         message = "box:#{box['instance_id']} worlds:#{box[:worlds].size} players:#{box[:players].size} uptime_minutes:#{uptime box}"
-        puts "#{message} terminating unuseable"
+        info "#{message} terminating unuseable"
         Prism.redis.lpush "workers:requests:stop", box['instance_id']
       end
     end
@@ -123,7 +125,7 @@ module Prism
     end
 
     def start_new_box box_type
-      puts "starting new box"
+      info "starting new box"
       request_id = `uuidgen`.strip
       Prism.redis.lpush_hash "workers:requests:create", box_type.to_hash.merge(request_id:request_id)
     end
@@ -131,32 +133,32 @@ module Prism
     def print_box_status
       upcoming_boxes.each do |request_id, box|
         box_type = BoxType.new(box['instance_type'])
-        puts "box:#{request_id} worlds:0/#{box_type.world_cap} players:0/#{box_type.player_cap} creating..."
+        debug "box:#{request_id} worlds:0/#{box_type.world_cap} players:0/#{box_type.player_cap} creating..."
       end
 
       running_box_capacities.each do |box|
         box_type = BoxType.new(box['instance_type'])
         widget = universe.widgets[box['instance_id']]
 
-        puts "box:#{box['instance_id']} world_players: #{box[:worlds].values.map{|w| w[:players].size}.join(', ')}"
+        debug "box:#{box['instance_id']} world_players: #{box[:worlds].values.map{|w| w[:players].size}.join(', ')}"
         if widget
           if pi = widget['pi']
             cpu_values = pi.values.map{|i| i['cpu'].to_i }
             cpu_total = cpu_values.inject(0) {|sum, val| sum + val }
-            puts "box:#{box['instance_id']} cpu: #{cpu_values.map{|cpu| "#{cpu}%"}.join(', ')}  total: #{cpu_total}%"
+            debug "box:#{box['instance_id']} cpu: #{cpu_values.map{|cpu| "#{cpu}%"}.join(', ')}  total: #{cpu_total}%"
 
             mem_values = pi.values.map{|i| i['mem'].to_i * 1024 }
             mem_total = mem_values.inject(0) {|sum, val| sum + val }
-            puts "box:#{box['instance_id']} mem: #{mem_values.map{|mem| "#{mem.to_human_size}"}.join(', ')}  total: #{mem_total.to_human_size}"
+            debug "box:#{box['instance_id']} mem: #{mem_values.map{|mem| "#{mem.to_human_size}"}.join(', ')}  total: #{mem_total.to_human_size}"
           end
           if disk = widget['disk']
-            puts "box:#{box['instance_id']} disk: #{disk.values.map{|d| ((d['used'] / (d['total'] || 1).to_f) * 100).to_i.to_s + "%" }.join(', ')}"
+            debug "box:#{box['instance_id']} disk: #{disk.values.map{|d| ((d['used'] / (d['total'] || 1).to_f) * 100).to_i.to_s + "%" }.join(', ')}"
           end
         end
 
         message = "box:#{box['instance_id']} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime:#{friendly_time uptime box}"
         message += " not accepting" if worlds_accepted box
-        puts message
+        debug message
       end
     end
 

@@ -12,9 +12,10 @@ EM.epoll
 
 module Prism
   EM.run do
-    puts "Initialising"
+
+    puts "initialising"
     redis = Prism.redis
-    
+
     EM.error_handler do |e|
       Exceptional.handle(e)
       raise e
