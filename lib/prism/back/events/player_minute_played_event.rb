@@ -13,7 +13,7 @@ module Prism
     }
 
     def run
-      Player.find_with_user(player_id) do |player|
+      MinecraftPlayer.find_with_user(player_id) do |player|
         raise "unknown player:#{player_id}" unless player
 
         info "played 1 minute [#{player.plan_status}]"

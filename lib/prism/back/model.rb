@@ -1,5 +1,8 @@
 class Model
   extend Prism::Mongo
+
+  attr_reader :doc
+
   def self.collection collection
     @collection = collection.to_s
   end
@@ -19,6 +22,17 @@ class Model
     cb
   end
 
+  def self.find_all options, *a, &b
+    cb = EM::Callback *a, &b
+    EM.defer(proc {
+      docs = mongo_collection.find options
+      docs.map{|d| new d }
+    }, proc { |user|
+      cb.call user
+    })
+    cb
+  end
+
   def self.find_and_modify options, *a, &b
     cb = EM::Callback *a, &b
     EM.defer(proc {
@@ -30,6 +44,10 @@ class Model
     cb
   end
 
+  def self.find id, *a, &b
+    find_one({"_id" => BSON::ObjectId(id.to_s)}, *a, &b)
+  end
+
   def initialize doc
     @doc = doc
   end
@@ -37,7 +55,7 @@ class Model
   def collection
     self.class.mongo_collection
   end
-  
+
   def update options
     collection.update({'_id' => id}, options)
   end

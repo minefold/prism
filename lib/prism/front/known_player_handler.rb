@@ -11,11 +11,15 @@ module Prism
 
     def friendly_kick_messages
       {
-        'unrecognised_player' => %Q{HEY! Check your username or sign up at minefold.com},
+        'unknown_world' => %Q{Unknown server! Visit minefold.com},
         'no_credit' => %Q{No credit! Top up your account at minefold.com},
-        'no_world' => %Q{No world! Create or join one at minefold.com},
+        'banned' => %Q{You are banned from this server! Visit minefold.com},
+        'not_whitelisted' => %Q{You are not white-listed on this server! Visit minefold.com},
         'no_instances_available' => %Q{Sorry! Minefold is under heavy load argh! Please try again in a few minutes},
-        '500' => %Q{Sorry! The gremlins messed something up, try connecting again while we spank them}
+        '500' => %Q{Sorry! The gremlins messed something up, try connecting again while we spank them},
+        
+        'no_world' => %Q{No world! Create or join one at minefold.com},
+        'unrecognised_player' => %Q{HEY! Check your username or sign up at minefold.com}
       }.freeze
     end
 

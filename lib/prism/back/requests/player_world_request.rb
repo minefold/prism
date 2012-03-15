@@ -69,32 +69,37 @@ module Prism
       debug "getting world:#{world_id} started"
 
       Prism::RedisUniverse.collect do |universe|
-        EM.defer(proc {
-            mongo_connect['worlds'].find_one({"_id"  => BSON::ObjectId(world_id) })
-          }, proc { |world|
-            if world
-              start_options = WorldAllocator.new(universe).find_box_for_new_world world
+        World.find(world_id) do |world|
+          if world
+            start_options = WorldAllocator.new(universe).find_box_for_new_world world.doc
+            opped_player_ids = Array(world.opped_player_ids)
+            whitelisted_player_ids = Array(world.whitelisted_player_ids)
+            banned_player_ids = Array(world.banned_player_ids)
+
+            world_player_ids = opped_player_ids | whitelisted_player_ids | banned_player_ids
+
+            MinecraftPlayer.find_all('_id' => {'$in' => world_player_ids}) do |world_players|
+              opped_players = world_players.select{|p| opped_player_ids.include?(p.id)}
+              whitelisted_players = world_players.select{|p| whitelisted_player_ids.include?(p.id)}
+              banned_players = world_players.select{|p| banned_player_ids.include?(p.id)}
+
               runpack_defaults = {
                          name: 'Minecraft',
                       version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
 
-                    data_file: world['world_data_file'],
-                          ops: op_usernames(world),
-
-                         seed: world['seed'],
-                   level_type: world['level_type'],
-                  online_mode: world['online_mode'],
-                   difficulty: world['difficulty'],
-                    game_mode: world['game_mode'],
-                          pvp: world['pvp'],
-                spawn_animals: world['spawn_animals'],
-               spawn_monsters: world['spawn_monsters'],
+                    data_file: world.world_data_file,
+                          ops: (opped_players.map(&:username) | World::DEFAULT_OPS).compact,
+                  whitelisted: whitelisted_players.map(&:username).compact,
+                       banned: banned_players.map(&:username).compact,
 
                       plugins: []
               }
+              world_settings = %w(seed level_type online_mode difficulty game_mode pvp spawn_animals spawn_monsters)
+              runpack_defaults.merge!(world_settings.each_with_object({}){|setting, h| h[setting] = world.doc[setting] })
 
-              start_options.merge! world_id: world_id, runpack: runpack_defaults.merge(world['runpack'] || {})
+              start_options.merge! world_id: world_id, runpack: runpack_defaults.merge(world.runpack || {})
 
+              debug "start options: #{start_options}"
 
               if start_options[:instance_id]
                 start_world_on_started_worker start_options
@@ -102,10 +107,11 @@ module Prism
                 info "no instances available"
                 redis.publish_json "players:connection_request:#{username}", rejected:'no_instances_available'
               end
-            else
-              redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
             end
-          })
+          else
+            redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
+          end
+        end
       end
     end
 

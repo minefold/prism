@@ -1,18 +1,20 @@
-class World
+class World < Model
   extend Prism::Mongo
 
-  def self.find id, *a, &b
-    find_one({"_id" => BSON::ObjectId(id.to_s)}, *a, &b)
-  end
+  collection :worlds
 
-  def self.find_by_slug creator_slug, world_slug, *a, &b
+  DEFAULT_OPS = %W(chrislloyd whatupdave)
+
+  def self.find_by_name creator_username, world_name, *a, &b
     cb = EM::Callback *a, &b
-    User.find_by_slug(creator_slug) do |user|
-      if user
-        find_one({
-          creator_id: user.id,
-          slug: world_slug
-        }) do |world|
+    MinecraftPlayer.find_by_username_with_user(creator_username) do |player|
+      if player.user
+        opts = {
+          creator_id: player.user_id,
+          name: /#{world_name}/i
+        }
+        p opts
+        find_one(opts) do |world|
           cb.call world
         end
       else
@@ -22,52 +24,41 @@ class World
     cb
   end
 
-  def self.find_one options, *a, &b
-    cb = EM::Callback *a, &b
-    EM.defer(proc {
-      doc = collection.find_one options
-      new doc if doc
-    }, proc { |user|
-      cb.call user
-    })
-    cb
+  %w(name
+     slug
+     world_data_file
+     parent_id
+     opped_player_ids
+     whitelisted_player_ids
+     banned_player_ids
+     runpack
+  ).each do |field|
+    define_method(:"#{field}") do
+      @doc[field]
+    end
   end
 
-  def self.collection
-    mongo_connect.collection('worlds')
+  def op? player
+    return true if DEFAULT_OPS.include? player.username
+
+    (op_ids || []).include? player.id
   end
 
-  def initialize doc
-    @doc = doc
+  def whitelisted? player
+    (whitelisted_player_ids || []).include? player.id
   end
 
-  def id
-    @doc['_id']
-  end
-  
-  def slug
-    @doc['slug']
-  end
-  
-  def name
-    @doc['name']
-  end
-
-  def data_file
-    @doc['world_data_file']
-  end
-  
-  def parent_id
-    @doc['parent_id']
+  def banned? player
+    (banned_player_ids || []).include? player.id
   end
 
   def has_data_file?
-    return true if data_file.nil?
-    
+    return true if world_data_file.nil?
+
     # TODO: world data_file's should include the full path world_id/world_id.tar.gz
-    Storage.worlds.exists?("#{data_file}") || 
-      Storage.worlds.exists?("#{id}/#{data_file}") || 
-      Storage.worlds.exists?("#{parent_id}/#{data_file}") || 
-      Storage.old_worlds.exists?(data_file)
+    Storage.worlds.exists?("#{world_data_file}") ||
+      Storage.worlds.exists?("#{id}/#{world_data_file}") ||
+      Storage.worlds.exists?("#{parent_id}/#{world_data_file}") ||
+      Storage.old_worlds.exists?(world_data_file)
   end
 end
