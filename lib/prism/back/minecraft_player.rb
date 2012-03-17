@@ -2,6 +2,7 @@ class MinecraftPlayer < Model
   FREE_MINUTES = 600
 
   collection :minecraft_players
+
   attr_accessor :user
 
   def self.upsert_by_username username, *a, &b
@@ -27,9 +28,9 @@ class MinecraftPlayer < Model
       }
     }
 
-    find_one(slug: slug) do |player|
+    find_one(deleted_at: nil, slug: slug) do |player|
       properties = player.nil? ? default_properties : update_properties
-      opts = { query: { slug: slug }, update: properties, upsert: true, new: true }
+      opts = { query: { deleted_at: nil, slug: slug }, update: properties, upsert: true, new: true }
       find_and_modify(opts) do |player|
         cb.call player
       end
@@ -54,7 +55,7 @@ class MinecraftPlayer < Model
 
   def self.find_by_username_with_user username, *a, &b
     cb = EM::Callback(*a, &b)
-    find_one('slug' => sanitize(username)) do |player|
+    find_one(deleted_at: nil, slug: sanitize(username)) do |player|
       if player.user_id
         User.find(player.user_id) do |u|
           player.user = u

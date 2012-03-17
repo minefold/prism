@@ -4,11 +4,11 @@ class User < Model
   collection :users
 
   def self.find_by_slug slug, *a, &b
-    find_one({slug: slug}, *a, &b)
+    find_one({deleted_at: nil, slug: slug}, *a, &b)
   end
 
   def self.find_by_username username, *a, &b
-    find_one({safe_username: username.downcase.strip}, *a, &b)
+    find_one({deleted_at: nil, safe_username: username.downcase.strip}, *a, &b)
   end
 
   def email

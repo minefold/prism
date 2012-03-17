@@ -10,10 +10,10 @@ class World < Model
     MinecraftPlayer.find_by_username_with_user(creator_username) do |player|
       if player.user
         opts = {
+          deleted_at: nil,
           creator_id: player.user_id,
           name: /#{world_name}/i
         }
-        p opts
         find_one(opts) do |world|
           cb.call world
         end
@@ -41,7 +41,7 @@ class World < Model
   def op? player
     return true if DEFAULT_OPS.include? player.username
 
-    (op_ids || []).include? player.id
+    (opped_player_ids || []).include? player.id
   end
 
   def whitelisted? player

@@ -3,6 +3,8 @@ class Model
 
   attr_reader :doc
 
+  DEFAULT_SCOPE = { deleted_at: nil }
+
   def self.collection collection
     @collection = collection.to_s
   end
@@ -45,7 +47,7 @@ class Model
   end
 
   def self.find id, *a, &b
-    find_one({"_id" => BSON::ObjectId(id.to_s)}, *a, &b)
+    find_one({_id: BSON::ObjectId(id.to_s)}, *a, &b)
   end
 
   def initialize doc
@@ -57,7 +59,7 @@ class Model
   end
 
   def update options
-    collection.update({'_id' => id}, options)
+    collection.update({_id: id}, options)
   end
 
   def id

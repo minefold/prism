@@ -32,7 +32,6 @@ module Prism
       end
     end
 
-
     def start_busy_world busy_world
       state = busy_world['state']
       case
@@ -78,7 +77,7 @@ module Prism
 
             world_player_ids = opped_player_ids | whitelisted_player_ids | banned_player_ids
 
-            MinecraftPlayer.find_all('_id' => {'$in' => world_player_ids}) do |world_players|
+            MinecraftPlayer.find_all(deleted_at: nil, _id: {'$in' => world_player_ids}) do |world_players|
               opped_players = world_players.select{|p| opped_player_ids.include?(p.id)}
               whitelisted_players = world_players.select{|p| whitelisted_player_ids.include?(p.id)}
               banned_players = world_players.select{|p| banned_player_ids.include?(p.id)}
