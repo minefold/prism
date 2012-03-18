@@ -3,7 +3,7 @@ require 'time'
 module Prism
   ECUS_PER_WORLD = 1.5
   RAM_PER_PLAYER = 128
-  OS_RAM_BUFFER = 0.2 # let the OS have this much ram
+  OS_RAM_BUFFER = 0.1 # let the OS have this much ram
 
   INSTANCE_PLAYER_BUFFER = 5 # needs to be space for 5 players to start a world on a box
   WORLD_BUFFER = 3  # there must be room for 3 more worlds at any time
@@ -24,24 +24,23 @@ module Prism
   }.freeze
 
   class BoxType
-    attr_reader :instance_type, :instance_ram, :player_cap, :world_cap, :heap_size, :image_id
+    attr_reader :instance_type, :instance_ram, :player_cap, :world_cap, :image_id, :ram_slot
 
     def initialize instance_type
       @instance_type = instance_type
       instance = INSTANCE_DEFS[instance_type]
 
-      @instance_ram = instance[:ram] - OS_RAM_BUFFER
+      @instance_ram = instance[:ram] * (1 - OS_RAM_BUFFER)
       @world_cap    = (instance[:ecus] / ECUS_PER_WORLD).round
       @image_id     = instance[:image_id]
       @player_cap   = (@instance_ram / RAM_PER_PLAYER).round
-      @heap_size    = (@instance_ram / world_cap).round
+      @ram_slot     = (@instance_ram / world_cap).round
     end
 
     def to_hash
       {
         instance_type: instance_type,
-             image_id: image_id,
-            heap_size: heap_size
+             image_id: image_id
       }
     end
   end
@@ -59,28 +58,40 @@ module Prism
       'c1.xlarge'
     end
 
-    def find_box_for_new_world world
+    def start_options_for_new_world world, slots_required = nil
       # find a box with the least amount of world slots and the most player slots
       # this means we fill boxes with smaller worlds and (in theory) allow larger
       # worlds to grow larger still. This might be complete bullshit…
 
-      # check world['whitelisted_player_ids']
-      start_options = BoxType.new(new_instance_type).to_hash
+      # TODO: calculate this from player counts
+      slots_required ||= 1
 
+      # TODO: this probably belongs in the sweeper (rebalancer)
+      start_box_if_at_capacity
+
+      if box = find_box_for_new_world(world, slots_required)
+        box_type = BoxType.new(box['instance_type'])
+        start_options = box_type.to_hash.merge({
+          instance_id: box['instance_id'],
+          heap_size: slots_required * box_type.ram_slot
+        })
+      end
+    end
+
+    def find_box_for_new_world world, slots_required
+      # check if there's a specific box to send this world
       if box = running_box_capacities.find{|box| Array(worlds_accepted(box)).include? world['_id'] }
         puts "using dedicated box:#{box['instance_id']}"
-        start_options[:instance_id] = box['instance_id']
+        box
+
       else
-        boxes_with_capacity.each do |box|
+        candidates = boxes_with_capacity.select do |box|
           puts "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
+          box[:world_slots] >= slots_required
         end
 
-        start_box_if_at_capacity
-
-        start_options[:instance_id] = boxes_with_capacity.first["instance_id"] if boxes_with_capacity.any?
+        candidates.first if candidates.any?
       end
-
-      start_options
     end
 
     def rebalance_boxes

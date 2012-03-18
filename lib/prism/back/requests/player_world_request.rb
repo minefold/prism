@@ -71,7 +71,7 @@ module Prism
           }, proc { |world|
             if world
               mongo_connect.collection('users').find_one({"_id"  => BSON::ObjectId(user_id) })
-              start_options = WorldAllocator.new(universe).find_box_for_new_world world
+              start_options = WorldAllocator.new(universe).start_options_for_new_world world
               runpack_defaults = {
                          name: 'Minecraft',
                       version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
