@@ -154,24 +154,6 @@ module Prism
     def connect_player_to_world instance_id, host, port
       puts "connecting to #{host}:#{port}"
       redis.publish_json "players:connection_request:#{username}", host:host, port:port, player_id:player_id, world_id:world_id
-
-      op = redis.hgetall "players:playing"
-      op.callback do |players|
-        world_players = players.each_with_object({}) do |(username, world_id), h|
-          h[world_id] ||= []
-          h[world_id] += [username]
-        end
-
-        @instance_id = instance_id
-        send_delayed_message 4, "Hi #{username} welcome to minefold.com!"
-        send_delayed_message 7, "You're playing in #{description}"
-        if world_players[world_id]
-          player_count = world_players[world_id].size
-          send_delayed_message 10, player_count == 1 ?
-            "It's just you, invite some friends!" :
-            "There #{player_count == 2 ? 'is' : 'are'} #{pluralize (player_count - 1), "other player"} in this world"
-        end
-      end
     end
   end
 end

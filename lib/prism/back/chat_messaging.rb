@@ -1,5 +1,7 @@
 module Prism
   module ChatMessaging
+    attr_reader :instance_id # make sure you set this
+
     def pluralize amount, singular
       "#{amount} #{singular}#{amount == 1 ? '' : 's'}"
     end
@@ -13,13 +15,17 @@ module Prism
       end
     end
 
-    def send_delayed_message delay, message
-      EM.add_timer(delay) { send_world_player_message instance_id, world_id, username, message }
+    def send_delayed_message delay, *lines
+      EM.add_timer(delay) {
+        lines.each do |line|
+          send_world_player_message instance_id, world_id, username, line
+        end
+      }
     end
 
-    def send_world_player_message instance_id, world_id, username, body
+    def send_world_player_message instance_id, world_id, username, line
       world_stdin = "workers:#{instance_id}:worlds:#{world_id}:stdin"
-      redis.publish world_stdin, "tell #{username} #{body}"
+      redis.publish world_stdin, "tell #{username} #{line}"
     end
   end
 end

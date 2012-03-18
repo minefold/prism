@@ -30,6 +30,10 @@ class User < Model
   def has_credit?
     plan_or_unlimited? || credits > 0
   end
+  
+  def limited_time?
+    (not valid_plan?) and (not unlimited?)
+  end
 
   def plan_or_unlimited?
     valid_plan? or unlimited?

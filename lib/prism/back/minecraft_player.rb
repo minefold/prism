@@ -118,9 +118,16 @@ class MinecraftPlayer < Model
     end
   end
 
-  # should we deduct credits from associated user?
+  def credits_remaining
+    if user
+      user.credits_remaining
+    else
+      FREE_MINUTES - minutes_played
+    end
+  end
+
   def limited_time?
-    user && (not user.plan_or_unlimited?)
+    user.nil? or (user.limited_time?)
   end
 
   def plan_status

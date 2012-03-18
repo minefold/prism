@@ -26,7 +26,9 @@ module Prism
     end
 
     [ PlayerConnectionRequest,
+      PlayerConnectedEvent,
       PlayerMinutePlayedEvent,
+      PlayerDisconnectedEvent,
       PlayerWorldRequest,
       WorkerStopRequest,
       WorkerCreateRequest].each do |klass|

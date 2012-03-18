@@ -67,8 +67,6 @@ module Prism
        player_id: player_id,
         world_id: world_id,
         description: world.name
-
-      player.update('$set' => { last_connected_at: Time.now })
     end
 
     def unrecognised_player_connecting

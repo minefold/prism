@@ -23,15 +23,21 @@ module Prism
         redis.lpush_hash "players:minute_played",
           world_id: world_id,
           player_id: player_id,
-          username:username, 
-          timestamp:Time.now.utc
-          
+          username:username,
+          timestamp:Time.now.utc,
+          session_started_at: @minecraft_session_started_at
+
         Resque.push 'high', class: 'MinutePlayedJob', args: [player_id, world_id, Time.now.utc]
       end
 
       listen_once("players:disconnect:#{username}") { exit }
 
       Resque.push 'high', class: 'PlayerConnectedJob', args: [player_id, world_id, Time.now.utc]
+      redis.lpush_hash "player:connected",
+        world_id: world_id,
+        player_id: player_id,
+        username: username,
+        timestamp: Time.now.utc
     end
 
     def exit
@@ -41,13 +47,13 @@ module Prism
         @credit_muncher.cancel
       end
       redis.hdel "players:playing", player_id
-      
-      # redis.lpush_hash "players:disconnection_request", player_id: player_id,
-      #                                                  remote_ip: remote_ip,
-      #                                                 started_at: @minecraft_session_started_at.to_i,
-      #                                                   ended_at: Time.now.to_i
 
       StatsD.measure_timer @minecraft_session_started_at, "sessions.minecraft"
+      redis.lpush_hash "player:disconnected",
+        world_id: world_id,
+        player_id: player_id,
+        username: username,
+        timestamp: Time.now.utc
       Resque.push 'high', class: 'PlayerDisconnectedJob', args: [player_id, world_id, @minecraft_session_started_at, Time.now.utc]
     end
 

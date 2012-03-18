@@ -22,7 +22,7 @@ module Prism
           Exceptional.rescue { raise "Invalid connection packet: #{data}" }
         end
       elsif header == 0xFE
-        connection.send_data server_packet 0xFF, :reason => "Change worlds at minefold.com"
+        connection.send_data server_packet 0xFF, :reason => "minefold.com"
         connection.close_connection_after_writing
       else
         connection.close_connection
