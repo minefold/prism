@@ -118,9 +118,9 @@ class MinecraftPlayer < Model
     end
   end
 
-  def credits_remaining
+  def credits
     if user
-      user.credits_remaining
+      user.credits
     else
       FREE_MINUTES - minutes_played
     end

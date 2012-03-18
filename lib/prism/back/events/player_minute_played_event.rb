@@ -40,19 +40,19 @@ module Prism
     end
 
     def credits_updated player
-      EM.add_timer(60) { redis.publish "players:disconnect:#{player.id}", "no credit" } if player.credits_remaining <= 1
+      EM.add_timer(60) { redis.publish "players:disconnect:#{player.id}", "no credit" } if player.credits <= 1
 
-      if (message = MESSAGES[player.credits_remaining]) || player.credits_remaining <= 1
+      if (message = MESSAGES[player.credits]) || player.credits <= 1
         send_delayed_message 0, message if message
 
-        if player.credits_remaining < 1
+        if player.credits < 1
           EM.add_timer(1)  { send_world_player_message instance_id, world_id, username, "Top up your account at minefold.com" }
           EM.add_timer(40) { send_world_player_message instance_id, world_id, username, "Thanks for playing!" }
         end
       end
 
       EM.defer do
-        UserMailer.send_reminder(user_id.to_s) if player.credits_remaining == 30
+        UserMailer.send_reminder(user_id.to_s) if player.credits == 30
       end
     end
 
