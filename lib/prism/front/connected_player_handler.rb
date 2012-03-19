@@ -1,5 +1,6 @@
 module Prism
   class ConnectedPlayerHandler < Handler
+    include EM::P::Minecraft::Packets::Server
     include Messaging
 
     attr_reader :username, :host, :port, :user_id, :world_id
@@ -23,7 +24,11 @@ module Prism
         Resque.push 'high', class: 'MinutePlayedJob', args: [user_id, world_id, Time.now.utc]
       end
 
-      listen_once("players:disconnect:#{username}") { exit }
+      listen_once("players:disconnect:#{username}") do |message|
+        connection.send_data server_packet 0xFF, :reason => message
+        connection.close_connection_after_writing
+        exit
+      end
 
       # TODO: player_id, world_id
       Resque.push 'high', class: 'PlayerConnectedJob', args: [username, Time.now.utc]

@@ -133,6 +133,7 @@ module EventMachine
           client 0x10, :slot_id => :short
           client 0x13, :eid => :int, :action_id => :byte
           client 0xFE
+          client 0xFF, :reason => :string16
 
         end
 

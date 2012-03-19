@@ -154,7 +154,9 @@ module Prism
           if box[:worlds].any?
             worlds_info = box[:worlds].each_with_object({}) do |(id, w), h|
               h[id] = {
-                players: w[:players].size
+                players: w[:players].size,
+                cpu: 0,
+                mem: 0
               }
 
               if pi = widget['pi'] and widget['pi'][id]
