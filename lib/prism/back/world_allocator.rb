@@ -150,19 +150,29 @@ module Prism
         box_type = BoxType.new(box['instance_type'])
         widget = universe.widgets[box['instance_id']]
 
-        puts "box:#{box['instance_id']} world_players: #{box[:worlds].values.map{|w| w[:players].size}.join(', ')}"
         if widget
-          if pi = widget['pi']
-            cpu_values = pi.values.map{|i| i['cpu'].to_i }
-            cpu_total = cpu_values.inject(0) {|sum, val| sum + val }
-            puts "box:#{box['instance_id']} cpu: #{cpu_values.map{|cpu| "#{cpu}%"}.join(', ')}  total: #{cpu_total}%"
+          if box[:worlds].any?
+            worlds_info = box[:worlds].each_with_object({}) do |(id, w), h|
+              h[id] = {
+                players: w[:players].size
+              }
 
-            mem_values = pi.values.map{|i| i['mem'].to_i * 1024 }
-            mem_total = mem_values.inject(0) {|sum, val| sum + val }
-            puts "box:#{box['instance_id']} mem: #{mem_values.map{|mem| "#{mem.to_human_size}"}.join(', ')}  total: #{mem_total.to_human_size}"
+              if pi = widget['pi'] and widget['pi'][id]
+                h[id][:cpu] = pi[id]['cpu'].to_i
+                h[id][:mem] = pi[id]['mem'].to_i * 1024
+              end
+            end
+
+            # worlds:[4 13% 292Mb]
+            descriptions = worlds_info.values.map {|w| "[#{w[:players]} #{w[:cpu]}% #{w[:mem].to_human_size}]" }
+            player_total = worlds_info.values.inject(0) {|sum, w| sum + w[:players] }
+            cpu_total = worlds_info.values.inject(0) {|sum, w| sum + w[:cpu] }
+            mem_total = worlds_info.values.inject(0) {|sum, w| sum + w[:mem] }
+            puts "box:#{box['instance_id']} worlds:#{descriptions.join(' ')} total:[#{player_total} #{cpu_total}% #{mem_total.to_human_size}]"
           end
+
           if disk = widget['disk']
-            puts "box:#{box['instance_id']} disk: #{disk.values.map{|d| ((d['used'] / (d['total'] || 1).to_f) * 100).to_i.to_s + "%" }.join(', ')}"
+            puts "box:#{box['instance_id']} disk: #{disk.values.map{|d| ((d['used'] / (d['total'] || 1).to_f) * 100).to_i.to_s + "%" }.join(' ')}"
           end
         end
 
@@ -203,7 +213,13 @@ module Prism
           box_type = BoxType.new box["instance_type"]
           box[:player_slots] = box_type.player_cap - box[:players].size
           box[:world_slots] = box_type.world_cap - box[:worlds].inject(0) {|sum, (id, w)| sum + (w['slots'] || 1)}
-          box[:description] = "box:#{instance_id} worlds:#{box[:worlds].size} slots:#{box[:world_slots]}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime_minutes:#{friendly_time uptime box}"
+          box[:description] = {
+            box: instance_id,
+            worlds: box[:worlds].size,
+            slots: "#{box_type.world_cap - box[:world_slots]}/#{box_type.world_cap}",
+            uptime: friendly_time(uptime box)
+          }.map{|k,v| "#{k}:#{v}" }.join(' ')
+
           box
         end.sort_by {|box| [box[:world_slots], -box[:player_slots]] }
       end
