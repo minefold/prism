@@ -50,11 +50,18 @@ module Prism
       publish "workers:requests:stop:#{instance_id}", host
     end
 
-    def store_running_world instance_id, world_id, host, port
-      hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
+    def store_running_world world_id, instance_id, host, port, slots
+      world_hash = {
+        instance_id: instance_id,
+        host: host,
+        port: port,
+        slots: slots
+      }
+
+      hset_hash "worlds:running", world_id, world_hash
       sadd "workers:#{instance_id}:worlds", world_id
       hdel "worlds:busy", world_id
-      publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:port
+      publish_json "worlds:requests:start:#{world_id}", world_hash
     end
 
     def unstore_running_world instance_id, world_id

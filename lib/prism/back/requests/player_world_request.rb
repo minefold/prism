@@ -71,7 +71,7 @@ module Prism
           }, proc { |world|
             if world
               mongo_connect.collection('users').find_one({"_id"  => BSON::ObjectId(user_id) })
-              start_options = WorldAllocator.new(universe).start_options_for_new_world world
+              start_options = WorldAllocator.new(universe).start_options_for_new_world world, 4
               runpack_defaults = {
                          name: 'Minecraft',
                       version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
@@ -154,14 +154,14 @@ module Prism
           h[world_id] ||= []
           h[world_id] += [username]
         end
-        
+
         @instance_id = instance_id
         send_delayed_message 4, "Hi #{username} welcome to minefold.com!"
         send_delayed_message 7, "You're playing in #{description}"
         if world_players[world_id]
           player_count = world_players[world_id].size
-          send_delayed_message 10, player_count == 1 ? 
-            "It's just you, invite some friends!" : 
+          send_delayed_message 10, player_count == 1 ?
+            "It's just you, invite some friends!" :
             "There #{player_count == 2 ? 'is' : 'are'} #{pluralize (player_count - 1), "other player"} in this world"
         end
       end

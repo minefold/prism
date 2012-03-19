@@ -73,7 +73,8 @@ module Prism
         box_type = BoxType.new(box['instance_type'])
         start_options = box_type.to_hash.merge({
           instance_id: box['instance_id'],
-          heap_size: slots_required * box_type.ram_slot
+          heap_size: slots_required * box_type.ram_slot,
+          slots: slots_required
         })
       end
     end
@@ -114,7 +115,7 @@ module Prism
         if excess_capacity >= 0
           box = idles_close_to_end_of_hour[instance_id]
 
-          message = "box:#{instance_id} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime_minutes:#{uptime box}"
+          message = box[:description]
           puts "#{message} terminating idle"
           Prism.redis.lpush "workers:requests:stop", instance_id
         end
@@ -123,7 +124,7 @@ module Prism
 
     def shutdown_boxes_not_in_use
       unusable_boxes.select {|box| box[:worlds].size == 0 && box[:players].size == 0 && close_to_end_of_hour(box) }.each do |box|
-        message = "box:#{box['instance_id']} worlds:#{box[:worlds].size} players:#{box[:players].size} uptime_minutes:#{uptime box}"
+        message = box[:description]
         puts "#{message} terminating unuseable"
         Prism.redis.lpush "workers:requests:stop", box['instance_id']
       end
@@ -142,7 +143,7 @@ module Prism
     def print_box_status
       upcoming_boxes.each do |request_id, box|
         box_type = BoxType.new(box['instance_type'])
-        puts "box:#{request_id} worlds:0/#{box_type.world_cap} players:0/#{box_type.player_cap} creating..."
+        puts "box:#{request_id} slots:#{box_type.world_cap} players:#{box_type.player_cap} creating..."
       end
 
       running_box_capacities.each do |box|
@@ -165,7 +166,7 @@ module Prism
           end
         end
 
-        message = "box:#{box['instance_id']} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime:#{friendly_time uptime box}"
+        message = box[:description]
         message += " not accepting" if worlds_accepted box
         puts message
       end
@@ -201,7 +202,8 @@ module Prism
         universe.boxes[:running].map do |instance_id, box|
           box_type = BoxType.new box["instance_type"]
           box[:player_slots] = box_type.player_cap - box[:players].size
-          box[:world_slots] = box_type.world_cap - box[:worlds].size
+          box[:world_slots] = box_type.world_cap - box[:worlds].inject(0) {|sum, (id, w)| sum + (w['slots'] || 1)}
+          box[:description] = "box:#{instance_id} worlds:#{box[:worlds].size} slots:#{box[:world_slots]}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime_minutes:#{friendly_time uptime box}"
           box
         end.sort_by {|box| [box[:world_slots], -box[:player_slots]] }
       end
