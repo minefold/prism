@@ -11,6 +11,10 @@ class User < Model
     find_one({deleted_at: nil, safe_username: username.downcase.strip}, *a, &b)
   end
 
+  def self.find_by_verification_code(code, *a, &b)
+    find_one({deleted_at: nil, verification_code: code}, *a, &b)
+  end
+
   def email
     @doc['email']
   end
@@ -30,7 +34,7 @@ class User < Model
   def has_credit?
     plan_or_unlimited? || credits > 0
   end
-  
+
   def limited_time?
     (not valid_plan?) and (not unlimited?)
   end
