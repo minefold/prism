@@ -14,27 +14,31 @@ module Prism
   }
 
   INSTANCE_DEFS = {
-    'm1.small'   => { ram:  1.7 * 1024, ecus:  1.0, image_id: AMIS['64bit'] },   # worlds:  3  players:  14
-    'c1.medium'  => { ram:  1.7 * 1024, ecus:  5.0, image_id: AMIS['64bit'] },   # worlds:  3  players:  14
-    'c1.xlarge'  => { ram:  7.0 * 1024, ecus: 20.0, image_id: AMIS['64bit'] },   # worlds: 10  players:  56
-    'm1.large'   => { ram:  7.5 * 1024, ecus:  4.0, image_id: AMIS['64bit'] },   # worlds:  2  players:  60
-    'm2.xlarge'  => { ram: 17.1 * 1024, ecus:  6.5, image_id: AMIS['64bit'] },   # worlds:  3  players: 137
-    'm2.2xlarge' => { ram: 34.2 * 1024, ecus: 13.0, image_id: AMIS['64bit'] },   # worlds:  7  players: 274
-    'm2.4xlarge' => { ram: 68.4 * 1024, ecus: 26.0, image_id: AMIS['64bit'] }    # worlds: 13  players: 547
+    'm1.small'    => { ram:  1.7 * 1024, ecus:  1.0, image_id: AMIS['64bit'] },   # worlds:  1  players:  14
+    'm1.large'    => { ram:  7.5 * 1024, ecus:  4.0, image_id: AMIS['64bit'] },   # worlds:  3  players:  60
+    'm1.xlarge'   => { ram: 15.0 * 1024, ecus:  8.0, image_id: AMIS['64bit'] },   # worlds:  5  players:  120
+
+    'm2.xlarge'   => { ram: 17.1 * 1024, ecus:  6.5, image_id: AMIS['64bit'] },   # worlds:  4  players: 137
+    'm2.2xlarge'  => { ram: 34.2 * 1024, ecus: 13.0, image_id: AMIS['64bit'] },   # worlds:  9  players: 274
+    'm2.4xlarge'  => { ram: 68.4 * 1024, ecus: 26.0, image_id: AMIS['64bit'] },   # worlds: 17  players: 547
+
+    'cc1.4xlarge' => { ram: 23.0 * 1024, ecus: 33.5, image_id: AMIS['64bit'] },   # worlds: 22  players:  184
+    'cc2.8xlarge' => { ram: 60.5 * 1024, ecus: 88.0, image_id: AMIS['64bit'] }    # worlds: 59  players:  484
   }.freeze
 
   class BoxType
-    attr_reader :instance_type, :instance_ram, :player_cap, :world_cap, :image_id, :ram_slot
+    attr_reader :instance_type, :instance_ram, :player_cap, :world_cap, :image_id, :ram_slot, :players_per_slot
 
     def initialize instance_type
       @instance_type = instance_type
       instance = INSTANCE_DEFS[instance_type]
+      @image_id         = instance[:image_id]
 
-      @instance_ram = instance[:ram] * (1 - OS_RAM_BUFFER)
-      @world_cap    = (instance[:ecus] / ECUS_PER_WORLD).round
-      @image_id     = instance[:image_id]
-      @player_cap   = (@instance_ram / RAM_PER_PLAYER).round
-      @ram_slot     = (@instance_ram / world_cap).round
+      @instance_ram     = instance[:ram] * (1 - OS_RAM_BUFFER)        # 6451 Mb
+      @world_cap        = (instance[:ecus] / ECUS_PER_WORLD).round    # 13
+      @player_cap       = (@instance_ram / RAM_PER_PLAYER).round      # 50
+      @ram_slot         = (@instance_ram / world_cap).round           # 496
+      @players_per_slot = (@player_cap / @world_cap)                  # 4
     end
 
     def to_hash
@@ -95,7 +99,7 @@ module Prism
       end
     end
 
-    def rebalance_boxes
+    def rebalance
       print_box_status
       start_box_if_at_capacity
       shutdown_idle_boxes
@@ -245,6 +249,36 @@ module Prism
 
     def at_capacity?
       total_world_slots < WORLD_BUFFER
+    end
+
+    # 4 players per slot on c1.xlarge
+    #    1    2    4      8
+    #   0-4  4-8  8-16  16-32
+
+    # 24 players per slot on m1.xlarge
+    #    1      2      4
+    #   0-24  24-48  48-96
+
+
+    def world_allocations
+      universe.worlds[:running].map do |world_id, world|
+        box_type = BoxType.new(world[:box]['instance_type'])
+        current_slots = world['slots']
+
+        # this might leave us between a power of 2 slot like
+        # if it's 6 we want 8, if it's 8 we want 8, if it's 9 we want 16
+        required_slots = (world[:players].size / box_type.players_per_slot.to_f).ceil
+        required_slots = 1 if required_slots == 0
+
+        # so clamp it!
+        clamped_required_slots = 2**(Math.log(required_slots,2).floor)
+
+        {
+          world_id: world_id,
+          current_slots: current_slots,
+          required_slots: clamped_required_slots
+        }
+      end
     end
 
     # helpers

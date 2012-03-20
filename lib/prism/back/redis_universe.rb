@@ -56,6 +56,7 @@ module Prism
 
       @worlds[:running].each do |world_id, world|
         @worlds[:running][world_id][:players] = world_players[world_id] || []
+        @worlds[:running][world_id][:box] = @boxes[:running][world['instance_id']]
       end
 
       @boxes[:running].each do |instance_id, box|
@@ -64,7 +65,7 @@ module Prism
           acc | world[:players]
         end
       end
-      
+
       @widgets = results.each_with_object({}) do |(key, heartbeat), h|
         key =~ /widget:(.*):heartbeat/
         if id = $1

@@ -68,6 +68,13 @@ module Prism
       hdel "worlds:running", world_id
     end
 
+    def get_json key, *a, &b
+      cb = EM::Callback *a, &b
+      op = get key
+      op.callback {|data| cb.call data ? JSON.parse(data) : nil }
+      cb
+    end
+
     def hget_json key, field
       op = hget key, field
       op.callback {|data| yield data ? JSON.parse(data) : nil }

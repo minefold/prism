@@ -13,7 +13,7 @@ Fold.worker_user = ENV['USER']
 
 # Storage.provider = Fog::Storage.new({
 #   :provider      => :local,
-#   :local_root    => "#{ROOT}/tmp/local_storage"
+#   :local_root    => "#{ROOT}/tmp/s3"
 # })
 Storage.provider = Fog::Storage.new({
   :provider                 => :aws,

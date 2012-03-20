@@ -50,28 +50,25 @@ module Prism
     end
 
     def update_state
-      update_boxes
-      lost_boxes
-      lost_busy_boxes
+      RedisUniverse.collect do |universe|
+        @redis_universe = universe
+        @allocator = WorldAllocator.new(universe)
+        @allocator.rebalance
 
-      found_worlds
-      lost_worlds
-      lost_busy_worlds
+        update_boxes
+        lost_boxes
+        lost_busy_boxes
 
-      fix_broken_boxes
+        found_worlds
+        lost_worlds
+        lost_busy_worlds
 
-      shutdown_idle_worlds
+        fix_broken_boxes
 
-      # wait 5 seconds so redis is definitely up to date
-      # this would be better as a multi query, waiting for all of these
-      # tasks to finish
+        shutdown_idle_worlds
+        rebalance_worlds
 
-      EM.add_timer(5) do
-        RedisUniverse.collect do |universe|
-          @redis_universe = universe
-          WorldAllocator.new(universe).rebalance_boxes
-          @sweep_op.call
-        end
+        @sweep_op.call
       end
     end
 
@@ -165,6 +162,49 @@ module Prism
           redis.set_busy "worlds:busy", world_id, 'empty', expires_after: 60
         end
       end
+    end
+
+    def rebalance_worlds
+      @allocator.world_allocations.each do |a|
+        if a[:current_slots] != a[:required_slots]
+
+          notice("worlds:allocation_difference:#{a[:world_id]}", a[:required_slots]) do |since, slots|
+            under = a[:current_slots] < a[:required_slots]
+            seconds = Time.now - since
+            debug "world:#{a[:world_id]} #{a[:current_slots]} < #{a[:required_slots]} #{under ? "under" : "over"} allocated for #{seconds} seconds"
+
+            over = !under
+
+            if (under and seconds > 10) or (over and seconds > 10)
+              debug "reallocating world to slots:#{a[:required_slots]}"
+              redis.lpush_hash 'worlds:move_request',
+                world_id: a[:world_id],
+                slots: a[:required_slots]
+            end
+          end
+        elsif
+          ignore "worlds:allocation_difference:#{a[:world_id]}"
+        end
+
+      end
+    end
+
+    def notice key, value, *a, &b
+      cb = EM::Callback *a, &b
+
+      redis.get_json(key) do |h|
+        if h and h['value'] == value
+          cb.call Time.at(h['at']), h['value']
+        else
+          redis.set(key, { at: Time.now.to_i, value: value }.to_json)
+        end
+      end
+
+      cb
+    end
+
+    def ignore key
+      redis.del key
     end
 
     def record_stats
