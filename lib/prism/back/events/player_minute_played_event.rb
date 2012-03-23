@@ -8,12 +8,15 @@ module Prism
 
     def run
       User.find_by_username(username) do |user|
-        raise "unknown user:#{username}" unless user
-        info "played 1 minute [#{user.plan_status}]"
+        if user.nil?
+          redis.publish "players:disconnect:#{username}", 'unrecognised_player'
+        else
+          info "played 1 minute [#{user.plan_status}]"
 
-        unless user.plan_or_unlimited?
-          user.update '$inc' => { 'credits' => -1 }
-          credits_updated user.id, user.credits - 1
+          unless user.plan_or_unlimited?
+            user.update '$inc' => { 'credits' => -1 }
+            credits_updated user.id, user.credits - 1
+          end
         end
       end
     end
@@ -24,7 +27,7 @@ module Prism
         5  =>  "5 minefold minutes left!"
       }.freeze
 
-      EM.add_timer(60) { redis.publish "players:disconnect:#{username}", "no credit" } if credits_remaining < 1
+      EM.add_timer(60) { redis.publish "players:disconnect:#{username}", "no_credit" } if credits_remaining < 1
 
       if (message = messages[credits_remaining]) || credits_remaining < 1
         op = redis.hget "players:playing", username
