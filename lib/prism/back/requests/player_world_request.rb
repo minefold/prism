@@ -82,7 +82,7 @@ module Prism
                          seed: world['seed'],
                    level_type: world['level_type'],
                   online_mode: world['online_mode'],
-                   difficulty: world['difficulty'],
+                   difficulty: world['difficulty_level'],
                     game_mode: world['game_mode'],
                           pvp: world['pvp'],
                 spawn_animals: world['spawn_animals'],
