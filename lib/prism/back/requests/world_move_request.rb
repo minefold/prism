@@ -12,6 +12,7 @@ module Prism
 
     def run
       info "moving world:#{world_id} to slots:#{slots}"
+      redis.setex "worlds:#{world_id}:moving", 300, Time.now.to_i
 
       redis.hget_json 'worlds:running', world_id do |world|
         @instance_id = world['instance_id']

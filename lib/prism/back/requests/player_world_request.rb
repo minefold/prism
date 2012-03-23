@@ -71,7 +71,7 @@ module Prism
           }, proc { |world|
             if world
               mongo_connect.collection('users').find_one({"_id"  => BSON::ObjectId(user_id) })
-              start_options = WorldAllocator.new(universe).start_options_for_new_world world, 1
+              start_options = WorldAllocator.new(universe).start_options_for_new_world world, (world['allocation_slots'] || 1)
               runpack_defaults = {
                          name: 'Minecraft',
                       version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
@@ -82,7 +82,7 @@ module Prism
                          seed: world['seed'],
                    level_type: world['level_type'],
                   online_mode: world['online_mode'],
-                   difficulty: world['difficulty'],
+                   difficulty: world['difficulty_level'],
                     game_mode: world['game_mode'],
                           pvp: world['pvp'],
                 spawn_animals: world['spawn_animals'],

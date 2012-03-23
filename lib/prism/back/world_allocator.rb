@@ -264,6 +264,7 @@ module Prism
       universe.worlds[:running].map do |world_id, world|
         box_type = BoxType.new(world[:box]['instance_type'])
         current_slots = world['slots']
+        current_step  = Math.log(current_slots,2).floor
 
         # this might leave us between a power of 2 slot like
         # if it's 6 we want 8, if it's 8 we want 8, if it's 9 we want 16
@@ -271,12 +272,14 @@ module Prism
         required_slots = 1 if required_slots == 0
 
         # so clamp it!
-        clamped_required_slots = 2**(Math.log(required_slots,2).floor)
+        required_step = Math.log(required_slots,2).floor
+        clamped_required_slots = 2 ** required_step
 
         {
           world_id: world_id,
           current_slots: current_slots,
-          required_slots: clamped_required_slots
+          required_slots: clamped_required_slots,
+          step_difference: required_step - current_step
         }
       end
     end

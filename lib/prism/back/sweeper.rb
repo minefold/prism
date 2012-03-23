@@ -166,26 +166,44 @@ module Prism
 
     def rebalance_worlds
       @allocator.world_allocations.each do |a|
-        if a[:current_slots] != a[:required_slots]
+        op = redis.get("worlds:#{a[:world_id]}:moving")
+        op.callback do |moving|
+          if moving
+            debug "world:#{a[:world_id]} is moving"
+            
+          elsif a[:current_slots] == a[:required_slots]
+            ignore "worlds:allocation_difference:#{a[:world_id]}"
+          else
 
-          notice("worlds:allocation_difference:#{a[:world_id]}", a[:required_slots]) do |since, slots|
-            under = a[:current_slots] < a[:required_slots]
-            seconds = Time.now - since
-            debug "world:#{a[:world_id]} #{a[:current_slots]} < #{a[:required_slots]} #{under ? "under" : "over"} allocated for #{seconds} seconds"
+            World.collection.update({_id: a[:world_id]}, { '$set' => {'allocation_slots' => a[:required_slots] }})
 
-            over = !under
+            notice("worlds:allocation_difference:#{a[:world_id]}", a[:required_slots]) do |since, slots|
+              under_allocated = a[:current_slots] < a[:required_slots]
+              seconds = Time.now - since
+              debug "world:#{a[:world_id]} #{a[:current_slots]} < #{a[:required_slots]} (steps:#{a[:step_difference]}) #{under_allocated ? "under" : "over"} allocated for #{seconds} seconds"
 
-            if (under and seconds > 10) or (over and seconds > 10)
-              debug "reallocating world to slots:#{a[:required_slots]}"
-              redis.lpush_hash 'worlds:move_request',
-                world_id: a[:world_id],
-                slots: a[:required_slots]
+              over_allocated = !under_allocated
+
+              rebalance_now = false
+              if under_allocated
+                # we should move world up if we've been under for 2 minutes or
+                # we're more than 1 step from balanced
+                rebalance_now = seconds > 120 or a[:step_difference] > 1
+              else
+                # we should move world down if we've been over for 10 minutes and
+                # we're more than 2 steps from balanced
+                rebalance_now = seconds > 600 and a[:step_difference] < -2
+              end
+
+              if rebalance_now
+                debug "reallocating world to slots:#{a[:required_slots]}"
+                redis.lpush_hash 'worlds:move_request',
+                  world_id: a[:world_id],
+                  slots: a[:required_slots]
+              end
             end
           end
-        elsif
-          ignore "worlds:allocation_difference:#{a[:world_id]}"
         end
-
       end
     end
 
