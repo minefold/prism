@@ -7,6 +7,7 @@ module Prism
     attr_reader :instance_id
 
     def reply options = {}
+      puts "PUBLISH worlds:start_request:#{world_id}"
       redis.publish_json "worlds:start_request:#{world_id}", options
     end
 

@@ -46,7 +46,6 @@ module Prism
     def unstore_running_box instance_id, host
       zadd "boxes:stopped", Time.now.to_i, instance_id
       hdel "workers:running", instance_id
-      del "workers:#{instance_id}:worlds"
       publish "workers:requests:stop:#{instance_id}", host
     end
 
@@ -59,7 +58,6 @@ module Prism
       }
 
       hset_hash "worlds:running", world_id, world_hash
-      sadd "workers:#{instance_id}:worlds", world_id
       hdel "worlds:busy", world_id
       publish_json "worlds:requests:start:#{world_id}", world_hash
     end

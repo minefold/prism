@@ -18,9 +18,7 @@ module Prism
         @instance_id = world['instance_id']
 
         message_gamers do
-          restart_world do
-            info "completed move world:#{world_id} slots:#{slots}"
-          end
+          restart_world
         end
       end
     end
@@ -44,19 +42,13 @@ module Prism
       cb
     end
 
-    def restart_world *a, &b
-      cb = EM::Callback *a, &b
-
+    def restart_world
       redis.lpush "workers:#{@instance_id}:worlds:requests:stop", world_id
+
+      # TODO: there's a half second gap here!
       EM.add_timer(0.5) do
         redis.lpush_hash "worlds:start_request", world_id: world_id, slots: slots
-
-        listen_once "worlds:start_request:#{world_id}" do
-          cb.call
-        end
       end
-
-      cb
     end
   end
 end

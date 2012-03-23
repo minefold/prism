@@ -55,6 +55,8 @@ module Prism
         @allocator = WorldAllocator.new(universe)
         @allocator.rebalance
 
+        clear_phantoms
+
         update_boxes
         lost_boxes
         lost_busy_boxes
@@ -69,6 +71,14 @@ module Prism
         rebalance_worlds
 
         @sweep_op.call
+      end
+    end
+
+    def clear_phantoms
+      redis.keys("worlds:allocation_difference:*") do |keys|
+        keys.each do |key|
+          redis.del key unless world_running?(key.split(':').last)
+        end
       end
     end
 
@@ -164,23 +174,29 @@ module Prism
       end
     end
 
+    def world_running? world_id
+      redis_universe.worlds[:running].keys.include? world_id
+    end
+
     def rebalance_worlds
       @allocator.world_allocations.each do |a|
         op = redis.get("worlds:#{a[:world_id]}:moving")
-        op.callback do |moving|
-          if moving
-            debug "world:#{a[:world_id]} is moving"
-            
+        op.callback do |move_started_at|
+          if move_started_at
+            if world_running? a[:world_id]
+              redis.del "worlds:#{a[:world_id]}:moving"
+            else
+              debug "world:#{a[:world_id]} is moving (#{Time.now - Time.at(move_started_at)} seconds)"
+            end
+
           elsif a[:current_slots] == a[:required_slots]
             ignore "worlds:allocation_difference:#{a[:world_id]}"
+
           else
-
-            World.collection.update({_id: a[:world_id]}, { '$set' => {'allocation_slots' => a[:required_slots] }})
-
             notice("worlds:allocation_difference:#{a[:world_id]}", a[:required_slots]) do |since, slots|
               under_allocated = a[:current_slots] < a[:required_slots]
-              seconds = Time.now - since
-              debug "world:#{a[:world_id]} #{a[:current_slots]} < #{a[:required_slots]} (steps:#{a[:step_difference]}) #{under_allocated ? "under" : "over"} allocated for #{seconds} seconds"
+              minutes = (Time.now - since) / 60.0
+              debug "world:#{a[:world_id]} #{a[:current_slots]} < #{a[:required_slots]} (steps:#{a[:step_difference]}) #{under_allocated ? "under" : "over"} allocated for #{minutes} minutes"
 
               over_allocated = !under_allocated
 
@@ -188,14 +204,19 @@ module Prism
               if under_allocated
                 # we should move world up if we've been under for 2 minutes or
                 # we're more than 1 step from balanced
-                rebalance_now = seconds > 120 or a[:step_difference] > 1
+                rebalance_now = minutes > 2 or a[:step_difference] > 1
               else
                 # we should move world down if we've been over for 10 minutes and
                 # we're more than 2 steps from balanced
-                rebalance_now = seconds > 600 and a[:step_difference] < -2
+                rebalance_now = minutes > 10 and a[:step_difference] < -2
               end
 
               if rebalance_now
+                World.collection.update(
+                  {_id: BSON::ObjectId(a[:world_id])},
+                  { '$set' => {'allocation_slots' => a[:required_slots] }}
+                )
+
                 debug "reallocating world to slots:#{a[:required_slots]}"
                 redis.lpush_hash 'worlds:move_request',
                   world_id: a[:world_id],

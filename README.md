@@ -30,9 +30,6 @@ worlds:running (HASH)
 workers:running (HASH)
   i-5678 => 1.2.3.4
 
-workers:i-5678:worlds (SET)
-  world1
-
 # queues
 
 players:minute_played
