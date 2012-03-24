@@ -34,6 +34,10 @@ module Prism
         Fold.env == :staging ? 'dev' : 'master'
       end
 
+      def self.log_server
+        Fold.env == :staging ? 'logs.fold.to' : 'logs.minefold.com'
+      end
+
       def self.cloud_init_script
         <<-EOS
 #!/bin/bash
@@ -71,7 +75,12 @@ echo 3 > /proc/sys/vm/drop_caches
 cat<<EOF > /tmp/attributes.json
 {
   "widget": { "branch": "#{widget_branch}"},
-  "run_list":["recipe[widget::deploy]"]
+  "relp": { "server": "#{log_server}" },
+  
+  "run_list":[
+    "recipe[relp::client]",
+    "recipe[widget::deploy]",
+  ]
 }
 EOF
 

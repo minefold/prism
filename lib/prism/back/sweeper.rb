@@ -189,14 +189,14 @@ module Prism
               debug "world:#{a[:world_id]} is moving (#{Time.now - Time.at(move_started_at)} seconds)"
             end
 
-          elsif a[:current_slots] == a[:required_slots]
+          elsif a[:current_world_slots] == a[:required_world_slots]
             ignore "worlds:allocation_difference:#{a[:world_id]}"
 
           else
-            notice("worlds:allocation_difference:#{a[:world_id]}", a[:required_slots]) do |since, slots|
-              under_allocated = a[:current_slots] < a[:required_slots]
+            notice("worlds:allocation_difference:#{a[:world_id]}", a[:required_world_slots]) do |since, slots|
+              under_allocated = a[:current_world_slots] < a[:required_world_slots]
               minutes = (Time.now - since) / 60.0
-              debug "world:#{a[:world_id]} #{a[:current_slots]} < #{a[:required_slots]} (steps:#{a[:step_difference]}) #{under_allocated ? "under" : "over"} allocated for #{minutes} minutes"
+              debug "world:#{a[:world_id]} #{a[:current_world_slots]} <-> #{a[:required_world_slots]} (steps:#{a[:step_difference]}) #{under_allocated ? "under" : "over"} allocated for #{minutes} minutes"
 
               over_allocated = !under_allocated
 
@@ -214,13 +214,13 @@ module Prism
               if rebalance_now
                 World.collection.update(
                   {_id: BSON::ObjectId(a[:world_id])},
-                  { '$set' => {'allocation_slots' => a[:required_slots] }}
+                  { '$set' => {'allocation_slots' => a[:required_player_slots] }}
                 )
 
-                debug "reallocating world to slots:#{a[:required_slots]}"
+                debug "reallocating world to slots:#{a[:required_player_slots]}"
                 redis.lpush_hash 'worlds:move_request',
                   world_id: a[:world_id],
-                  slots: a[:required_slots]
+                  player_slots: a[:required_player_slots]
               end
             end
           end

@@ -65,19 +65,21 @@ module Prism
       'c1.xlarge'
     end
 
-    def start_options_for_new_world world, slots_required = nil
+    def start_options_for_new_world world, player_slots_required = nil
       # find a box with the least amount of world slots and the most player slots
       # this means we fill boxes with smaller worlds and (in theory) allow larger
       # worlds to grow larger still. This might be complete bullshit…
 
-      # TODO: calculate this from player counts
-      slots_required ||= 1
+      player_slots_required ||= 4
+      player_slots_required = [4, player_slots_required].max
 
       # TODO: this probably belongs in the sweeper (rebalancer)
       start_box_if_at_capacity
 
-      if box = find_box_for_new_world(world, slots_required)
+      if box = find_box_for_new_world(world, player_slots_required)
         box_type = BoxType.new(box['instance_type'])
+        slots_required = (player_slots_required / box_type.players_per_slot.to_f).ceil
+
         start_options = box_type.to_hash.merge({
           instance_id: box['instance_id'],
           heap_size: slots_required * box_type.ram_slot,
@@ -86,7 +88,7 @@ module Prism
       end
     end
 
-    def find_box_for_new_world world, slots_required
+    def find_box_for_new_world world, player_slots_required
       # check if there's a specific box to send this world
       if box = running_box_capacities.find{|box| Array(worlds_accepted(box)).include? world['_id'] }
         puts "using dedicated box:#{box['instance_id']}"
@@ -95,7 +97,8 @@ module Prism
       else
         candidates = boxes_with_capacity.select do |box|
           puts "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
-          box[:world_slots] >= slots_required
+          box_type = BoxType.new(box['instance_type'])
+          (box[:world_slots] * box_type.players_per_slot) >= player_slots_required
         end
 
         candidates.first if candidates.any?
@@ -262,27 +265,32 @@ module Prism
     #    1      2      4
     #   0-24  24-48  48-96
 
+    # player_slots 4, 8, 16, 32, 64, 128
+
 
     def world_allocations
       universe.worlds[:running].map do |world_id, world|
         box_type = BoxType.new(world[:box]['instance_type'])
-        current_slots = world['slots']
-        current_step  = Math.log(current_slots,2).floor
 
-        # this might leave us between a power of 2 slot like
-        # if it's 6 we want 8, if it's 8 we want 8, if it's 9 we want 16
-        required_slots = (world[:players].size / box_type.players_per_slot.to_f).ceil
-        required_slots = 1 if required_slots == 0
+        current_world_slots = world['slots']
+        current_world_step = Math.log(current_world_slots, 2).ceil
+        current_player_slots = current_world_slots * box_type.players_per_slot
 
-        # so clamp it!
-        required_step = Math.log(required_slots,2).floor
-        clamped_required_slots = 2 ** required_step
+        # we want slots on the range: 4, 8, 16, 32 etc
+
+        required_world_slots = [(world[:players].size / box_type.players_per_slot.to_f).ceil, 1].max
+        required_world_step = Math.log(required_world_slots,2).ceil
+        required_players = [world[:players].size, 4].max
+
+        required_player_slots = 2 ** Math.log(required_players,2).ceil
 
         {
           world_id: world_id,
-          current_slots: current_slots,
-          required_slots: clamped_required_slots,
-          step_difference: required_step - current_step
+          current_world_slots: current_world_slots,
+          current_player_slots: current_player_slots,
+          required_world_slots: required_world_slots,
+          required_player_slots: required_player_slots,
+          step_difference: required_world_step - current_world_step
         }
       end
     end

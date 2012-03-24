@@ -3,7 +3,7 @@ module Prism
     include Messaging
     include ChatMessaging
 
-    process "worlds:move_request", :world_id, :slots
+    process "worlds:move_request", :world_id, :player_slots
 
     # this is the process
     # 1. message gamers that the world is about to die
@@ -11,7 +11,7 @@ module Prism
     # 3. email players?
 
     def run
-      info "moving world:#{world_id} to slots:#{slots}"
+      info "moving world:#{world_id} to player_slots:#{player_slots}"
       redis.setex "worlds:#{world_id}:moving", 300, Time.now.to_i
 
       redis.hget_json 'worlds:running', world_id do |world|
@@ -47,7 +47,7 @@ module Prism
 
       # TODO: there's a half second gap here!
       EM.add_timer(0.5) do
-        redis.lpush_hash "worlds:start_request", world_id: world_id, slots: slots
+        redis.lpush_hash "worlds:start_request", world_id: world_id, player_slots: player_slots
       end
     end
   end

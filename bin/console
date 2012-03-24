@@ -20,4 +20,29 @@ def mongo
   @mongo ||= mongo_connect
 end
 
+def world world_id
+  mongo['worlds'].find_one(_id: BSON::ObjectId(world_id.to_s))
+end
+
+def world_backup world_id, new_value = nil
+  previous = world(world_id)['world_data_file']
+  if new_value
+    mongo['worlds'].update({_id: BSON::ObjectId(world_id.to_s)}, {'$set' => {'world_data_file' => new_value}})
+    puts "#{previous} => #{new_value}"
+  else
+    previous
+  end
+end
+
+def set_players(n, world_id='4f5be9da0ecb2800010000f5')
+  n.times do |i| 
+    redis.hset 'players:playing', "player#{i}", world_id
+    redis.hset 'usernames', "player#{i}", BSON::ObjectId.new.to_s
+  end
+end
+
+def clear_players(n)
+  n.times {|i| redis.hdel 'players:playing', "player#{i}" }
+end
+
 IRB.start

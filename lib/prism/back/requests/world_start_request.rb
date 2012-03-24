@@ -2,7 +2,7 @@ module Prism
   class WorldStartRequest < Request
     include Messaging
 
-    process "worlds:start_request", :world_id, :slots
+    process "worlds:start_request", :world_id, :player_slots
 
     attr_reader :instance_id
 
@@ -73,7 +73,7 @@ module Prism
             mongo_connect['worlds'].find_one({"_id"  => BSON::ObjectId(world_id) })
           }, proc { |world|
             if world
-              start_options = WorldAllocator.new(universe).start_options_for_new_world world, slots
+              start_options = WorldAllocator.new(universe).start_options_for_new_world world, player_slots
               runpack_defaults = {
                          name: 'Minecraft',
                       version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3

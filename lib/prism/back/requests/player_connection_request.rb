@@ -21,6 +21,7 @@ module Prism
 
           elsif user.current_world_id
             World.find(user.current_world_id) {|world| connect_to_world user, world }
+
           else
             info "user has no current_world"
             redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
