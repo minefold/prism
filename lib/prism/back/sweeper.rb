@@ -113,10 +113,16 @@ module Prism
     end
 
     def found_worlds
-      new_worlds = running_worlds.reject{|world_id, world| redis_universe.worlds[:running].keys.include? world_id }
+      new_worlds = running_worlds.reject{|world_id, world| redis_universe.worlds[:running].keys.include? world_id };
+      
       new_worlds.each do |world_id, world|
         debug "found world:#{world_id} #{world}"
-        # redis.store_running_world world_id, world['instance_id'], world['host'], world['port'], world['slots']
+
+        heartbeat = redis_universe.widget_worlds[world_id]
+        # TODO: this should always be present but its not getting it from the heartbeat
+        if heartbeat
+          redis.store_running_world world_id, heartbeat['instance_id'], heartbeat['host'], heartbeat['port'], heartbeat['slots']
+        end
       end
     end
 

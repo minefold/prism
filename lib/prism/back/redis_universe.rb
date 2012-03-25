@@ -30,7 +30,7 @@ module Prism
       cb
     end
 
-    attr_reader :boxes, :worlds, :players, :widgets
+    attr_reader :boxes, :worlds, :players, :widgets, :widget_worlds
 
     def initialize results = {}
       @boxes = {
@@ -53,7 +53,7 @@ module Prism
         hash[world_id] ||= []
         hash[world_id] = hash[world_id] | [user_id]
       end
-      
+
       @widgets = results.each_with_object({}) do |(key, heartbeat), h|
         key =~ /widget:(.*):heartbeat/
         if id = $1
@@ -61,9 +61,16 @@ module Prism
         end
       end
 
+      @widget_worlds = @widgets.each_with_object({}) do |(id, widget), h|
+        widget['pi'].each do |world_id, world|
+          h[world_id] = world
+        end
+      end
+
       @worlds[:running].each do |world_id, world|
+        instance_id = world['instance_id']
         @worlds[:running][world_id][:players] = world_players[world_id] || []
-        @worlds[:running][world_id][:box] = @boxes[:running][world['instance_id']]
+        @worlds[:running][world_id][:box] = @boxes[:running][instance_id]
       end
 
       @boxes[:running].each do |instance_id, box|
