@@ -115,7 +115,8 @@ module Prism
     def found_worlds
       new_worlds = running_worlds.reject{|world_id, world| redis_universe.worlds[:running].keys.include? world_id }
       new_worlds.each do |world_id, world|
-        debug "found world:#{world_id}"
+        debug "found world:#{world_id} #{world}"
+        # redis.store_running_world world_id, world['instance_id'], world['host'], world['port'], world['slots']
       end
     end
 
@@ -197,18 +198,18 @@ module Prism
               under_allocated = a[:current_world_slots] < a[:required_world_slots]
               minutes = (Time.now - since) / 60.0
               debug "world:#{a[:world_id]} #{a[:current_world_slots]} <-> #{a[:required_world_slots]} (steps:#{a[:step_difference]}) #{under_allocated ? "under" : "over"} allocated for #{minutes} minutes"
-
+              debug "#{a.inspect}"
               over_allocated = !under_allocated
 
               rebalance_now = false
               if under_allocated
                 # we should move world up if we've been under for 2 minutes or
                 # we're more than 1 step from balanced
-                rebalance_now = minutes > 2 or a[:step_difference] > 1
+                rebalance_now = minutes > 1 || a[:step_difference] > 1
               else
                 # we should move world down if we've been over for 10 minutes and
                 # we're more than 2 steps from balanced
-                rebalance_now = minutes > 10 and a[:step_difference] < -2
+                rebalance_now = minutes > 1 && a[:step_difference] < -2
               end
 
               if rebalance_now

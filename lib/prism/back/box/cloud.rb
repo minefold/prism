@@ -78,8 +78,9 @@ cat<<EOF > /tmp/attributes.json
   "relp": { "server": "#{log_server}" },
   
   "run_list":[
+    "recipe[rsyslog]",
     "recipe[relp::client]",
-    "recipe[widget::deploy]",
+    "recipe[widget::deploy]"
   ]
 }
 EOF

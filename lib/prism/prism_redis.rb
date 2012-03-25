@@ -56,7 +56,7 @@ module Prism
         port: port,
         slots: slots
       }
-
+      
       hset_hash "worlds:running", world_id, world_hash
       hdel "worlds:busy", world_id
       publish_json "worlds:requests:start:#{world_id}", world_hash

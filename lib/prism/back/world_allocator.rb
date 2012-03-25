@@ -78,7 +78,7 @@ module Prism
 
       if box = find_box_for_new_world(world, player_slots_required)
         box_type = BoxType.new(box['instance_type'])
-        slots_required = (player_slots_required / box_type.players_per_slot.to_f).ceil
+        slots_required = (player_slots_required / [box_type.players_per_slot, 4].max.to_f).ceil
 
         start_options = box_type.to_hash.merge({
           instance_id: box['instance_id'],
@@ -271,8 +271,8 @@ module Prism
     def world_allocations
       universe.worlds[:running].map do |world_id, world|
         box_type = BoxType.new(world[:box]['instance_type'])
-
-        current_world_slots = world['slots']
+        
+        current_world_slots = world['slots'] || 1
         current_world_step = Math.log(current_world_slots, 2).ceil
         current_player_slots = current_world_slots * box_type.players_per_slot
 

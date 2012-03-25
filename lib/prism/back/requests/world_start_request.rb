@@ -7,7 +7,6 @@ module Prism
     attr_reader :instance_id
 
     def reply options = {}
-      puts "PUBLISH worlds:start_request:#{world_id}"
       redis.publish_json "worlds:start_request:#{world_id}", options
     end
 
@@ -74,29 +73,28 @@ module Prism
           }, proc { |world|
             if world
               start_options = WorldAllocator.new(universe).start_options_for_new_world world, player_slots
-              runpack_defaults = {
-                         name: 'Minecraft',
-                      version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
+              if start_options and start_options[:instance_id]
+                runpack_defaults = {
+                           name: 'Minecraft',
+                        version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
 
-                    data_file: world['world_data_file'],
-                          ops: op_usernames(world),
+                      data_file: world['world_data_file'],
+                            ops: op_usernames(world),
 
-                         seed: world['seed'],
-                   level_type: world['level_type'],
-                  online_mode: world['online_mode'],
-                   difficulty: world['difficulty'],
-                    game_mode: world['game_mode'],
-                          pvp: world['pvp'],
-                spawn_animals: world['spawn_animals'],
-               spawn_monsters: world['spawn_monsters'],
+                           seed: world['seed'],
+                     level_type: world['level_type'],
+                    online_mode: world['online_mode'],
+                     difficulty: world['difficulty'],
+                      game_mode: world['game_mode'],
+                            pvp: world['pvp'],
+                  spawn_animals: world['spawn_animals'],
+                 spawn_monsters: world['spawn_monsters'],
 
-                      plugins: []
-              }
+                        plugins: []
+                }
 
-              start_options.merge! world_id: world_id, runpack: runpack_defaults.merge(world['runpack'] || {})
+                start_options.merge! world_id: world_id, runpack: runpack_defaults.merge(world['runpack'] || {})
 
-
-              if start_options[:instance_id]
                 start_world_on_running_worker start_options
               else
                 info "no instances available for world:#{world_id}"
