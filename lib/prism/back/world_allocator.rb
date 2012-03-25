@@ -41,7 +41,7 @@ module Prism
       @world_cap        = (instance[:ecus] / ECUS_PER_WORLD).round    # 13
       @player_cap       = (@instance_ram / RAM_PER_PLAYER).round      # 50
       @ram_slot         = (@instance_ram / world_cap).round           # 496
-      @players_per_slot = (@player_cap / @world_cap)                  # 4
+      @players_per_slot = [(@player_cap / @world_cap).ceil, 4].max    # 4
     end
 
     def to_hash
@@ -278,11 +278,13 @@ module Prism
 
         # we want slots on the range: 4, 8, 16, 32 etc
 
-        required_world_slots = [(world[:players].size / box_type.players_per_slot.to_f).ceil, 1].max
-        required_world_step = Math.log(required_world_slots,2).ceil
         required_players = [world[:players].size, 4].max
-
         required_player_slots = 2 ** Math.log(required_players,2).ceil
+        required_world_slots = [(required_player_slots / box_type.players_per_slot.to_f).ceil, 1].max
+        required_world_step = Math.log(required_world_slots,2).ceil
+        
+
+        
 
         {
           world_id: world_id,

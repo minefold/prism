@@ -15,10 +15,12 @@ module Prism
       redis.setex "worlds:#{world_id}:moving", 300, Time.now.to_i
 
       redis.hget_json 'worlds:running', world_id do |world|
-        @instance_id = world['instance_id']
+        if world
+          @instance_id = world['instance_id']
 
-        message_gamers do
-          restart_world
+          message_gamers do
+            restart_world
+          end
         end
       end
     end

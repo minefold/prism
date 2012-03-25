@@ -209,13 +209,13 @@ module Prism
 
               rebalance_now = false
               if under_allocated
-                # we should move world up if we've been under for 2 minutes or
+                # we should move world up if we've been under for 5 minutes or
                 # we're more than 1 step from balanced
-                rebalance_now = minutes > 1 || a[:step_difference] > 1
+                rebalance_now = minutes > 5 || a[:step_difference] > 1
               else
-                # we should move world down if we've been over for 10 minutes and
+                # we should move world down if we've been over for 20 minutes and
                 # we're more than 2 steps from balanced
-                rebalance_now = minutes > 1 && a[:step_difference] < -2
+                rebalance_now = minutes > 20 && a[:step_difference] < -2
               end
 
               if rebalance_now
@@ -224,7 +224,7 @@ module Prism
                   { '$set' => {'allocation_slots' => a[:required_player_slots] }}
                 )
 
-                debug "reallocating world to slots:#{a[:required_player_slots]}"
+                debug "reallocating world to player_slots:#{a[:required_player_slots]}"
                 redis.lpush_hash 'worlds:move_request',
                   world_id: a[:world_id],
                   player_slots: a[:required_player_slots]
