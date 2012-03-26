@@ -50,27 +50,34 @@ module Prism
     end
 
     def update_state
-      update_boxes
-      lost_boxes
-      lost_busy_boxes
+      RedisUniverse.collect do |universe|
+        @redis_universe = universe
+        @allocator = WorldAllocator.new(universe)
+        @allocator.rebalance
 
-      found_worlds
-      lost_worlds
-      lost_busy_worlds
+        clear_phantoms
 
-      fix_broken_boxes
+        update_boxes
+        lost_boxes
+        lost_busy_boxes
 
-      shutdown_idle_worlds
+        found_worlds
+        lost_worlds
+        lost_busy_worlds
 
-      # wait 5 seconds so redis is definitely up to date
-      # this would be better as a multi query, waiting for all of these
-      # tasks to finish
+        fix_broken_boxes
 
-      EM.add_timer(5) do
-        RedisUniverse.collect do |universe|
-          @redis_universe = universe
-          WorldAllocator.new(universe).rebalance_boxes
-          @sweep_op.call
+        shutdown_idle_worlds
+        rebalance_worlds
+
+        @sweep_op.call
+      end
+    end
+
+    def clear_phantoms
+      redis.keys("worlds:allocation_difference:*") do |keys|
+        keys.each do |key|
+          redis.del key unless world_running?(key.split(':').last)
         end
       end
     end
@@ -106,12 +113,15 @@ module Prism
     end
 
     def found_worlds
-      new_worlds = running_worlds.reject{|world_id, world| redis_universe.worlds[:running].keys.include? world_id }
+      new_worlds = running_worlds.reject{|world_id, world| redis_universe.worlds[:running].keys.include? world_id };
+
       new_worlds.each do |world_id, world|
-        
-        if world_id != 'disk' # TODO: this line is temp
-          debug "found world:#{world_id}"
-          redis.store_running_world world['instance_id'], world_id, world['host'], world['port']
+        debug "found world:#{world_id} #{world}"
+
+        heartbeat = redis_universe.widget_worlds[world_id]
+        # TODO: this should always be present but its not getting it from the heartbeat
+        if heartbeat
+          redis.store_running_world world_id, heartbeat['instance_id'], heartbeat['host'], heartbeat['port'], heartbeat['slots']
         end
       end
     end
@@ -169,6 +179,78 @@ module Prism
           redis.set_busy "worlds:busy", world_id, 'empty', expires_after: 60
         end
       end
+    end
+
+    def world_running? world_id
+      redis_universe.worlds[:running].keys.include? world_id
+    end
+
+    def rebalance_worlds
+      @allocator.world_allocations.each do |a|
+        op = redis.get("worlds:#{a[:world_id]}:moving")
+        op.callback do |move_started_at|
+          if move_started_at
+            if world_running? a[:world_id]
+              redis.del "worlds:#{a[:world_id]}:moving"
+            else
+              debug "world:#{a[:world_id]} is moving (#{Time.now - Time.at(move_started_at)} seconds)"
+            end
+
+          elsif a[:current_world_slots] == a[:required_world_slots]
+            ignore "worlds:allocation_difference:#{a[:world_id]}"
+
+          else
+            notice("worlds:allocation_difference:#{a[:world_id]}", a[:required_world_slots]) do |since, slots|
+              under_allocated = a[:current_world_slots] < a[:required_world_slots]
+              minutes = (Time.now - since) / 60.0
+              debug "world:#{a[:world_id]} #{a[:current_world_slots]} <-> #{a[:required_world_slots]} (steps:#{a[:step_difference]}) #{under_allocated ? "under" : "over"} allocated for #{minutes} minutes"
+              debug "#{a.inspect}"
+              over_allocated = !under_allocated
+
+              rebalance_now = false
+              if under_allocated
+                # we should move world up if we've been under for 5 minutes or
+                # we're more than 1 step from balanced
+                rebalance_now = minutes > 5 || a[:step_difference] > 1
+              else
+                # we should move world down if we've been over for 20 minutes and
+                # we're more than 2 steps from balanced
+                rebalance_now = minutes > 20 && a[:step_difference] < -2
+              end
+
+              if rebalance_now
+                World.collection.update(
+                  {_id: BSON::ObjectId(a[:world_id])},
+                  { '$set' => {'allocation_slots' => a[:required_player_slots] }}
+                )
+
+                debug "reallocating world to player_slots:#{a[:required_player_slots]}"
+                # redis.lpush_hash 'worlds:move_request',
+                #   world_id: a[:world_id],
+                #   player_slots: a[:required_player_slots]
+              end
+            end
+          end
+        end
+      end
+    end
+
+    def notice key, value, *a, &b
+      cb = EM::Callback *a, &b
+
+      redis.get_json(key) do |h|
+        if h and h['value'] == value
+          cb.call Time.at(h['at']), h['value']
+        else
+          redis.set(key, { at: Time.now.to_i, value: value }.to_json)
+        end
+      end
+
+      cb
+    end
+
+    def ignore key
+      redis.del key
     end
 
     def record_stats

@@ -7,3 +7,6 @@ export EC2_HOME="/usr/local/Cellar/ec2-api-tools/1.5.0.1/jars"
 
 export S3_KEY=$EC2_ACCESS_KEY
 export S3_SECRET=$EC2_SECRET_KEY
+
+export AWS_ACCESS_KEY="AKIAJPN5IJVEBB2QE35A"
+export AWS_SECRET_KEY="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"

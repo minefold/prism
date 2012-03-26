@@ -19,7 +19,6 @@ module Prism
         raise "unknown player:#{player_id}" unless player
 
         session_minutes = Time.parse(session_started_at).minutes_til(Time.now)
-
         info "played 1 minute [#{player.plan_status}] session:#{session_minutes} mins"
 
         player.update '$inc' => { 'minutes_played' => 1 }

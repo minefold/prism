@@ -1,5 +1,6 @@
 module Prism
   class ConnectedPlayerHandler < Handler
+    include EM::P::Minecraft::Packets::Server
     include Messaging
     include Logging
 
@@ -30,7 +31,11 @@ module Prism
         Resque.push 'high', class: 'MinutePlayedJob', args: [player_id, world_id, Time.now.utc]
       end
 
-      listen_once("players:disconnect:#{username}") { exit }
+      listen_once("players:disconnect:#{username}") do |message|
+        connection.send_data server_packet 0xFF, :reason => message
+        connection.close_connection_after_writing
+        exit
+      end
 
       Resque.push 'high', class: 'PlayerConnectedJob', args: [player_id, world_id, Time.now.utc]
       redis.lpush_hash "player:connected",

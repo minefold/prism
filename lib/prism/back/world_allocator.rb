@@ -3,10 +3,10 @@ require 'time'
 module Prism
   ECUS_PER_WORLD = 1.5
   RAM_PER_PLAYER = 128
-  OS_RAM_BUFFER = 0.2 # let the OS have this much ram
+  OS_RAM_BUFFER = 0.1 # let the OS have this much ram
 
   INSTANCE_PLAYER_BUFFER = 5 # needs to be space for 5 players to start a world on a box
-  WORLD_BUFFER = 3  # there must be room for 3 more worlds at any time
+  WORLD_BUFFER = 3  # there must be room for 3 more slots at any time
 
   AMIS = {
     '64bit' => 'ami-9ed905f7',
@@ -14,34 +14,40 @@ module Prism
   }
 
   INSTANCE_DEFS = {
-    'm1.small'   => { ram:  1.7 * 1024, ecus:  1.0, image_id: AMIS['64bit'] },   # worlds:  3  players:  14
-    'c1.medium'  => { ram:  1.7 * 1024, ecus:  5.0, image_id: AMIS['64bit'] },   # worlds:  3  players:  14
-    'c1.xlarge'  => { ram:  7.0 * 1024, ecus: 20.0, image_id: AMIS['64bit'] },   # worlds: 10  players:  56
-    'm1.large'   => { ram:  7.5 * 1024, ecus:  4.0, image_id: AMIS['64bit'] },   # worlds:  2  players:  60
-    'm2.xlarge'  => { ram: 17.1 * 1024, ecus:  6.5, image_id: AMIS['64bit'] },   # worlds:  3  players: 137
-    'm2.2xlarge' => { ram: 34.2 * 1024, ecus: 13.0, image_id: AMIS['64bit'] },   # worlds:  7  players: 274
-    'm2.4xlarge' => { ram: 68.4 * 1024, ecus: 26.0, image_id: AMIS['64bit'] }    # worlds: 13  players: 547
+    'm1.small'    => { ram:  1.7 * 1024, ecus:  1, image_id: AMIS['64bit'] },   # worlds:  1  players:  14
+    'm1.large'    => { ram:  7.5 * 1024, ecus:  4, image_id: AMIS['64bit'] },   # worlds:  3  players:  60
+    'm1.xlarge'   => { ram: 15.0 * 1024, ecus:  8, image_id: AMIS['64bit'] },   # worlds:  5  players:  120
+
+    'm2.xlarge'   => { ram: 17.1 * 1024, ecus:  6.5, image_id: AMIS['64bit'] },   # worlds:  4  players: 137
+    'm2.2xlarge'  => { ram: 34.2 * 1024, ecus: 13.0, image_id: AMIS['64bit'] },   # worlds:  9  players: 274
+    'm2.4xlarge'  => { ram: 68.4 * 1024, ecus: 26.0, image_id: AMIS['64bit'] },   # worlds: 17  players: 547
+
+    'c1.medium' => { ram:  1.7 * 1024, ecus:  5, image_id: AMIS['64bit'] },   # worlds: 3  players:  14
+    'c1.xlarge' => { ram:  7.0 * 1024, ecus: 20, image_id: AMIS['64bit'] },   # worlds: 13  players:  56
+
+    'cc1.4xlarge' => { ram: 23.0 * 1024, ecus: 33.5, image_id: AMIS['HVM'] },   # worlds: 22  players:  184
+    'cc2.8xlarge' => { ram: 60.5 * 1024, ecus: 88.0, image_id: AMIS['HVM'] }    # worlds: 59  players:  484
   }.freeze
 
   class BoxType
-    attr_reader :instance_type, :instance_ram, :player_cap, :world_cap, :heap_size, :image_id
+    attr_reader :instance_type, :instance_ram, :player_cap, :world_cap, :image_id, :ram_slot, :players_per_slot
 
     def initialize instance_type
       @instance_type = instance_type
       instance = INSTANCE_DEFS[instance_type]
+      @image_id         = instance[:image_id]
 
-      @instance_ram = instance[:ram] - OS_RAM_BUFFER
-      @world_cap    = (instance[:ecus] / ECUS_PER_WORLD).round
-      @image_id     = instance[:image_id]
-      @player_cap   = (@instance_ram / RAM_PER_PLAYER).round
-      @heap_size    = (@instance_ram / world_cap).round
+      @instance_ram     = instance[:ram] * (1 - OS_RAM_BUFFER)        # 6451 Mb
+      @world_cap        = (instance[:ecus] / ECUS_PER_WORLD).round    # 13
+      @player_cap       = (@instance_ram / RAM_PER_PLAYER).round      # 50
+      @ram_slot         = (@instance_ram / world_cap).round           # 496
+      @players_per_slot = [(@player_cap / @world_cap).ceil, 4].max    # 4
     end
 
     def to_hash
       {
         instance_type: instance_type,
-             image_id: image_id,
-            heap_size: heap_size
+             image_id: image_id
       }
     end
   end
@@ -61,31 +67,47 @@ module Prism
       'c1.xlarge'
     end
 
-    def find_box_for_new_world world
+    def start_options_for_new_world world, player_slots_required = nil
       # find a box with the least amount of world slots and the most player slots
       # this means we fill boxes with smaller worlds and (in theory) allow larger
       # worlds to grow larger still. This might be complete bullshit…
 
-      # check world['whitelisted_player_ids']
-      start_options = BoxType.new(new_instance_type).to_hash
+      player_slots_required ||= 4
+      player_slots_required = [4, player_slots_required].max
 
-      if box = running_box_capacities.find{|box| Array(worlds_accepted(box)).include? world['_id'] }
-        debug "using dedicated box:#{box['instance_id']}"
-        start_options[:instance_id] = box['instance_id']
-      else
-        boxes_with_capacity.each do |box|
-          debug "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
-        end
+      # TODO: this probably belongs in the sweeper (rebalancer)
+      start_box_if_at_capacity
 
-        start_box_if_at_capacity
+      if box = find_box_for_new_world(world, player_slots_required)
+        box_type = BoxType.new(box['instance_type'])
+        slots_required = (player_slots_required / [box_type.players_per_slot, 4].max.to_f).ceil
 
-        start_options[:instance_id] = boxes_with_capacity.first["instance_id"] if boxes_with_capacity.any?
+        start_options = box_type.to_hash.merge({
+          instance_id: box['instance_id'],
+          heap_size: slots_required * box_type.ram_slot,
+          slots: slots_required
+        })
       end
-
-      start_options
     end
 
-    def rebalance_boxes
+    def find_box_for_new_world world, player_slots_required
+      # check if there's a specific box to send this world
+      if box = running_box_capacities.find{|box| Array(worlds_accepted(box)).include? world['_id'] }
+        debug "using dedicated box:#{box['instance_id']}"
+        box
+
+      else
+        candidates = boxes_with_capacity.select do |box|
+          puts "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
+          box_type = BoxType.new(box['instance_type'])
+          (box[:world_slots] * box_type.players_per_slot) >= player_slots_required
+        end
+
+        candidates.first if candidates.any?
+      end
+    end
+
+    def rebalance
       print_box_status
       start_box_if_at_capacity
       shutdown_idle_boxes
@@ -105,7 +127,7 @@ module Prism
         if excess_capacity >= 0
           box = idles_close_to_end_of_hour[instance_id]
 
-          message = "box:#{instance_id} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime_minutes:#{uptime box}"
+          message = box[:description]
           info "#{message} terminating idle"
           Prism.redis.lpush "workers:requests:stop", instance_id
         end
@@ -114,7 +136,7 @@ module Prism
 
     def shutdown_boxes_not_in_use
       unusable_boxes.select {|box| box[:worlds].size == 0 && box[:players].size == 0 && close_to_end_of_hour(box) }.each do |box|
-        message = "box:#{box['instance_id']} worlds:#{box[:worlds].size} players:#{box[:players].size} uptime_minutes:#{uptime box}"
+        message = box[:description]
         info "#{message} terminating unuseable"
         Prism.redis.lpush "workers:requests:stop", box['instance_id']
       end
@@ -133,30 +155,42 @@ module Prism
     def print_box_status
       upcoming_boxes.each do |request_id, box|
         box_type = BoxType.new(box['instance_type'])
-        debug "box:#{request_id} worlds:0/#{box_type.world_cap} players:0/#{box_type.player_cap} creating..."
+        debug "box:#{request_id} slots:#{box_type.world_cap} players:#{box_type.player_cap} creating..."
       end
 
       running_box_capacities.each do |box|
         box_type = BoxType.new(box['instance_type'])
         widget = universe.widgets[box['instance_id']]
 
-        debug "box:#{box['instance_id']} world_players: #{box[:worlds].values.map{|w| w[:players].size}.join(', ')}"
         if widget
-          if pi = widget['pi']
-            cpu_values = pi.values.map{|i| i['cpu'].to_i }
-            cpu_total = cpu_values.inject(0) {|sum, val| sum + val }
-            debug "box:#{box['instance_id']} cpu: #{cpu_values.map{|cpu| "#{cpu}%"}.join(', ')}  total: #{cpu_total}%"
+          if box[:worlds].any?
+            worlds_info = box[:worlds].each_with_object({}) do |(id, w), h|
+              h[id] = {
+                players: w[:players].size,
+                cpu: 0,
+                mem: 0
+              }
 
-            mem_values = pi.values.map{|i| i['mem'].to_i * 1024 }
-            mem_total = mem_values.inject(0) {|sum, val| sum + val }
-            debug "box:#{box['instance_id']} mem: #{mem_values.map{|mem| "#{mem.to_human_size}"}.join(', ')}  total: #{mem_total.to_human_size}"
+              if pi = widget['pi'] and widget['pi'][id]
+                h[id][:cpu] = pi[id]['cpu'].to_i
+                h[id][:mem] = pi[id]['mem'].to_i * 1024
+              end
+            end
+
+            # worlds:[4 13% 292Mb]
+            descriptions = worlds_info.values.map {|w| "[#{w[:players]} #{w[:cpu]}% #{w[:mem].to_human_size}]" }
+            player_total = worlds_info.values.inject(0) {|sum, w| sum + w[:players] }
+            cpu_total = worlds_info.values.inject(0) {|sum, w| sum + w[:cpu] }
+            mem_total = worlds_info.values.inject(0) {|sum, w| sum + w[:mem] }
+            puts "box:#{box['instance_id']} worlds:#{descriptions.join(' ')} total:[#{player_total} #{cpu_total}% #{mem_total.to_human_size}]"
           end
+
           if disk = widget['disk']
-            debug "box:#{box['instance_id']} disk: #{disk.values.map{|d| ((d['used'] / (d['total'] || 1).to_f) * 100).to_i.to_s + "%" }.join(', ')}"
+            debug "box:#{box['instance_id']} disk: #{disk.values.map{|d| ((d['used'] / (d['total'] || 1).to_f) * 100).to_i.to_s + "%" }.join(' ')}"
           end
         end
 
-        message = "box:#{box['instance_id']} worlds:#{box[:worlds].size}/#{box_type.world_cap} players:#{box[:players].size}/#{box_type.player_cap} uptime:#{friendly_time uptime box}"
+        message = box[:description]
         message += " not accepting" if worlds_accepted box
         debug message
       end
@@ -192,7 +226,14 @@ module Prism
         universe.boxes[:running].map do |instance_id, box|
           box_type = BoxType.new box["instance_type"]
           box[:player_slots] = box_type.player_cap - box[:players].size
-          box[:world_slots] = box_type.world_cap - box[:worlds].size
+          box[:world_slots] = box_type.world_cap - box[:worlds].inject(0) {|sum, (id, w)| sum + (w['slots'] || 1)}
+          box[:description] = {
+            box: instance_id,
+            worlds: box[:worlds].size,
+            slots: "#{box_type.world_cap - box[:world_slots]}/#{box_type.world_cap}",
+            uptime: friendly_time(uptime box)
+          }.map{|k,v| "#{k}:#{v}" }.join(' ')
+
           box
         end.sort_by {|box| [box[:world_slots], -box[:player_slots]] }
       end
@@ -216,6 +257,46 @@ module Prism
 
     def at_capacity?
       total_world_slots < WORLD_BUFFER
+    end
+
+    # 4 players per slot on c1.xlarge
+    #    1    2    4      8
+    #   0-4  4-8  8-16  16-32
+
+    # 24 players per slot on m1.xlarge
+    #    1      2      4
+    #   0-24  24-48  48-96
+
+    # player_slots 4, 8, 16, 32, 64, 128
+
+
+    def world_allocations
+      universe.worlds[:running].map do |world_id, world|
+        box_type = BoxType.new(world[:box]['instance_type'])
+
+        current_world_slots = world['slots'] || 1
+        current_world_step = Math.log(current_world_slots, 2).ceil
+        current_player_slots = current_world_slots * box_type.players_per_slot
+
+        # we want slots on the range: 4, 8, 16, 32 etc
+
+        required_players = [world[:players].size, 4].max
+        required_player_slots = 2 ** Math.log(required_players,2).ceil
+        required_world_slots = [(required_player_slots / box_type.players_per_slot.to_f).ceil, 1].max
+        required_world_step = Math.log(required_world_slots,2).ceil
+
+
+
+
+        {
+          world_id: world_id,
+          current_world_slots: current_world_slots,
+          current_player_slots: current_player_slots,
+          required_world_slots: required_world_slots,
+          required_player_slots: required_player_slots,
+          step_difference: required_world_step - current_world_step
+        }
+      end
     end
 
     # helpers

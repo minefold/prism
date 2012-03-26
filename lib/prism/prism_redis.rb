@@ -46,19 +46,31 @@ module Prism
     def unstore_running_box instance_id, host
       zadd "boxes:stopped", Time.now.to_i, instance_id
       hdel "workers:running", instance_id
-      del "workers:#{instance_id}:worlds"
       publish "workers:requests:stop:#{instance_id}", host
     end
 
-    def store_running_world instance_id, world_id, host, port
-      hset_hash "worlds:running", world_id, instance_id:instance_id, host:host, port:port
-      sadd "workers:#{instance_id}:worlds", world_id
+    def store_running_world world_id, instance_id, host, port, slots
+      world_hash = {
+        instance_id: instance_id,
+        host: host,
+        port: port,
+        slots: slots
+      }
+      
+      hset_hash "worlds:running", world_id, world_hash
       hdel "worlds:busy", world_id
-      publish_json "worlds:requests:start:#{world_id}", instance_id:instance_id, host:host, port:port
+      publish_json "worlds:requests:start:#{world_id}", world_hash
     end
 
     def unstore_running_world instance_id, world_id
       hdel "worlds:running", world_id
+    end
+
+    def get_json key, *a, &b
+      cb = EM::Callback *a, &b
+      op = get key
+      op.callback {|data| cb.call data ? JSON.parse(data) : nil }
+      cb
     end
 
     def hget_json key, field

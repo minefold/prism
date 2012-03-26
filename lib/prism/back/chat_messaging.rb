@@ -27,5 +27,10 @@ module Prism
       world_stdin = "workers:#{instance_id}:worlds:#{world_id}:stdin"
       redis.publish world_stdin, "tell #{username} #{line}"
     end
+
+    def send_world_message instance_id, world_id, message
+      world_stdin = "workers:#{instance_id}:worlds:#{world_id}:stdin"
+      redis.publish world_stdin, "say #{message}"
+    end
   end
 end
