@@ -12,7 +12,7 @@ module Prism
 
       MinecraftPlayer.upsert_by_username_with_user(username) do |player|
         debug "player:#{player.id} user:#{player.user.id if player.user}"
-        @mp_id, @mp_name = player.mpid.to_s, player.username
+        @mp_id, @mp_name = player.distinct_id.to_s, player.username
 
         # TODO: support other hosts besides minefold.com
         if target_host =~ /^([\w]+)\.([\w]+)\.(localhost\.)?minefold\.com\:?(\d+)?$/

@@ -32,6 +32,7 @@ class World < Model
      whitelisted_player_ids
      banned_player_ids
      runpack
+     allocation_slots
   ).each do |field|
     define_method(:"#{field}") do
       @doc[field]

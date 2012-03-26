@@ -1,5 +1,6 @@
 module Prism
   class WorldStartRequest < Request
+    include Logging
     include Messaging
 
     process "worlds:start_request", :world_id, :player_slots
@@ -24,7 +25,7 @@ module Prism
       redis.hget_json "worlds:running", world_id do |world|
         if world
           debug "world:#{world_id} is already running"
-          reply
+          reply world
         else
           debug "world:#{world_id} is not running"
           start_world
@@ -51,63 +52,64 @@ module Prism
       end
     end
 
-    def op_ids world
-      [world['creator_id']] +
-       world['memberships'].
-         select {|m| m['role'] == 'op' }.
-            map {|m| m['user_id']}
-    end
-
-    def op_usernames world
-      MinefoldDb.connection['users'].
-        find('_id' => { '$in' => op_ids(world) }).
-        map {|u| u['username']}
-    end
-
     def start_world
       debug "getting world:#{world_id} started"
 
       Prism::RedisUniverse.collect do |universe|
-        EM.defer(proc {
-            mongo_connect['worlds'].find_one({"_id"  => BSON::ObjectId(world_id) })
-          }, proc { |world|
-            if world
-              start_options = WorldAllocator.new(universe).start_options_for_new_world world, player_slots
-              if start_options and start_options[:instance_id]
-                runpack_defaults = {
-                           name: 'Minecraft',
-                        version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
+        World.find(world_id) do |world|
+          if world
+            slots_required = player_slots || world.allocation_slots
 
-                      data_file: world['world_data_file'],
-                            ops: op_usernames(world),
-
-                           seed: world['seed'],
-                     level_type: world['level_type'],
-                    online_mode: world['online_mode'],
-                     difficulty: world['difficulty'],
-                      game_mode: world['game_mode'],
-                            pvp: world['pvp'],
-                  spawn_animals: world['spawn_animals'],
-                 spawn_monsters: world['spawn_monsters'],
-
-                        plugins: []
-                }
-
-                start_options.merge! world_id: world_id, runpack: runpack_defaults.merge(world['runpack'] || {})
-
-                start_world_on_running_worker start_options
-              else
-                info "no instances available for world:#{world_id}"
-                reply rejected:'no_instances_available'
-              end
+            start_options = WorldAllocator.new(universe).start_options_for_new_world world.doc, slots_required
+            
+            if start_options and start_options[:instance_id]
+              add_start_options_for_world world, start_options
             else
-              reply rejected:'not_found'
+              info "no instances available"
+              reply failed:'no_instances_available'
             end
-          })
+          else
+            reply failed:'no_world'
+          end
+        end
       end
     end
 
-    def start_world_on_running_worker options
+    def add_start_options_for_world world, start_options
+      opped_player_ids = Array(world.opped_player_ids)
+      whitelisted_player_ids = Array(world.whitelisted_player_ids)
+      banned_player_ids = Array(world.banned_player_ids)
+
+      world_player_ids = opped_player_ids | whitelisted_player_ids | banned_player_ids
+
+      MinecraftPlayer.find_all(deleted_at: nil, _id: {'$in' => world_player_ids}) do |world_players|
+        opped_players = world_players.select{|p| opped_player_ids.include?(p.id)}
+        whitelisted_players = world_players.select{|p| whitelisted_player_ids.include?(p.id)}
+        banned_players = world_players.select{|p| banned_player_ids.include?(p.id)}
+
+        runpack_defaults = {
+                   name: 'Minecraft',
+                version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
+
+              data_file: world.world_data_file,
+                    ops: (opped_players.map(&:username) | World::DEFAULT_OPS).compact,
+            whitelisted: whitelisted_players.map(&:username).compact,
+                 banned: banned_players.map(&:username).compact,
+
+                plugins: []
+        }
+        world_settings = %w(seed level_type online_mode difficulty_level game_mode pvp spawn_animals spawn_monsters)
+        runpack_defaults.merge!(world_settings.each_with_object({}){|setting, h| h[setting] = world.doc[setting] })
+
+        start_options.merge! world_id: world_id, runpack: runpack_defaults.merge(world.runpack || {})
+
+        debug "start options: #{start_options}"
+
+        start_world_with_options start_options
+      end
+    end
+
+    def start_world_with_options options
       instance_id = options[:instance_id]
       debug "starting world:#{world_id} on worker:#{instance_id} heap:#{options[:heap_size]}"
 
@@ -123,11 +125,9 @@ module Prism
 
         if world['failed']
           Exceptional.rescue { raise "World start failed: #{world['failed']}" }
-          reply rejected:'500'
+          reply failed:'500'
         else
-          reply instance_id: world['instance_id'],
-                       host: world["host"],
-                       port: world["port"]
+          reply world
         end
       end
     end
