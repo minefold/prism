@@ -15,9 +15,24 @@ module Prism
         @mp_id, @mp_name = player.distinct_id.to_s, player.username
 
         # TODO: support other hosts besides minefold.com
-        if target_host =~ /^([\w]+)\.([\w]+)\.(localhost\.)?minefold\.com\:?(\d+)?$/
-          World.find_by_name($2, $1) do |world|
-            connect_unvalidated_player_to_unknown_world player, world
+        if target_host =~ /^(\w+)\.(\w{1,16})\.(localhost\.)?minefold\.com\:?(\d+)?$/
+          if $2 == 'verify'
+            msg = nil
+            User.find_by_verification_code($1) do |user|
+              if user
+                Resque.push 'high', class: 'UserVerifiedJob', args: [$1, username]
+                msg = "Thank you for verifying your account."
+              else
+                msg = "Invalid verification code."
+              end
+
+              # TODO Kick the player with a friendly message
+              redis.publish "players:disconnect:#{username}", "Yay! You're now verified!"
+            end
+          else
+            World.find_by_name($2, $1) do |world|
+              connect_unvalidated_player_to_unknown_world(player, world)
+            end
           end
         else
           # connecting to a different host, probably pluto, old sk00l
