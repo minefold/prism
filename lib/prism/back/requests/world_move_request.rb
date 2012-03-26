@@ -49,7 +49,7 @@ module Prism
 
       # TODO: there's a half second gap here!
       EM.add_timer(0.5) do
-        redis.lpush_hash "worlds:start_request", world_id: world_id, player_slots: player_slots
+        redis.lpush_hash "worlds:requests:start", world_id: world_id, player_slots: player_slots
       end
     end
   end

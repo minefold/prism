@@ -7,7 +7,7 @@ module Prism
       redis = Prism.redis
 
       @timeout = EM.add_periodic_timer(timeout) {
-        puts "timeout colecting redis state"
+        puts "timeout collecting redis state"
         EM.stop
       }
 

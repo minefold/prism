@@ -98,7 +98,7 @@ module Prism
 
       else
         candidates = boxes_with_capacity.select do |box|
-          puts "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
+          debug "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
           box_type = BoxType.new(box['instance_type'])
           (box[:world_slots] * box_type.players_per_slot) >= player_slots_required
         end
@@ -182,7 +182,7 @@ module Prism
             player_total = worlds_info.values.inject(0) {|sum, w| sum + w[:players] }
             cpu_total = worlds_info.values.inject(0) {|sum, w| sum + w[:cpu] }
             mem_total = worlds_info.values.inject(0) {|sum, w| sum + w[:mem] }
-            puts "box:#{box['instance_id']} worlds:#{descriptions.join(' ')} total:[#{player_total} #{cpu_total}% #{mem_total.to_human_size}]"
+            debug "box:#{box['instance_id']} worlds:#{descriptions.join(' ')} total:[#{player_total} #{cpu_total}% #{mem_total.to_human_size}]"
           end
 
           if disk = widget['disk']

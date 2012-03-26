@@ -3,12 +3,14 @@ module Prism
     include Logging
     include Messaging
 
-    process "worlds:start_request", :world_id, :player_slots
+    process "worlds:requests:start", :world_id, :player_slots
 
     attr_reader :instance_id
+    
+    log_tags :world_id
 
     def reply options = {}
-      redis.publish_json "worlds:start_request:#{world_id}", options
+      redis.publish_json "worlds:requests:start:#{world_id}", options
     end
 
     def run
@@ -127,6 +129,7 @@ module Prism
           Exceptional.rescue { raise "World start failed: #{world['failed']}" }
           reply failed:'500'
         else
+          debug "world started"
           reply world
         end
       end

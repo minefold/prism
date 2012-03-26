@@ -22,8 +22,8 @@ module Prism
 
     def start_world
       debug "world:#{world_id} is not running"
-      redis.lpush_hash "worlds:start_request", world_id: world_id
-      listen_once_json "worlds:start_request:#{world_id}" do |world|
+      redis.lpush_hash "worlds:requests:start", world_id: world_id
+      listen_once_json "worlds:requests:start:#{world_id}" do |world|
         if world
           connect_player_to_world world['instance_id'], world['host'], world['port']
         else
