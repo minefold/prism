@@ -13,8 +13,11 @@ EM.epoll
 module Prism
   EM.run do
 
-    puts "initialising"
+    prism_id = ARGV.shift || `hostname`.strip
+
+    puts "initialising #{prism_id}"
     redis = Prism.redis
+    Prism.redis.prism_id = prism_id
 
     EM.error_handler do |e|
       Exceptional.handle(e)
@@ -24,6 +27,7 @@ module Prism
     subscription = PrismRedis.connect
     subscription.psubscribe "players:connection_request:*"
     subscription.psubscribe "players:disconnect:*"
+    subscription.psubscribe "players:authenticate:*"
     subscription.on :pmessage do |key, channel, message|
       Prism::Messaging.deliver_message channel, message
     end

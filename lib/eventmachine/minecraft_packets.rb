@@ -119,8 +119,14 @@ module EventMachine
           end
 
           client 0x00, :keepalive_id => :int
-          client 0x01, :protocol_version => :int, :username => :string16,
-                       :unused1 => :long, :unused2 => :int, :unused3 => :byte, :unused4 => :byte, :unused5 => :byte, :unused6 => :byte
+          client 0x01, :protocol_version => :int, 
+                       :username => :string16,
+                       :unused1 => :string16, 
+                       :unused2 => :int, 
+                       :unused3 => :int, 
+                       :unused4 => :byte, 
+                       :unused5 => :byte, 
+                       :unused6 => :byte
           client 0x02, :username => :string16
           client 0x07, :user => :int, :target => :int, :left_click => :bool
           client 0x09, :world => :byte, :difficulty => :byte, :creative_mode => :byte, :world_height => :short, :map_seed => :long
@@ -157,7 +163,7 @@ module EventMachine
 
           server 0x00, :keepalive_id => :int
           server 0x01, :entity_id => :int, :unknown => :string16, :map_seed => :long, :server_mode => :int, :dimension => :byte, :difficulty => :byte, :world_height => :byte, :max_players => :byte
-          server 0x02, :server_id => :string16
+          server 0x02, :connection_hash => :string16
           server 0x04, :time => :long
           server 0x05, :entity_id => :int, :slot => :short, :item_id => :short, :unknown => :short
           server 0x06, :x => :int, :y => :int, :z => :int

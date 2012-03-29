@@ -34,15 +34,19 @@ def world_backup world_id, new_value = nil
   end
 end
 
+def prism_id
+  `hostname`.strip
+end
+
 def set_players(n, world_id='4f5be9da0ecb2800010000f5')
   n.times do |i| 
-    redis.hset 'players:playing', "player#{i}", world_id
+    redis.hset "players:playing", "player#{i}", world_id
     redis.hset 'usernames', "player#{i}", BSON::ObjectId.new.to_s
   end
 end
 
 def clear_players(n)
-  n.times {|i| redis.hdel 'players:playing', "player#{i}" }
+  n.times {|i| redis.hdel "players:playing", "player#{i}" }
 end
 
 IRB.start

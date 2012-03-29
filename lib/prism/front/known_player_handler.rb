@@ -3,7 +3,7 @@ module Prism
     include MinecraftKeepalive
     include Messaging
     include EM::P::Minecraft::Packets::Server
-    
+
     include Logging
 
     attr_reader :username
@@ -17,7 +17,7 @@ module Prism
         'not_whitelisted' => %Q{You are not white-listed on this server! Visit minefold.com},
         'no_instances_available' => %Q{Sorry! Minefold is under heavy load argh! Please try again in a few minutes},
         '500' => %Q{Sorry! The gremlins messed something up, try connecting again while we spank them},
-        
+
         'no_world' => %Q{No world! Create or join one at minefold.com},
         'unrecognised_player' => %Q{HEY! Check your username or sign up at minefold.com}
       }.freeze
@@ -63,6 +63,16 @@ module Prism
             StatsD.increment_and_measure_from started_connection, "players.connection_request.failed.#{response['rejected']}"
           end
         end
+      end
+
+      listen_once("players:authenticate:#{username}") do |connection_hash|
+        connection.send_data server_packet 0x02, connection_hash: connection_hash
+      end
+
+      listen_once("players:disconnect:#{username}") do |message|
+        connection.send_data server_packet 0xFF, :reason => message
+        connection.close_connection_after_writing
+        exit
       end
 
       redis.lpush_hash "players:connection_request", username:username, remote_ip:remote_ip, target_host:target_host

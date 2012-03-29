@@ -11,13 +11,15 @@ module Prism
     def hiredis_connect
       @redis_factory ? @redis_factory.call : EM::Hiredis.connect(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
     end
+    
+    attr_accessor :prism_id
   end
 
   class PrismRedis
     include Logging
 
     attr_reader :redis
-
+    
     def self.connect
       new Prism.hiredis_connect
     end
@@ -36,6 +38,10 @@ module Prism
       @redis = connection
       @redis.errback {|e| error "failed to connect to redis: #{e}" }
       @redis
+    end
+    
+    def prism_id
+      self.class.prism_id
     end
 
     def store_running_box box

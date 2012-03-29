@@ -11,8 +11,8 @@ class User < Model
     find_one({deleted_at: nil, safe_username: username.downcase.strip}, *a, &b)
   end
 
-  def self.find_by_verification_code(code, *a, &b)
-    find_one({deleted_at: nil, verification_code: code}, *a, &b)
+  def self.find_by_verification_token(code, *a, &b)
+    find_one({deleted_at: nil, verification_token: code}, *a, &b)
   end
 
   def email

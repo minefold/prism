@@ -111,6 +111,8 @@ class MinecraftPlayer < Model
   end
 
   def has_credit?
+    p user, minutes_played, FREE_MINUTES    
+    
     if user
       user.has_credit?
     else
