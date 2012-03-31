@@ -225,9 +225,9 @@ module Prism
                 )
 
                 debug "reallocating world to player_slots:#{a[:required_player_slots]}"
-                # redis.lpush_hash 'worlds:move_request',
-                #   world_id: a[:world_id],
-                #   player_slots: a[:required_player_slots]
+                redis.lpush_hash 'worlds:move_request',
+                  world_id: a[:world_id],
+                  player_slots: a[:required_player_slots]
               end
             end
           end
