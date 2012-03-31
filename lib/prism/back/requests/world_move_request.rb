@@ -2,7 +2,7 @@ module Prism
   class WorldMoveRequest < Request
     include Messaging
     include ChatMessaging
-
+    
     process "worlds:move_request", :world_id, :player_slots
 
     # this is the process
@@ -27,15 +27,15 @@ module Prism
 
     def message_gamers *a, &b
       cb = EM::Callback *a, &b
-      send_world_message @instance_id, world_id, "SORRY! This server needs to be restarted!"
+      send_world_message @instance_id, world_id, "Optimizing server: restart required"
       EM.add_timer(2) do
-        send_world_message @instance_id, world_id, "Please reconnect in 30 seconds!"
+        send_world_message @instance_id, world_id, "Please reconnect in 30 seconds"
         EM.add_timer(8) do
           op = redis.hgetall "players:playing"
           op.callback do |players|
             users = players.select{|username, player_world_id| player_world_id == world_id }.keys
             users.each do |username|
-              redis.publish "players:disconnect:#{username}", "Please reconnect in 30 seconds!"
+              redis.publish "players:disconnect:#{username}", "Please reconnect in 30 seconds"
             end
             cb.call
           end
