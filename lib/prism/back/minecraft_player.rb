@@ -85,34 +85,24 @@ class MinecraftPlayer < Model
   def self.sanitize username
     username.downcase.strip
   end
-
-  def user_id
-    @doc['user_id']
+  
+  %w(user_id
+     slug
+     username
+     distinct_id
+     last_connected_at
+     minutes_played
+  ).each do |field|
+    define_method(:"#{field}") do
+      @doc[field]
+    end
   end
-
-  def slug
-    @doc['slug']
-  end
-
-  def username
-    @doc['username']
-  end
-
-  def distinct_id
-    @doc['distinct_id']
-  end
-
-  def last_connected_at
-    @doc['last_connected_at']
-  end
-
-  def minutes_played
-    @doc['minutes_played'] || 0
+  
+  def verified?
+    not user.nil?
   end
 
   def has_credit?
-    p user, minutes_played, FREE_MINUTES    
-    
     if user
       user.has_credit?
     else

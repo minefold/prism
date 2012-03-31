@@ -24,7 +24,7 @@ module Prism
         # TODO: support other hosts besides minefold.com
         if target_host =~ /^(\w+)\.(\w{1,16})\.minefold\.com\:?(\d+)?$/
           if $2 == 'verify'
-            verify_player $1
+            verify_player player, $1
           else
             World.find_by_name($2, $1) do |world|
               connect_unvalidated_player_to_unknown_world(player, world)
@@ -37,27 +37,34 @@ module Prism
       end
     end
 
-    def verify_player token
-      debug "verifying player with code:#{token}"
-      User.find_by_verification_token(token) do |user|
-        if user
-          authenticate_player do |success|
-            if success
-              debug "verified"
-              Resque.push 'high', class: 'UserVerifiedJob', args: [username, token]
-              kick_player "Done! Your account is now verified"
-            else
-              debug "invalid player"
-              kick_player "Bad account! You need a real minecraft.net account"
+    def verify_player player, token
+      if player.verified?
+        kick_player "Already verified! #{username} already has a minefold.com account"
+        
+      else
+        debug "verifying player with code:#{token}"
+        User.find_by_verification_token(token) do |user|
+          if user
+            authenticate_player do |result|
+              debug result.to_s
+              case result
+              when :success
+                Resque.push 'high', class: 'UserVerifiedJob', args: [username, token]
+                kick_player "Done! Your account is now verified"
+              
+              when :invalid_player
+                kick_player "Bad account! #{username} is not a real minecraft.net account"
+              
+              end
             end
+          else
+            debug "invalid token"
+            kick_player "Invalid verification code"
           end
-        else
-          debug "invalid token"
-          kick_player "Invalid verification code"
         end
       end
     end
-
+    
     def authenticate_player *a, &b
       cb = EM::Callback *a, &b
 
@@ -65,7 +72,7 @@ module Prism
       redis.publish "players:authenticate:#{username}", connection_hash
       timer = EM.periodic_with_timeout(0.5, 15)
       timer.timeout do
-        cb.call false
+        cb.call :invalid_player
       end
       timer.callback do |timer|
         url = "http://session.minecraft.net/game/checkserver.jsp?user=#{username}&serverId=#{connection_hash}"
@@ -73,7 +80,7 @@ module Prism
         http.callback do
           if http.response.strip == 'YES'
             timer.cancel
-            cb.call true
+            cb.call :success
           end
         end
       end
