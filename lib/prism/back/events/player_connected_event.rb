@@ -3,15 +3,23 @@ module Prism
     include ChatMessaging
     include Logging
 
-    process "player:connected", :world_id, :player_id, :username, :timestamp
+    process "player:connected", :session_id, :world_id, :player_id, :username, :timestamp
 
-    log_tags :world_id, :player_id, :username
+    log_tags :session_id, :world_id, :player_id, :username
 
     def run
       MinecraftPlayer.find_with_user(player_id) do |player|
         raise "unknown player:#{player_id}" unless player
 
         player.update('$set' => { last_connected_at: Time.now })
+        
+        Session.insert(
+          {        _id: BSON::ObjectId(session_id),
+             player_id: BSON::ObjectId(player_id),
+              world_id: BSON::ObjectId(world_id),
+              started_at: Time.at(timestamp),
+          }
+        )
 
         redis.hget_json "worlds:running", world_id do |world|
           if world

@@ -12,27 +12,42 @@ class Model
   def self.mongo_collection
     mongo_connect.collection(@collection)
   end
+  
+  def self.find id, *a, &b
+    find_one({_id: BSON::ObjectId(id.to_s)}, *a, &b)
+  end
 
   def self.find_one options, *a, &b
     cb = EM::Callback *a, &b
     EM.defer(proc {
       doc = mongo_collection.find_one options
       new doc if doc
-    }, proc { |user|
-      cb.call user
+    }, proc { |model|
+      cb.call model
     })
     cb
   end
 
-  def self.find_all options, *a, &b
+  def self.find_all options = {}, *a, &b
     cb = EM::Callback *a, &b
     EM.defer(proc {
-      docs = mongo_collection.find options
-      docs.map{|d| new d }
-    }, proc { |user|
-      cb.call user
+      mongo_collection.find options
+    }, proc { |docs|
+      cb.call docs.map{|doc| new(doc) }
     })
     cb
+  end
+
+  def self.insert document, options = {}
+    EM.defer do
+      mongo_collection.insert document, options
+    end
+  end
+  
+  def self.update selector, document, options = {}
+    EM.defer do
+      mongo_collection.update selector, document, options
+    end
   end
 
   def self.find_and_modify options, *a, &b
@@ -40,14 +55,10 @@ class Model
     EM.defer(proc {
       doc = mongo_collection.find_and_modify options
       new doc if doc
-    }, proc { |user|
-      cb.call user
+    }, proc { |model|
+      cb.call model
     })
     cb
-  end
-
-  def self.find id, *a, &b
-    find_one({_id: BSON::ObjectId(id.to_s)}, *a, &b)
   end
 
   def initialize doc

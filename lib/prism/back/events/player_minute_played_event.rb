@@ -3,16 +3,14 @@ module Prism
     include ChatMessaging
     include Logging
 
-    process "players:minute_played", :world_id, :player_id, :username, :session_started_at, :timestamp
+    process "players:minute_played", :world_id, :player_id, :username, :session_started_at, :session_id
 
-    log_tags :world_id, :player_id, :username
+    log_tags :session_id, :world_id, :player_id, :username
 
     MESSAGES = {
       15 => "15 minefold minutes left",
       5  =>  "5 minefold minutes left!"
     }
-
-    NEW_PLAYER_SESSION_MINUTES = 120 # new players can play for two hours without an account
 
     def run
       MinecraftPlayer.find_with_user(player_id) do |player|
@@ -22,6 +20,11 @@ module Prism
         info "played 1 minute [#{player.plan_status}] session:#{session_minutes} mins"
 
         player.update '$inc' => { 'minutes_played' => 1 }
+
+        Session.update(
+          { _id: BSON::ObjectId(session_id) },
+          { '$inc' => { minutes_played: 1 } }
+        )
 
         if player.limited_time?
           redis.hget_json "worlds:running", world_id do |world|

@@ -14,18 +14,19 @@ module Prism
 
       @username, @host, @port, @player_id, @world_id = username, host, port, player_id, world_id
       @minecraft_session_started_at = Time.now
+      @session_id = BSON::ObjectId.new.to_s
 
       # EM.add_timer(20) { disconnect_and_reconnect }
 
       redis.hset "players:playing", player_id, world_id
-      debug "starting credit muncher"
+      debug "session:#{@session_id} started"
       @credit_muncher = EventMachine::PeriodicTimer.new(60) do
         debug "recording minute played"
         redis.lpush_hash "players:minute_played",
+          session_id: @session_id,
           world_id: world_id,
           player_id: player_id,
           username:username,
-          timestamp:Time.now.utc,
           session_started_at: @minecraft_session_started_at
 
         Resque.push 'high', class: 'MinutePlayedJob', args: [player_id, world_id, Time.now.utc]
@@ -33,16 +34,17 @@ module Prism
 
       Resque.push 'high', class: 'PlayerConnectedJob', args: [player_id, world_id, Time.now.utc]
       redis.lpush_hash "player:connected",
+        session_id: @session_id,
         world_id: world_id,
         player_id: player_id,
         username: username,
-        timestamp: Time.now.utc
+        timestamp: @minecraft_session_started_at.to_i
     end
 
     def exit
       @server.close_connection_after_writing
       if @credit_muncher
-        debug "stopping credit muncher"
+        debug "session:#{@session_id} ended"
         @credit_muncher.cancel
       end
       redis.hdel "players:playing", player_id
