@@ -61,13 +61,19 @@ class World
     @doc['parent_id']
   end
 
-  def has_data_file?
-    return true if data_file.nil?
-
-    # TODO: world data_file's should include the full path world_id/world_id.tar.gz
-    Storage.worlds.exists?("#{data_file}") ||
-      Storage.worlds.exists?("#{id}/#{data_file}") ||
-      Storage.worlds.exists?("#{parent_id}/#{data_file}") ||
-      Storage.old_worlds.exists?(data_file)
+  def has_data_file? *a, &b
+    cb = EM::Callback *a, &b
+    if data_file.nil?
+      cb.call true
+    else
+      # TODO: world data_file's should include the full path world_id/world_id.tar.gz
+      EM.defer do
+        cb.call Storage.worlds.exists?("#{data_file}") ||
+          Storage.worlds.exists?("#{id}/#{data_file}") ||
+          Storage.worlds.exists?("#{parent_id}/#{data_file}") ||
+          Storage.old_worlds.exists?(data_file)
+      end
+    end
+    cb
   end
 end

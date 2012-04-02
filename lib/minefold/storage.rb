@@ -4,11 +4,29 @@ class Storage
   class << self; attr_accessor :provider; end
 
   def self.old_worlds
-    new provider.directories.create(:key => OLD_WORLDS_BUCKET, :public => false)
+    retry_timeout, retry_times = 1, 0
+    begin
+      new provider.directories.create(:key => OLD_WORLDS_BUCKET, :public => false)
+    rescue Excon::Errors::InternalServerError => e
+      puts e
+      sleep retry_timeout
+      retry_timeout += 1
+      retry if (retry_times > 10)
+      raise e
+    end
   end
 
   def self.worlds
-    new provider.directories.create(:key => WORLDS_BUCKET, :public => false)
+    retry_timeout, retry_times = 1, 0
+    begin
+      new provider.directories.create(:key => WORLDS_BUCKET, :public => false)
+    rescue Excon::Errors::InternalServerError => e
+      puts e
+      sleep retry_timeout
+      retry_timeout += 1
+      retry if (retry_times > 10)
+      raise e
+    end
   end
 
   def self.game_servers

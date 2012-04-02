@@ -37,18 +37,20 @@ module Prism
       if world
         debug "found world:#{world.id} #{world.name}"
 
-        if world.has_data_file?
-          debug "world is valid"
+        world.has_data_file? do |has_data_file|
+          if has_data_file
+            debug "world is valid"
 
-          if user.has_credit?
-            recognised_player_connecting user, world
+            if user.has_credit?
+              recognised_player_connecting user, world
+            else
+              mixpanel_track 'bounced'
+              no_credit_player_connecting
+            end
           else
-            mixpanel_track 'bounced'
-            no_credit_player_connecting
+            info "world:#{world.id} data_file:#{world.data_file} does not exist"
+            redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
           end
-        else
-          info "world:#{world.id} data_file:#{world.data_file} does not exist"
-          redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
         end
       else
         info "world:#{user.current_world_id} doesn't exist"
