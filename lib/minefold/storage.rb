@@ -8,9 +8,10 @@ class Storage
     begin
       new provider.directories.create(:key => OLD_WORLDS_BUCKET, :public => false)
     rescue => e
-      puts "failed #{retry_times} time: #{e}\n#{e.backtrace.join("\n")}"
+      puts "failed #{retry_times} times: #{e}\n#{e.backtrace.join("\n")}"
       sleep retry_timeout
       retry_timeout += 1
+      retry_times += 1
       retry if (retry_times < 10)
       raise e
     end
@@ -21,9 +22,10 @@ class Storage
     begin
       new provider.directories.create(:key => WORLDS_BUCKET, :public => false)
     rescue => e
-      puts "failed #{retry_times} time: #{e}\n#{e.backtrace.join("\n")}"
+      puts "failed #{retry_times} times: #{e}\n#{e.backtrace.join("\n")}"
       sleep retry_timeout
       retry_timeout += 1
+      retry_times += 1
       retry if (retry_times < 10)
       raise e
     end
