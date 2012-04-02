@@ -7,7 +7,7 @@ class Storage
     retry_timeout, retry_times = 1, 0
     begin
       new provider.directories.create(:key => OLD_WORLDS_BUCKET, :public => false)
-    rescue Excon::Errors::InternalServerError => e
+    rescue => e
       puts e
       sleep retry_timeout
       retry_timeout += 1
@@ -20,7 +20,7 @@ class Storage
     retry_timeout, retry_times = 1, 0
     begin
       new provider.directories.create(:key => WORLDS_BUCKET, :public => false)
-    rescue Excon::Errors::InternalServerError => e
+    rescue => e
       puts e
       sleep retry_timeout
       retry_timeout += 1
