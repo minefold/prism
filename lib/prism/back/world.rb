@@ -12,7 +12,7 @@ class World < Model
         opts = {
           deleted_at: nil,
           creator_id: player.user_id,
-          name: /#{world_name}/i
+          slug: world_name.downcase
         }
         find_one(opts) do |world|
           cb.call world
