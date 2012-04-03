@@ -87,8 +87,8 @@ namespace :sweeper do
   end
 
   task :restart_prism do
-    raise "This is fucking dangerous!"
-    ssh "sudo restart prism"
+    # raise "This is fucking dangerous!"
+    ssh "sudo stop prism; sudo start prism"
   end
 
   task :logs do
@@ -140,7 +140,7 @@ namespace :stress do
     }, {
       '$set' => { 'online_mode' => false }
     })
-    
+
     1000.times do |i|
       name = "stress-test-#{i}"
       puts "#{name}"
