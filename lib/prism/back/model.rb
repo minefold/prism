@@ -14,7 +14,7 @@ class Model
   end
   
   def self.find id, *a, &b
-    find_one({_id: BSON::ObjectId(id.to_s)}, *a, &b)
+    find_one({_id: BSON::ObjectId(id.to_s), deleted_at: nil}, *a, &b)
   end
 
   def self.find_one options, *a, &b

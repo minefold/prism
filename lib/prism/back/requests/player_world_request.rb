@@ -34,7 +34,7 @@ module Prism
 
 
     def connect_player_to_world instance_id, host, port
-      puts "connecting to #{host}:#{port}"
+      info "connecting to #{host}:#{port}"
       redis.publish_json "players:connection_request:#{username}", host:host, port:port, player_id:player_id, world_id:world_id
     end
   end
