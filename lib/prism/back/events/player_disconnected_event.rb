@@ -11,7 +11,11 @@ module Prism
       MinecraftPlayer.find_with_user(player_id) do |player|
         raise "unknown player:#{player_id}" unless player
 
-        debug "disconnected after #{player.last_connected_at.minutes_til(Time.now)} minutes"
+        if player.last_connected_at
+          debug "disconnected after #{player.last_connected_at.minutes_til(Time.now)} minutes"
+        else
+          debug "disconnected after unknown minutes"
+        end
       end
     end
   end
