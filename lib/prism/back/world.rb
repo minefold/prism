@@ -8,7 +8,7 @@ class World < Model
   def self.find_by_name creator_username, world_name, *a, &b
     cb = EM::Callback *a, &b
     MinecraftPlayer.find_by_username_with_user(creator_username) do |player|
-      if player.user
+      if player and player.user
         opts = {
           deleted_at: nil,
           creator_id: player.user_id,
