@@ -106,7 +106,7 @@ class MinecraftPlayer < Model
     if user
       user.has_credit?
     else
-      minutes_played < FREE_MINUTES
+      (minutes_played || 0) < FREE_MINUTES
     end
   end
 
