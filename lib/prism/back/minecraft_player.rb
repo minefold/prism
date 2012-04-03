@@ -114,7 +114,7 @@ class MinecraftPlayer < Model
     if user
       user.credits
     else
-      FREE_MINUTES - minutes_played
+      FREE_MINUTES - (minutes_played || 0)
     end
   end
 
@@ -126,7 +126,7 @@ class MinecraftPlayer < Model
     if user
       user.plan_status
     else
-      "#{FREE_MINUTES - minutes_played} remaining"
+      "#{FREE_MINUTES - (minutes_played || 0)} remaining"
     end
   end
 end
