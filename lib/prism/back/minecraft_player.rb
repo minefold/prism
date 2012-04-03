@@ -56,7 +56,7 @@ class MinecraftPlayer < Model
   def self.find_by_username_with_user username, *a, &b
     cb = EM::Callback(*a, &b)
     find_one(deleted_at: nil, slug: sanitize(username)) do |player|
-      if player.user_id
+      if player and player.user_id
         User.find(player.user_id) do |u|
           player.user = u
           cb.call player
