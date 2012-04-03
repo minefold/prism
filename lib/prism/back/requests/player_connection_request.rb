@@ -89,18 +89,21 @@ module Prism
 
     def connect_unvalidated_player_to_unknown_world player, world
       if world
-        if world.has_data_file? # TODO: Make this async!
-          debug "world:#{world.id} found"
-          connect_unvalidated_player_to_world player, world
+        world.has_data_file? do |has_data_file|
+          if has_data_file
+            debug "world:#{world.id} found"
+            connect_unvalidated_player_to_world player, world
+          else
+            error "world:#{world.id} data_file:#{world.world_data_file} does not exist"
+            redis.publish_json "players:connection_request:#{username}",
+              rejected:'500',
+              details:"world data #{world.world_data_file} not found"
+
+          end
         else
-          error "world:#{world.id} data_file:#{world.world_data_file} does not exist"
-          redis.publish_json "players:connection_request:#{username}",
-            rejected:'500',
-            details:"world data #{world.world_data_file} not found"
+          debug "world not found"
+          redis.publish_json "players:connection_request:#{username}", rejected:'unknown_world'
         end
-      else
-        debug "world not found"
-        redis.publish_json "players:connection_request:#{username}", rejected:'unknown_world'
       end
     end
 

@@ -34,7 +34,7 @@ namespace :prism do
       
       def restart_prism
         puts "restarting prism"
-        ssh "sudo stop prism; sudo restart prism_back; sudo restart sweeper; sudo start prism"
+        ssh "sudo stop prism; sudo stop sweeper"
         EM.stop
       end
       
