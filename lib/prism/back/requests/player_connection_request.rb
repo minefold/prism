@@ -100,10 +100,10 @@ module Prism
               details:"world data #{world.world_data_file} not found"
 
           end
-        else
-          debug "world not found"
-          redis.publish_json "players:connection_request:#{username}", rejected:'unknown_world'
         end
+      else
+        debug "world not found"
+        redis.publish_json "players:connection_request:#{username}", rejected:'unknown_world'
       end
     end
 
