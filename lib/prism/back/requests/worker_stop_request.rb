@@ -1,5 +1,7 @@
 module Prism
   class WorkerStopRequest < BusyOperationRequest
+    include Logging
+    
     process "workers:requests:stop", :instance_id
 
     def busy_hash

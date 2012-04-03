@@ -1,5 +1,6 @@
 module Prism
   class WorkerCreateRequest < BusyOperationRequest
+    include Logging
 
     process "workers:requests:create", :request_id, :instance_type, :image_id
 

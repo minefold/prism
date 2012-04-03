@@ -2,6 +2,7 @@ module Prism
   class WorldMoveRequest < Request
     include Messaging
     include ChatMessaging
+    include Logging
     
     process "worlds:move_request", :world_id, :player_slots
 
