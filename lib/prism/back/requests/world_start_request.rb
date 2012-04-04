@@ -100,7 +100,7 @@ module Prism
 
                 plugins: []
         }
-        world_settings = %w(seed level_type online_mode difficulty_level game_mode pvp spawn_animals spawn_monsters)
+        world_settings = %w(seed level_type online_mode difficulty game_mode pvp spawn_animals spawn_monsters)
         runpack_defaults.merge!(world_settings.each_with_object({}){|setting, h| h[setting] = world.doc[setting] })
 
         start_options.merge! world_id: world_id, runpack: runpack_defaults.merge(world.runpack || {})

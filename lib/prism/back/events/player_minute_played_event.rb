@@ -60,7 +60,7 @@ module Prism
 
     def send_onboarding_messages session_minutes, player
       if session_minutes == 15
-        send_delayed_message 0, "signup at minefold.com for 10 hours per month"
+        send_delayed_message 0, "signup at minefold.com for 10 hours free/month"
 
       # elsif session_minutes % 15 == 0
       #   send_delayed_message 0,

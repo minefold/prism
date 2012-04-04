@@ -17,9 +17,6 @@ usernames (HASH)
 players:playing (HASH)
   whatupdave => '91823746'
 
-worlds:91823746:connected_players (SET)
-  whatupdave
-
 worlds:busy (HASH)
   world2 => i-1234, state:starting, next_state:
   world5 => i-1234, state:stopping, next_state:starting
