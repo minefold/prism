@@ -9,11 +9,6 @@ overviewer:
 
 # state
 
-usernames (HASH)
-  whatupdave => '91823746'
-  chrislloyd => '89337893'
-  willrax    => '89437832'
-
 players:playing (HASH)
   whatupdave => '91823746'
 

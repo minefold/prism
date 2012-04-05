@@ -3,13 +3,14 @@ module Prism
     include Messaging
     include ChatMessaging
     include Logging
+    include Back::PlayerConnection
 
     process "players:world_request", :username, :player_id, :world_id, :description
 
     log_tags :player_id, :world_id
 
     attr_reader :instance_id
-    
+
     def run
       redis.hget_json "worlds:running", world_id do |world|
         if world
@@ -27,7 +28,7 @@ module Prism
         if world
           connect_player_to_world world['instance_id'], world['host'], world['port']
         else
-          redis.publish_json "players:connection_request:#{username}", rejected: world['failed']
+          reject_player username, world['failed']
         end
       end
     end

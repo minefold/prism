@@ -5,6 +5,7 @@ module Prism
     include Mixpanel::EventTracker
     include Messaging
     include Logging
+    include Back::PlayerConnection
 
     process "players:connection_request", :username, :target_host, :remote_ip
 
@@ -40,7 +41,7 @@ module Prism
     def verify_player player, token
       if player.verified?
         kick_player "Already verified! #{username} already has a minefold.com account"
-        
+
       else
         debug "verifying player with code:#{token}"
         User.find_by_verification_token(token) do |user|
@@ -51,10 +52,10 @@ module Prism
               when :success
                 Resque.push 'high', class: 'UserVerifiedJob', args: [username, token]
                 kick_player "Done! Your account is now verified"
-              
+
               when :invalid_player
                 kick_player "Bad account! #{username} is not a real minecraft.net account"
-              
+
               end
             end
           else
@@ -64,7 +65,7 @@ module Prism
         end
       end
     end
-    
+
     def authenticate_player *a, &b
       cb = EM::Callback *a, &b
 
@@ -95,15 +96,13 @@ module Prism
             connect_unvalidated_player_to_world player, world
           else
             error "world:#{world.id} data_file:#{world.world_data_file} does not exist"
-            redis.publish_json "players:connection_request:#{username}",
-              rejected:'500',
-              details:"world data #{world.world_data_file} not found"
-
+            reject_player username, '500',
+              details: "world data #{world.world_data_file} not found"
           end
         end
       else
         debug "world not found"
-        redis.publish_json "players:connection_request:#{username}", rejected:'unknown_world'
+        reject_player username, :unknown_world
       end
     end
 
@@ -113,11 +112,11 @@ module Prism
 
       elsif world.banned?(player)
         debug "world:#{world.id} player:#{player.id} is banned"
-        redis.publish_json "players:connection_request:#{username}", rejected:'banned'
+        reject_player username, :banned
 
       elsif not (world.whitelisted?(player) or world.op?(player))
         debug "world:#{world.id} player:#{player.id} is not whitelisted"
-        redis.publish_json "players:connection_request:#{username}", rejected:'not_whitelisted'
+        reject_player username, :not_whitelisted
 
       else
         debug "world:#{world.id} player:#{player.id} allowed to join"
@@ -137,13 +136,12 @@ module Prism
 
     def unrecognised_player_connecting
       info "unrecognised"
-      redis.publish_json "players:connection_request:#{username}", rejected:'unrecognised_player'
+      reject_player username, :unrecognised_player
     end
 
     def no_credit_player_connecting
-      mixpanel_track 'bounced'
       info "user:#{username} has no credit"
-      redis.publish_json "players:connection_request:#{username}", rejected:'no_credit'
+      reject_player username, :no_credit
     end
 
     # TODO: remove this method when we don't have "current worlds"
@@ -154,10 +152,9 @@ module Prism
           World.find(player.user.current_world_id) {|world| connect_to_world player, world }
         else
           info "user has no current_world"
-          redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
+          reject_player username, :no_world
         end
       else
-        mixpanel_track 'rejected'
         unrecognised_player_connecting
       end
     end
@@ -171,14 +168,13 @@ module Prism
             connect_unvalidated_player_to_current_world player, world
           else
             error "world:#{world.id} data_file:#{world.world_data_file} does not exist"
-            redis.publish_json "players:connection_request:#{username}",
-              rejected:'500',
+            reject_player username, '500',
               details:"world data #{world.world_data_file} not found"
           end
         end
       else
         debug "world not found"
-        redis.publish_json "players:connection_request:#{username}", rejected:'no_world'
+        reject_player username, :no_world
       end
     end
 
