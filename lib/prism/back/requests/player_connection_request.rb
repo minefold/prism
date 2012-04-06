@@ -18,9 +18,11 @@ module Prism
     def run
       debug "processing #{username} #{target_host}"
 
-      MinecraftPlayer.upsert_by_username_with_user(username) do |player|
+      MinecraftPlayer.upsert_by_username_with_user(username) do |player, new_record|
         debug "player:#{player.id} user:#{player.user.id if player.user}"
         @mp_id, @mp_name = player.distinct_id.to_s, player.username
+
+        mixpanel_track 'player created' if new_record
 
         # TODO: support other hosts besides minefold.com
         if target_host =~ /^(\w+)\.(\w{1,16})\.minefold\.com\:?(\d+)?$/

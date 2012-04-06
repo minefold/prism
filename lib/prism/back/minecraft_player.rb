@@ -28,11 +28,19 @@ class MinecraftPlayer < Model
       }
     }
 
-    find_one(deleted_at: nil, slug: slug) do |player|
-      properties = player.nil? ? default_properties : update_properties
-      opts = { query: { deleted_at: nil, slug: slug }, update: properties, upsert: true, new: true }
-      find_and_modify(opts) do |player|
-        cb.call player
+    query = { deleted_at: nil, slug: slug }
+    find_one(query) do |player|
+      new_record = player.nil?
+
+      properties = new_record ? default_properties : update_properties
+
+      find_and_modify(
+        query: query,
+        update: properties,
+        upsert: true,
+        new: true
+      ) do |player|
+        cb.call player, new_record
       end
     end
 
@@ -69,14 +77,14 @@ class MinecraftPlayer < Model
 
   def self.upsert_by_username_with_user username, *a, &b
     cb = EM::Callback(*a, &b)
-    upsert_by_username(username) do |player|
+    upsert_by_username(username) do |player, new_record|
       if player.user_id
         User.find(player.user_id) do |u|
           player.user = u
-          cb.call player
+          cb.call player, new_record
         end
       else
-        cb.call player
+        cb.call player, new_record
       end
     end
   end
@@ -85,7 +93,7 @@ class MinecraftPlayer < Model
   def self.sanitize username
     username.downcase.strip
   end
-  
+
   %w(user_id
      slug
      username
@@ -97,7 +105,7 @@ class MinecraftPlayer < Model
       @doc[field]
     end
   end
-  
+
   def verified?
     not user.nil?
   end
