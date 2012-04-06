@@ -3,14 +3,16 @@ require 'base64'
 module Mixpanel
   module EventTracker
 
+    attr_reader :mp_id, :mp_name, :remote_ip
+
     def mixpanel
       Mixpanel::Tracker.new MIXPANEL_TOKEN, remote_ip
     end
 
     def mixpanel_track event, properties = {}
-      mp_name = @mp_name ? @mp_name.downcase.strip : nil
+      mp_name = self.mp_name || self.mp_name.downcase.strip
       unless (mp_name || '').include?('-') # hack for bots. only bots will have - character
-        properties = { distinct_id: @mp_id.to_s, mp_name_tag: mp_name }.merge(properties)
+        properties = { distinct_id: mp_id.to_s, mp_name_tag: mp_name }.merge(properties)
         mixpanel.track event, properties.delete_if {|k,v| v.nil?}
       end
     end

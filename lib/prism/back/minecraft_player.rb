@@ -5,7 +5,7 @@ class MinecraftPlayer < Model
 
   attr_accessor :user
 
-  def self.upsert_by_username username, *a, &b
+  def self.upsert_by_username username, remote_ip, *a, &b
     cb = EM::Callback(*a, &b)
 
     slug = sanitize(username)
@@ -17,14 +17,16 @@ class MinecraftPlayer < Model
       distinct_id: `uuidgen`.strip,
       created_at: Time.now,
       updated_at: Time.now,
-      unlock_code: rand(36 ** 4).to_s(36)
+      unlock_code: rand(36 ** 4).to_s(36),
+      last_remote_ip: remote_ip
     }
 
     # for existing documents
     update_properties = {
       '$set' => {
         username: username,
-        updated_at: Time.now
+        updated_at: Time.now,
+        last_remote_ip: remote_ip
       }
     }
 
@@ -75,9 +77,9 @@ class MinecraftPlayer < Model
     end
   end
 
-  def self.upsert_by_username_with_user username, *a, &b
+  def self.upsert_by_username_with_user username, remote_ip, *a, &b
     cb = EM::Callback(*a, &b)
-    upsert_by_username(username) do |player, new_record|
+    upsert_by_username(username, remote_ip) do |player, new_record|
       if player.user_id
         User.find(player.user_id) do |u|
           player.user = u
@@ -99,6 +101,7 @@ class MinecraftPlayer < Model
      username
      distinct_id
      last_connected_at
+     last_remote_ip
      minutes_played
   ).each do |field|
     define_method(:"#{field}") do

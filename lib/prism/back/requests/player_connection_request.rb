@@ -18,9 +18,9 @@ module Prism
     def run
       debug "processing #{username} #{target_host}"
 
-      MinecraftPlayer.upsert_by_username_with_user(username) do |player, new_record|
+      MinecraftPlayer.upsert_by_username_with_user(username, remote_ip) do |player, new_record|
         debug "player:#{player.id} user:#{player.user.id if player.user}"
-        @mp_id, @mp_name = player.distinct_id.to_s, player.username
+        @mp_id, @mp_name, @remote_ip = player.distinct_id.to_s, player.username, player.last_remote_ip
 
         mixpanel_track 'player created' if new_record
 

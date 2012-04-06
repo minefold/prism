@@ -1,5 +1,6 @@
 module Prism
   class PlayerMinutePlayedEvent < Request
+    include Mixpanel::EventTracker
     include ChatMessaging
     include Logging
 
@@ -12,9 +13,13 @@ module Prism
       5  =>  "5 minefold minutes left!"
     }
 
+    ONBOARDING = ["signup at minefold.com for 10 hours free/month"]
+
     def run
       MinecraftPlayer.find_with_user(player_id) do |player|
         raise "unknown player:#{player_id}" unless player
+
+        @mp_id, @mp_name, @remote_ip = player.distinct_id.to_s, player.username, player.last_remote_ip
 
         session_minutes = Time.parse(session_started_at).minutes_til(Time.now)
         info "played 1 minute [#{player.plan_status}] session:#{session_minutes} mins"
@@ -59,17 +64,9 @@ module Prism
     end
 
     def send_onboarding_messages session_minutes, player
-      if session_minutes == 15
-        send_delayed_message 0, "signup at minefold.com for 10 hours free/month"
-
-      # elsif session_minutes % 15 == 0
-      #   send_delayed_message 0,
-      #     "you can play for #{NEW_PLAYER_SESSION_MINUTES - session_minutes} more minutes"
-      #   send_delayed_message 5,
-      #     "get 10 hours free! Press t and type"
-      #     "/signup me@email.com with your email address"
-      else
-        warn "no world running?"
+      if [1, 5, 15].include?(session_minutes) or (session_minutes % 30 == 0)
+        send_delayed_message 0, ONBOARDING.first
+        mixpanel_track 'sent onboarding message', campaign: 'basic'
       end
     end
   end
