@@ -47,7 +47,7 @@ module Prism
     end
 
     def credits_updated player
-      EM.add_timer(60) { redis.publish "players:disconnect:#{player.id}", "no credit" } if player.credits <= 1
+      EM.add_timer(60) { redis.publish "players:disconnect:#{username}", "no credit" } if player.credits <= 1
 
       if (message = MESSAGES[player.credits]) || player.credits <= 1
         send_delayed_message 0, message if message
