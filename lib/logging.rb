@@ -12,7 +12,7 @@ module Logging
     instance_tag_part = " " + instance_tags.map {|tag, h| "#{tag}:#{instance_variable_get(:"@#{tag}")}" }.join(' ') if instance_tags.any?
 
     method_tags = Array(args[0..-2])
-    method_tag_part = tags.join('') if method_tags.any?
+    method_tag_part = method_tags.join('') if method_tags.any?
 
     puts "[#{level.upcase}]#{instance_tag_part}#{method_tag_part} #{message}"
   end
