@@ -1,4 +1,5 @@
 require 'eventmachine/periodic_timer_with_timeout'
+require 'eventmachine/cancellable_timeout'
 
 module Prism
   class PlayerConnectionRequest < Request
@@ -6,6 +7,7 @@ module Prism
     include Messaging
     include Logging
     include Back::PlayerConnection
+    include ChatMessaging
 
     process "players:connection_request", :username, :target_host, :remote_ip
 
@@ -108,6 +110,63 @@ module Prism
       end
     end
 
+    def current_players world_id, *a, &b
+      cb = EM::Callback(*a, &b)
+      op = redis.hgetall "players:playing"
+      op.callback do |players|
+        player_ids = players.select {|player_id, player_world_id| player_world_id == world_id.to_s }.keys.map{|id| BSON::ObjectId(id) }
+        debug "players online:#{player_ids.join(',')}"
+
+        cb.call player_ids
+      end
+      cb
+    end
+
+    def current_ops world, *a, &b
+      cb = EM::Callback *a, &b
+      current_players(world.id) do |player_ids|
+        op_ids = world.opped_player_ids & player_ids
+        debug "ops online:#{op_ids.join(',')}"
+        cb.call op_ids
+      end
+      cb
+    end
+
+    def request_whitelist_connect player, world, *a, &b
+      cb = EM::Callback *a, &b
+      current_ops(world) do |op_ids|
+        if op_ids.empty?
+          # no ops online? no whitelist
+          cb.call false
+        else
+          MinecraftPlayer.find_all({deleted_at: nil, _id: { '$in' => op_ids}}) do |ops|
+            debug "ops online:#{ops.map(&:username).join(',')}"
+            request_whitelist(world, ops) do |accepted|
+              cb.call accepted
+            end
+          end
+        end
+      end
+      cb
+    end
+
+    def request_whitelist world, ops, *a, &b
+      cb = EM::Callback *a, &b
+      redis.hget_json "worlds:running", world.id.to_s do |running_world|
+        if world
+          # instance_id = running_world['instance_id']
+          # ops.each do |op|
+          #   send_world_player_message instance_id, world.id, op.username, "#{username} wants to join! /accept #{username} or /deny #{username}"
+          # end
+          cb.call false
+        else
+          warn "world not running?"
+          cb.call false
+        end
+      end
+      cb
+    end
+
     def connect_unvalidated_player_to_world player, world
       if not player.has_credit?
         no_credit_player_connecting
@@ -118,7 +177,21 @@ module Prism
 
       elsif not (world.whitelisted?(player) or world.op?(player))
         debug "world:#{world.id} player:#{player.id} is not whitelisted"
-        reject_player username, :not_whitelisted
+
+        whitelist_timeout = EM.set_timeout(20) do
+          reject_player username, :not_whitelisted
+        end
+
+        request_whitelist_connect player, world do |accepted|
+          whitelist_timeout.cancel
+          
+          if accepted
+            debug "world:#{world.id} player:#{player.id} whitelist request accepted"
+            connect_player_to_world player, world
+          else
+            reject_player username, :not_whitelisted
+          end
+        end
 
       else
         debug "world:#{world.id} player:#{player.id} allowed to join"

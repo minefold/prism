@@ -12,7 +12,7 @@ class Model
   def self.mongo_collection
     mongo_connect.collection(@collection)
   end
-  
+
   def self.find id, *a, &b
     find_one({_id: BSON::ObjectId(id.to_s), deleted_at: nil}, *a, &b)
   end
@@ -43,7 +43,7 @@ class Model
       mongo_collection.insert document, options
     end
   end
-  
+
   def self.update selector, document, options = {}
     EM.defer do
       mongo_collection.update selector, document, options
