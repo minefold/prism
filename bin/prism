@@ -25,7 +25,7 @@ module Prism
     end
 
     subscription = PrismRedis.connect
-    subscription.psubscribe "players:connection_request:*"
+    subscription.psubscribe "players:*"
     subscription.psubscribe "players:disconnect:*"
     subscription.psubscribe "players:authenticate:*"
     subscription.on :pmessage do |key, channel, message|

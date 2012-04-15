@@ -33,12 +33,14 @@ module Prism
 
         if player.limited_time?
           redis.hget_json "worlds:running", world_id do |world|
-            @instance_id = world['instance_id']
+            if world
+              @instance_id = world['instance_id']
 
-            if player.user
-              player.user.update '$inc' => { 'credits' => -1 }
-            else
-              send_onboarding_messages session_minutes, player
+              if player.user
+                player.user.update '$inc' => { 'credits' => -1 }
+              else
+                send_onboarding_messages session_minutes, player
+              end
             end
             credits_updated player
           end

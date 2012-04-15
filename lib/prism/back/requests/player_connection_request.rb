@@ -141,7 +141,7 @@ module Prism
         else
           MinecraftPlayer.find_all({deleted_at: nil, _id: { '$in' => op_ids}}) do |ops|
             debug "ops online:#{ops.map(&:username).join(',')}"
-            request_whitelist(world, ops) do |accepted|
+            request_whitelist(world, player, ops) do |accepted|
               cb.call accepted
             end
           end
@@ -150,15 +150,18 @@ module Prism
       cb
     end
 
-    def request_whitelist world, ops, *a, &b
+    def request_whitelist world, player, ops, *a, &b
       cb = EM::Callback *a, &b
       redis.hget_json "worlds:running", world.id.to_s do |running_world|
         if world
-          # instance_id = running_world['instance_id']
-          # ops.each do |op|
-          #   send_world_player_message instance_id, world.id, op.username, "#{username} wants to join! /accept #{username} or /deny #{username}"
-          # end
-          cb.call false
+          instance_id = running_world['instance_id']
+          ops.each do |op|
+            send_world_player_message instance_id, world.id, op.username, "#{username} wants to join!"
+            send_world_player_message instance_id, world.id, op.username, "/approve #{username} or /deny #{username}"
+          end
+          listen_once("worlds:#{world.id}:whitelist_change:#{player.id}") do |action|
+            cb.call action == 'added'
+          end
         else
           warn "world not running?"
           cb.call false
@@ -180,6 +183,7 @@ module Prism
 
         whitelist_timeout = EM.set_timeout(20) do
           reject_player username, :not_whitelisted
+          cancel_listener "worlds:requests:whitelist_change:#{player.id}"
         end
 
         request_whitelist_connect player, world do |accepted|

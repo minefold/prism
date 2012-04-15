@@ -18,8 +18,8 @@ module Prism
     end
 
     subscription = PrismRedis.connect
-    subscription.psubscribe "worlds:requests:*"
-    subscription.psubscribe "workers:requests:*"
+    subscription.psubscribe "worlds:*"
+    subscription.psubscribe "workers:*"
     subscription.on :pmessage do |key, channel, message|
       Prism::Messaging.deliver_message channel, message
     end
