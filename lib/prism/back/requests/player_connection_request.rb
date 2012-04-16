@@ -153,7 +153,7 @@ module Prism
     def request_whitelist world, player, ops, *a, &b
       cb = EM::Callback *a, &b
       redis.hget_json "worlds:running", world.id.to_s do |running_world|
-        if world
+        if world and running_world
           instance_id = running_world['instance_id']
           ops.each do |op|
             send_world_player_message instance_id, world.id, op.username, "#{username} wants to join!"
@@ -188,7 +188,7 @@ module Prism
 
         request_whitelist_connect player, world do |accepted|
           whitelist_timeout.cancel
-          
+
           if accepted
             debug "world:#{world.id} player:#{player.id} whitelist request accepted"
             connect_player_to_world player, world
