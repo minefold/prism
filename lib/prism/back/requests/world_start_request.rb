@@ -6,7 +6,7 @@ module Prism
     process "worlds:requests:start", :world_id, :player_slots
 
     attr_reader :instance_id
-    
+
     log_tags :world_id
 
     def reply options = {}
@@ -63,7 +63,7 @@ module Prism
             slots_required = player_slots || world.allocation_slots
 
             start_options = WorldAllocator.new(universe).start_options_for_new_world world.doc, slots_required
-            
+
             if start_options and start_options[:instance_id]
               add_start_options_for_world world, start_options
             else
@@ -90,8 +90,10 @@ module Prism
         banned_players = world_players.select{|p| banned_player_ids.include?(p.id)}
 
         runpack_defaults = {
+                #    name: 'essentials',
+                # version: '1.0',
                    name: 'Minecraft',
-                version: 'HEAD', # HEAD, 1.1, bukkit-1.1-R3
+                version: 'HEAD',
 
               data_file: world.world_data_file,
                     ops: (opped_players.map(&:username) | World::DEFAULT_OPS).compact,

@@ -1,5 +1,6 @@
 module Prism
   class PlayerWorldRequest < Request
+    include Mixpanel::EventTracker
     include Messaging
     include ChatMessaging
     include Logging
@@ -25,7 +26,7 @@ module Prism
       debug "world:#{world_id} is not running"
       redis.lpush_hash "worlds:requests:start", world_id: world_id
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
-        if world
+        if world['instance_id']
           connect_player_to_world world['instance_id'], world['host'], world['port']
         else
           reject_player username, world['failed']

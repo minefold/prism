@@ -16,6 +16,7 @@ module Prism
         'banned' => %Q{You are banned from this server! Visit minefold.com},
         'not_whitelisted' => %Q{You are not white-listed on this server! Visit minefold.com},
         'no_instances_available' => %Q{Sorry! Minefold is under heavy load argh! Please try again in a few minutes},
+        'prepare_world' => %Q{Sorry! There's a problem with your server. Please try again in a few minutes},
         '500' => %Q{Sorry! The gremlins messed something up, try connecting again while we spank them},
 
         'no_world' => %Q{No world! Create or join one at minefold.com},

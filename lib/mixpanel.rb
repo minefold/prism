@@ -10,7 +10,7 @@ module Mixpanel
     end
 
     def mixpanel_track event, properties = {}
-      mp_name = self.mp_name || self.mp_name.downcase.strip
+      mp_name = self.mp_name and self.mp_name.downcase.strip
       unless (mp_name || '').include?('-') # hack for bots. only bots will have - character
         properties = { distinct_id: mp_id.to_s, mp_name_tag: mp_name }.merge(properties)
         mixpanel.track event, properties.delete_if {|k,v| v.nil?}
