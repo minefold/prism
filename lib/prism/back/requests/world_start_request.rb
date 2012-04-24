@@ -90,10 +90,10 @@ module Prism
         banned_players = world_players.select{|p| banned_player_ids.include?(p.id)}
 
         runpack_defaults = {
-                #    name: 'essentials',
-                # version: '1.0',
                    name: 'Minecraft',
                 version: 'HEAD',
+                #    name: 'essentials',
+                # version: '1.0',
 
               data_file: world.world_data_file,
                     ops: (opped_players.map(&:username) | World::DEFAULT_OPS).compact,

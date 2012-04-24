@@ -271,7 +271,7 @@ module Prism
 
 
     def world_allocations
-      universe.worlds[:running].map do |world_id, world|
+      universe.worlds[:running].select{|world_id, world| world[:box] }.map do |world_id, world|
         box_type = BoxType.new(world[:box]['instance_type'])
 
         current_world_slots = world['slots'] || 1
