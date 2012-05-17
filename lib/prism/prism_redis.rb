@@ -11,7 +11,7 @@ module Prism
     def hiredis_connect
       @redis_factory ? @redis_factory.call : EM::Hiredis.connect(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
     end
-    
+
     attr_accessor :prism_id
   end
 
@@ -19,7 +19,7 @@ module Prism
     include Logging
 
     attr_reader :redis
-    
+
     def self.connect
       new Prism.hiredis_connect
     end
@@ -39,7 +39,7 @@ module Prism
       @redis.errback {|e| error "failed to connect to redis: #{e}" }
       @redis
     end
-    
+
     def prism_id
       self.class.prism_id
     end
@@ -62,7 +62,7 @@ module Prism
         port: port,
         slots: slots
       }
-      
+
       hset_hash "worlds:running", world_id, world_hash
       hdel "worlds:busy", world_id
       publish_json "worlds:requests:start:#{world_id}", world_hash

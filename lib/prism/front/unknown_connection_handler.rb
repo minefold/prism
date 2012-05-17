@@ -6,9 +6,9 @@ module Prism
     def receive_data data
       connection.buffered_data << data
 
-      header = data.unpack('C').first
-      if header == 0x02
-        raw_user_data = data[3..-1]
+      @header ||= connection.buffered_data.unpack('C').first
+      if @header == 0x02
+        raw_user_data = connection.buffered_data[3..-1]
         if raw_user_data
           begin
             username = raw_user_data.force_encoding('UTF-16BE').encode('UTF-8')
@@ -18,17 +18,15 @@ module Prism
             end
             new_handler KnownPlayerHandler, username, target_host
           rescue => e
-            Exceptional.rescue(e)
-            connection.send_data server_packet 0xFF, :reason => "Protocol Error"
-            connection.close_connection_after_writing
+            puts "#{e}\n#{e.backtrace.join("\n")}"
           end
         else
           connection.send_data server_packet 0xFF, :reason => "Protocol Error"
           connection.close_connection_after_writing
           Exceptional.rescue { raise "Invalid connection packet: #{data}" }
         end
-      elsif header == 0xFE
-        # p data
+      elsif @header == 0xFE
+
         connection.send_data server_packet 0xFF, :reason => "minefold.com"
         connection.close_connection_after_writing
       else

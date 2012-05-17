@@ -14,7 +14,7 @@ module EventMachine
         @buffer ||= ''
         remainder = @buffer + data
         @buffer = ''
-        
+
         begin
           header, packet, raw, remainder = parse_packet remainder
 
@@ -38,9 +38,7 @@ module EventMachine
         end
 
         def create_packet header, body
-          pkt = client_packet header, body
-          p "client_packet #{pkt}"
-          pkt
+          client_packet header, body
         end
       end
 
@@ -48,15 +46,11 @@ module EventMachine
         include EM::P::Minecraft
 
         def parse_packet data
-          p "data:", data
-          
           parse_client_packet data
         end
 
         def create_packet header, body
-          pkt = server_packet header, body
-          p "client_packet #{pkt}"
-          pkt
+          server_packet header, body
         end
       end
     end

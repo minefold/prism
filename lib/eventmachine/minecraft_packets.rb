@@ -97,7 +97,7 @@ module EventMachine
             hash
           end
 
-          [header, body, packet[0...i], packet[i..-1]]
+          [header, body, packet[0...i], packet[i..-1] || ""]
         end
 
         # these are the originators. ie. client sent a client packet, server sent a server packet
@@ -119,13 +119,13 @@ module EventMachine
           end
 
           client 0x00, :keepalive_id => :int
-          client 0x01, :protocol_version => :int, 
+          client 0x01, :protocol_version => :int,
                        :username => :string16,
-                       :unused1 => :string16, 
-                       :unused2 => :int, 
-                       :unused3 => :int, 
-                       :unused4 => :byte, 
-                       :unused5 => :byte, 
+                       :unused1 => :string16,
+                       :unused2 => :int,
+                       :unused3 => :int,
+                       :unused4 => :byte,
+                       :unused5 => :byte,
                        :unused6 => :byte
           client 0x02, :username => :string16
           client 0x07, :user => :int, :target => :int, :left_click => :bool

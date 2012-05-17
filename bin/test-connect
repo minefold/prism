@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+require 'bundler/setup'
+Bundler.require :default, :proxy
+
+module SlowClient
+  def post_init
+    username = 'whatupdave'
+    puts 'connected'
+    send_data [0x02, username.length].pack("Cn")
+    EM.add_timer(0.01) do
+      send_data [username.encode('UTF-16BE')].pack("a*")
+    end
+  end
+
+  def receive_data data
+    p data
+  end
+end
+
+EM.run do
+  EM.connect '0.0.0.0', 25565, SlowClient
+end

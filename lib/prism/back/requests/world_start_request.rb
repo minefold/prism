@@ -92,7 +92,7 @@ module Prism
         runpack_defaults = {
                    name: 'Minecraft',
                 version: 'HEAD',
-                #    name: 'essentials',
+                #    name: 'minecraft-essentials',
                 # version: '1.0',
 
               data_file: world.world_data_file,
@@ -100,7 +100,7 @@ module Prism
             whitelisted: whitelisted_players.map(&:username).compact,
                  banned: banned_players.map(&:username).compact,
 
-                plugins: []
+                new_player_can_build: true
         }
         world_settings = %w(seed level_type online_mode difficulty game_mode pvp spawn_animals spawn_monsters)
         runpack_defaults.merge!(world_settings.each_with_object({}){|setting, h| h[setting] = world.doc[setting] })

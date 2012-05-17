@@ -87,7 +87,7 @@ namespace :sweeper do
   end
 
   task :restart_prism do
-    # raise "This is fucking dangerous!"
+    raise "This is fucking dangerous!"
     ssh "sudo stop prism; sudo start prism"
   end
 
