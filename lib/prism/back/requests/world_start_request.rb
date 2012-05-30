@@ -89,23 +89,30 @@ module Prism
         whitelisted_players = world_players.select{|p| whitelisted_player_ids.include?(p.id)}
         banned_players = world_players.select{|p| banned_player_ids.include?(p.id)}
 
-        runpack_defaults = {
-                   name: 'Minecraft',
-                version: 'HEAD',
-                #    name: 'minecraft-essentials',
-                # version: '1.0',
+        funpack_defaults = {
+                   name: world.funpack || 'Minecraft',
+                   # name: 'Minecraft',
+                version: '1.0',
 
               data_file: world.world_data_file,
                     ops: (opped_players.map(&:username) | World::DEFAULT_OPS).compact,
             whitelisted: whitelisted_players.map(&:username).compact,
-                 banned: banned_players.map(&:username).compact,
-
-                new_player_can_build: true
+                 banned: banned_players.map(&:username).compact
         }
-        world_settings = %w(seed level_type online_mode difficulty game_mode pvp spawn_animals spawn_monsters)
-        runpack_defaults.merge!(world_settings.each_with_object({}){|setting, h| h[setting] = world.doc[setting] })
+        world_settings = %w(
+          minecraft_version
+          seed
+          level_type
+          online_mode
+          difficulty
+          game_mode
+          pvp
+          spawn_animals
+          spawn_monsters)
 
-        start_options.merge! world_id: world_id, runpack: runpack_defaults.merge(world.runpack || {})
+        pack_settings = funpack_defaults.merge(world_settings.each_with_object({}){|setting, h| h[setting] = world.doc[setting] })
+
+        start_options.merge! world_id: world_id, funpack: pack_settings
 
         debug "start options: #{start_options}"
 

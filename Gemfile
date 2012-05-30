@@ -21,6 +21,10 @@ gem 'statsd-instrument', git:'https://github.com/Shopify/statsd-instrument.git'
 gem 'hirb'
 gem 'exceptional'
 
+group :development do
+  gem 'pry'
+end
+
 group :test do
   gem "autotest-fsevent"
   gem "autotest-growl"

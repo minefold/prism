@@ -6,7 +6,7 @@ Bundler.require :default, :chatty, :proxy
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'minefold'
 require 'prism/back'
-require 'irb'
+require 'pry'
 
 def redis
   @redis ||= begin
@@ -39,7 +39,7 @@ def prism_id
 end
 
 def set_players(n, world_id='4f5be9da0ecb2800010000f5')
-  n.times do |i| 
+  n.times do |i|
     redis.hset "players:playing", "player#{i}", world_id
     redis.hset 'usernames', "player#{i}", BSON::ObjectId.new.to_s
   end
@@ -49,4 +49,4 @@ def clear_players(n)
   n.times {|i| redis.hdel "players:playing", "player#{i}" }
 end
 
-IRB.start
+binding.pry

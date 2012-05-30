@@ -31,7 +31,7 @@ class World < Model
      opped_player_ids
      whitelisted_player_ids
      banned_player_ids
-     runpack
+     funpack
      allocation_slots
   ).each do |field|
     define_method(:"#{field}") do
