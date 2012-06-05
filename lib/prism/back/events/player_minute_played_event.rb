@@ -62,7 +62,7 @@ module Prism
 
       if player.credits == 30 and user = player.user
         EM.defer do
-          UserMailer.send_reminder(user.id.to_s)
+          UserMailer.credit_reminder(user.id.to_s)
         end
       end
     end

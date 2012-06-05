@@ -1,8 +1,8 @@
 class UserMailer
   @queue = :mailer
 
-  def self.send_reminder user_id
-    Resque.enqueue self, "reminder", user_id
+  def self.credit_reminder user_id
+    Resque.enqueue self, "credit_reminder", user_id
   end
 end
 
