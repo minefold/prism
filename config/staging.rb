@@ -7,6 +7,7 @@ MONGOHQ_URL="mongodb://heroku_app650862:96gg63iarmqm0tuq46knv4a8mb@dbh18.mongola
 REDISTOGO_URL="redis://redistogo:a41865a64de42e31b2022186ad94bd38@angler.redistogo.com:9095/"
 MIXPANEL_TOKEN = nil
 WORLDS_BUCKET = OLD_WORLDS_BUCKET = 'minefold-staging-worlds'
+INCREMENTAL_WORLDS_BUCKET = ENV['INCREMENTAL_WORLDS_BUCKET'] || 'minefold-staging'
 
 uri = URI.parse(REDISTOGO_URL)
 Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)

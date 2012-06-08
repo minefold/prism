@@ -8,6 +8,7 @@ REDISTOGO_URL="redis://redistogo:0128df27dcecc0dac569b231d5bd7ccb@angler.redisto
 MIXPANEL_TOKEN = '34356c196fac389dff577bf3e1a2164a'
 WORLDS_BUCKET = 'minefold-production-worlds'
 OLD_WORLDS_BUCKET = 'minefold.production.worlds'
+INCREMENTAL_WORLDS_BUCKET = ENV['INCREMENTAL_WORLDS_BUCKET'] || 'minefold-production'
 
 uri = URI.parse(REDISTOGO_URL)
 Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)

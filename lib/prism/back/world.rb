@@ -60,7 +60,8 @@ class World < Model
     else
       # TODO: world data_file's should include the full path world_id/world_id.tar.gz
       EM.defer do
-        cb.call Storage.worlds.exists?("#{world_data_file}") ||
+        cb.call Storage.incremental_worlds.exists?("worlds/#{world_data_file}") ||
+          Storage.worlds.exists?("#{world_data_file}") ||
           Storage.worlds.exists?("#{id}/#{world_data_file}") ||
           Storage.worlds.exists?("#{parent_id}/#{world_data_file}") ||
           Storage.old_worlds.exists?(world_data_file)

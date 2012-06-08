@@ -30,6 +30,20 @@ class Storage
       raise e
     end
   end
+  
+  def self.incremental_worlds
+    retry_timeout, retry_times = 1, 0
+    begin
+      new provider.directories.create(:key => INCREMENTAL_WORLDS_BUCKET, :public => false)
+    rescue => e
+      puts "failed #{retry_times} times: #{e}\n#{e.backtrace.join("\n")}"
+      sleep retry_timeout
+      retry_timeout += 1
+      retry_times += 1
+      retry if (retry_times < 10)
+      raise e
+    end
+  end
 
   def self.game_servers
     new provider.directories.create(:key => "minefold-runpacks", :public => false)
