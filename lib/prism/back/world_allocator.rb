@@ -9,7 +9,7 @@ module Prism
   WORLD_BUFFER = 3  # there must be room for 3 more slots at any time
 
   AMIS = {
-    '64bit' => 'ami-9ed905f7',
+    '64bit' => 'ami-8acb68e3',
       'HVM' => 'ami-844b98ed'
   }
 
