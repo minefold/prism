@@ -10,7 +10,7 @@ module Prism
 
   AMIS = {
     '64bit' => 'ami-8acb68e3',
-      'HVM' => 'ami-844b98ed'
+      'HVM' => 'ami-0cd37065'
   }
 
   INSTANCE_DEFS = {
@@ -62,9 +62,8 @@ module Prism
     end
 
     def new_instance_type
-      # make the first one small, then the other ones bigger
-      # boxes_with_capacity.size == 0 ? 'c1.medium' : 'c1.xlarge'
-      'c1.xlarge'
+      # use the big reserved instance first, then use cheaper on-demand instances
+      boxes_with_capacity.size == 0 ? 'cc2.8xlarge' : 'c1.xlarge'
     end
 
     def start_options_for_new_world world, player_slots_required = nil
