@@ -15,6 +15,7 @@ module Prism
   EM.run do
     RedisUniverse.collect do |universe|
       EM.stop
+      @allocator = WorldAllocator.new(universe)
       binding.pry
     end
   end

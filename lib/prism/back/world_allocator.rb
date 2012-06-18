@@ -63,7 +63,9 @@ module Prism
 
     def new_instance_type
       # use the big reserved instance first, then use cheaper on-demand instances
-      boxes_with_capacity.size == 0 ? 'cc2.8xlarge' : 'c1.xlarge'
+      big_boys = boxes_with_capacity.count {|b| b['instance_type'] == 'cc2.8xlarge' }
+      
+      big_boys == 0 ? 'cc2.8xlarge' : 'c1.xlarge'
     end
 
     def start_options_for_new_world world, player_slots_required = nil
@@ -75,7 +77,7 @@ module Prism
       player_slots_required = [4, player_slots_required].max
 
       # TODO: this probably belongs in the sweeper (rebalancer)
-      start_box_if_at_capacity
+      # start_box_if_at_capacity
 
       if box = find_box_for_new_world(world, player_slots_required)
         box_type = BoxType.new(box['instance_type'])
@@ -100,7 +102,9 @@ module Prism
           debug "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
           box_type = BoxType.new(box['instance_type'])
           (box[:world_slots] * box_type.players_per_slot) >= player_slots_required
-        end
+        end.sort_by{|c| -c[:world_slots] }
+
+        # use the bigger instances first
 
         candidates.first if candidates.any?
       end
