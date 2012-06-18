@@ -90,7 +90,7 @@ module Prism
         banned_players = world_players.select{|p| banned_player_ids.include?(p.id)}
 
         funpack_defaults = {
-                   name: world.funpack || 'Minecraft',
+                   name: world.funpack || 'minecraft-vanilla',
                    # name: 'Minecraft',
                 version: '1.0',
 

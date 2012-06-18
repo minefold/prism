@@ -39,14 +39,12 @@ namespace :prism do
       end
       
       messages = {
-        "In 10 mins Minefold will be down for 2 minutes of scheduled maintenance" => 10,
-        "In 10 mins you'll be disconnected, please wait 2 minutes before reconnecting" => 5*60,
-        "Down for scheduled quick maintenance in 5 minutes" => 2 * 60,
-        "Down for scheduled quick maintenance in 3 minutes" => 60,
-        "Down for scheduled quick maintenance in 2 minutes" => 60,
-        "Down for scheduled quick maintenance in 1 minute"  => 30,
-        "Down for scheduled quick maintenance in 30 seconds" => 20,
-        "Maintenance in 10 seconds, please wait 2 minutes before reconnecting" => 10
+        "10 mins until 15 minutes of scheduled maintenance" => 120,
+        "8 mins until 15 minutes of scheduled maintenance" => 120,
+        "5 mins until 15 minutes of scheduled maintenance" => 180,
+        "2 mins until 15 minutes of scheduled maintenance" => 120,
+        "1 minute until 15 minutes of scheduled maintenance" => 60,
+        "Maintenance in 10 seconds, please wait 15 minutes before reconnecting" => 10
       }
       
       EM::Iterator.new(messages).each(proc{ |(message, delay),iter|
