@@ -155,14 +155,6 @@ module Prism
         debug "ignoring broken box:#{box.instance_id}"
       end
     end
-    
-    def push_if_uniq key, value
-      redis.lrange key, 0, redis.llen(key) do |values|
-        unless values.include? value
-          redis.lpush key, value
-        end
-      end
-    end
 
     def shutdown_idle_worlds
       # if any worlds previously declared as empty have become unempty, clear busy state
@@ -180,8 +172,7 @@ module Prism
 
           if busy_length > busy_hash['expires_after']
             debug "box:#{world['instance_id']} world:#{world_id} stopping empty world"
-            
-            push_if_uniq "workers:#{world['instance_id']}:worlds:requests:stop", world_id
+            redis.lpush "workers:#{world['instance_id']}:worlds:requests:stop", world_id
           end
         else
           debug "box:#{world['instance_id']} world:#{world_id} is empty"
