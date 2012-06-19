@@ -157,9 +157,10 @@ module Prism
     end
     
     def push_if_uniq key, value
-      values = redis.lrange key, 0, redis.llen(key)
-      unless values.include? value
-        redis.lpush key, value
+      redis.lrange key, 0, redis.llen(key) do |values|
+        unless values.include? value
+          redis.lpush key, value
+        end
       end
     end
 
