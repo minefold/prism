@@ -32,7 +32,7 @@ class User < Model
   end
 
   def has_credit?
-    plan? || credits > 0
+    valid_plan? || credits > 0
   end
 
   def limited_time?
