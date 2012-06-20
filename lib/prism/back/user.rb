@@ -32,19 +32,11 @@ class User < Model
   end
 
   def has_credit?
-    plan_or_unlimited? || credits > 0
+    plan? || credits > 0
   end
 
   def limited_time?
-    (not valid_plan?) and (not unlimited?)
-  end
-
-  def plan_or_unlimited?
-    valid_plan? or unlimited?
-  end
-
-  def unlimited?
-    @doc['unlimited'] or @doc['beta']
+    not valid_plan?
   end
 
   def valid_plan?
@@ -65,8 +57,6 @@ class User < Model
 
   def plan_status
     case
-    when unlimited?
-      "UNLIMITED"
     when valid_plan?
       "Plan expires: #{@doc['plan_expires_at'].strftime('%d %b %Y')}"
     else

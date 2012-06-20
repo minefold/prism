@@ -151,7 +151,6 @@ namespace :stress do
         safe_username: name.downcase.strip,
         slug: name,
         email: "#{name}@minefold.com",
-        unlimited: true,
         current_world_id: BSON::ObjectId('4f6d6135988e1b0001000136') # system-check/stress
       }, upsert: true)
     end
