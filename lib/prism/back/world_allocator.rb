@@ -102,9 +102,9 @@ module Prism
           debug "candidate:#{box["instance_id"]}  world_slots:#{box[:world_slots]}  player_slots:#{box[:player_slots]}"
           box_type = BoxType.new(box['instance_type'])
           (box[:world_slots] * box_type.players_per_slot) >= player_slots_required
-        end.sort_by{|c| -c[:world_slots] }
+        end.sort{|a,b| b['instance_type'] <=> a['instance_type'] }.sort_by{|c| c[:world_slots] }
 
-        # use the bigger instances first
+        # use the bigger instance types first, then use the instance with the least available slots
 
         candidates.first if candidates.any?
       end
