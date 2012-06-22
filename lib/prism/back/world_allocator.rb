@@ -63,9 +63,10 @@ module Prism
 
     def new_instance_type
       # use the big reserved instance first, then use cheaper on-demand instances
-      big_boys = boxes_with_capacity.count {|b| b['instance_type'] == 'cc2.8xlarge' }
-      
-      big_boys == 0 ? 'cc2.8xlarge' : 'c1.xlarge'
+      # big_boys = boxes_with_capacity.count {|b| b['instance_type'] == 'cc2.8xlarge' }
+      #
+      # big_boys == 0 ? 'cc2.8xlarge' : 'c1.xlarge'
+      'c1.xlarge'
     end
 
     def start_options_for_new_world world, player_slots_required = nil
