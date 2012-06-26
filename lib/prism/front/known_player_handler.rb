@@ -12,7 +12,7 @@ module Prism
     def friendly_kick_messages
       {
         'unknown_world' => %Q{Unknown server! Visit minefold.com},
-        'no_credit' => %Q{No credit! Top up your account at minefold.com},
+        'no_credit' => %Q{Outta Time! For more time, go PRO at minefold.com},
         'banned' => %Q{You are banned from this server! Visit minefold.com},
         'not_whitelisted' => %Q{You are not white-listed on this server! Visit minefold.com},
         'no_instances_available' => %Q{Sorry! Minefold is under heavy load argh! Please try again in a few minutes},
