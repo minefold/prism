@@ -44,7 +44,8 @@ module Prism
 
     def verify_player player, token
       if player.verified?
-        kick_player "Already verified! #{username} already has a minefold.com account"
+        Resque.push 'high', class: 'UserAlreadyVerifiedJob', args: [username, token]
+        kick_player "#{username} is linked to a different minefold.com account!"
 
       else
         debug "verifying player with code:#{token}"
@@ -64,7 +65,7 @@ module Prism
             end
           else
             debug "invalid token"
-            kick_player "Invalid verification code"
+            kick_player "Bad code! Check your verification address on minefold.com"
           end
         end
       end
