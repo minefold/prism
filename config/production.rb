@@ -5,7 +5,6 @@ EC2_SECRET_KEY="4VI8OqUBN6LSDP6cAWXUo0FM1L/uURRGIGyQCxvq"
 EC2_ACCESS_KEY="AKIAJPN5IJVEBB2QE35A"
 MONGOHQ_URL="mongodb://minefold:Aru06kAy8xE2@sun.member0.mongohq.com:10018/production,minefold:Aru06kAy8xE2@sun.member1.mongohq.com:10018/production"
 REDISTOGO_URL="redis://redis:0128df27dcecc0dac569b231d5bd7ccb@ec2-184-72-137-163.compute-1.amazonaws.com:9097/"
-MIXPANEL_TOKEN = '34356c196fac389dff577bf3e1a2164a'
 WORLDS_BUCKET = 'minefold-production-worlds'
 OLD_WORLDS_BUCKET = 'minefold.production.worlds'
 INCREMENTAL_WORLDS_BUCKET = ENV['INCREMENTAL_WORLDS_BUCKET'] || 'minefold-production'

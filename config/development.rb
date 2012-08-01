@@ -5,7 +5,6 @@ EC2_ACCESS_KEY="AKIAJPN5IJVEBB2QE35A"
 MONGOHQ_URL='mongodb://localhost/'
 REDISTOGO_URL="redis://localhost:6379/"
 MAPPER = "~/code/minefold/pigmap/pigmap"
-MIXPANEL_TOKEN = nil
 WORLDS_BUCKET = OLD_WORLDS_BUCKET = ENV['WORLDS_BUCKET'] || 'minefold-development-worlds'
 INCREMENTAL_WORLDS_BUCKET = ENV['INCREMENTAL_WORLDS_BUCKET'] || 'minefold-development'
 

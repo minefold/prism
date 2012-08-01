@@ -1,6 +1,5 @@
 module Prism
   class PlayerMinutePlayedEvent < Request
-    include Mixpanel::EventTracker
     include ChatMessaging
     include Logging
 
@@ -70,7 +69,6 @@ module Prism
     def send_onboarding_messages session_minutes, player
       if [1, 5, 15].include?(session_minutes) or (session_minutes % 30 == 0)
         send_delayed_message 0, ONBOARDING.first
-        mixpanel_track 'sent onboarding message', campaign: 'basic'
       end
     end
   end
