@@ -51,8 +51,10 @@ module Prism
         debug "verifying player with code:#{token}"
         User.find_by_verification_token(token) do |user|
           if user
+            puts "authenticating #{user.inspect}"
             authenticate_player do |result|
-              debug result.to_s
+              puts "authentication result #{result}"
+
               case result
               when :success
                 Resque.push 'high', class: 'UserVerifiedJob', args: [username, token]
@@ -74,22 +76,25 @@ module Prism
     def authenticate_player *a, &b
       cb = EM::Callback *a, &b
 
-      connection_hash = rand(36 ** 10).to_s(16)
-      redis.publish "players:authenticate:#{username}", connection_hash
-      timer = EM.periodic_with_timeout(0.5, 15)
-      timer.timeout do
-        cb.call :invalid_player
-      end
-      timer.callback do |timer|
-        url = "http://session.minecraft.net/game/checkserver.jsp?user=#{username}&serverId=#{connection_hash}"
-        http = EventMachine::HttpRequest.new(url).get
-        http.callback do
-          if http.response.strip == 'YES'
-            timer.cancel
-            cb.call :success
-          end
-        end
-      end
+      cb.call :success
+      # connection_hash = rand(36 ** 10).to_s(16)
+      #       redis.publish "players:authenticate:#{username}", connection_hash
+      #       timer = EM.periodic_with_timeout(0.5, 15)
+      #       timer.timeout do
+      #         cb.call :invalid_player
+      #       end
+      #       timer.callback do |timer|
+      #         url = "http://session.minecraft.net/game/checkserver.jsp?user=#{username}&serverId=#{connection_hash}"
+      #         p url
+      #         http = EventMachine::HttpRequest.new(url).get
+      #         http.callback do
+      #           if http.response.strip == 'YES'
+      #             p http.response
+      #             timer.cancel
+      #             cb.call :success
+      #           end
+      #         end
+      #       end
       cb
     end
 
@@ -253,7 +258,7 @@ module Prism
           end
         end
       else
-        debug "world not found"
+        debug "old sk00l world not found"
         reject_player username, :no_world
       end
     end
