@@ -76,7 +76,13 @@ module Prism
     def authenticate_player *a, &b
       cb = EM::Callback *a, &b
 
-      cb.call :success
+      if username.strip.downcase != 'player'
+        cb.call :success
+      else
+        cb.call :invalid_player
+      end
+
+
       # connection_hash = rand(36 ** 10).to_s(16)
       #       redis.publish "players:authenticate:#{username}", connection_hash
       #       timer = EM.periodic_with_timeout(0.5, 15)

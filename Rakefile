@@ -76,10 +76,9 @@ def set_host
   ENV['HOST'] ||= `ec2-describe-instances --hide-tags --filter instance-id=#{ENV['INSTANCE_ID']} | grep #{ENV['INSTANCE_ID']} | cut -f4`.strip
 end
 
-namespace :sweeper do
+namespace :prism do
   task :deploy do
     ssh "cd /opt/prism && sudo GIT_SSH=/home/fold/.ssh/deploy-wrapper git pull origin #{ENV['BRANCH']} && sudo bundle --binstubs --without test && sudo chown -R fold ."
-    ssh "sudo stop sweeper; sudo start sweeper"
   end
 
   task :bounce do
