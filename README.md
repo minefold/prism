@@ -1,11 +1,28 @@
-pil:
-  setup.py -> ZLIB_ROOT = ("/usr/lib/x86_64-linux-gnu", "/usr/include")
+# What prism reads from mongo
 
-  ARCHFLAGS="-arch x86_64" python setup.py build
+minecraft_players
+  slug (RW)
+  username (RW)
+  distinct_id (RW)
+  unlock_code (RW)
+  last_remote_ip (RW)
+  minutes_played (RW)
 
-overviewer:
-  ARCHFLAGS="-arch i386 -arch x86_64" C_INCLUDE_PATH="`pwd`/vendor/pil/libImaging" python ./setup.py build
+users
+  plan_expires_at (R)
+  credits (RW)
 
+worlds
+  creator_id (R)
+  parent_id (R)
+  slug (R)
+  world_data_file (RW)
+  opped_player_ids (R)
+  whitelisted_player_ids (R)
+  banned_player_ids (R)
+  funpack (R)
+  allocation_slots (R)
+    
 
 # state
 

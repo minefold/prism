@@ -11,9 +11,9 @@ gem 'fog', '~> 1.2.0' #code: '~/code/whatupdave/fog'
 gem 'mongo'
 gem 'bson_ext'
 
-gem "hiredis", "~> 0.3.1"
-gem "redis", "~> 2.2.0", :require => ["redis/connection/hiredis", "redis"]
-gem 'em-hiredis', git:'https://github.com/mloughran/em-hiredis'
+gem "hiredis", "~> 0.4.0"
+gem "redis", ">= 2.2.0", :require => ["redis/connection/hiredis", "redis"]
+gem 'em-hiredis', '~> 0.1.1'
 gem 'resque'
 gem "resque-loner", git: 'https://github.com/whatupdave/resque-loner'
 gem 'statsd-instrument', git:'https://github.com/Shopify/statsd-instrument.git'
@@ -26,7 +26,7 @@ group :development do
 end
 
 group :test do
-  gem "autotest-fsevent"
+  # gem "autotest-fsevent"
   gem "autotest-growl"
   gem 'foreman'
   gem 'launchy'
