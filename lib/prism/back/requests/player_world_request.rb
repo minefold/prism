@@ -1,6 +1,5 @@
 module Prism
   class PlayerWorldRequest < Request
-    include Mixpanel::EventTracker
     include Messaging
     include ChatMessaging
     include Logging

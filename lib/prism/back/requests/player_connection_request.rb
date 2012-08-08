@@ -3,7 +3,6 @@ require 'eventmachine/cancellable_timeout'
 
 module Prism
   class PlayerConnectionRequest < Request
-    include Mixpanel::EventTracker
     include Messaging
     include Logging
     include Back::PlayerConnection
@@ -23,8 +22,6 @@ module Prism
       MinecraftPlayer.upsert_by_username_with_user(username, remote_ip) do |player, new_record|
         debug "player:#{player.id} user:#{player.user.id if player.user}"
         @mp_id, @mp_name, @remote_ip = player.distinct_id.to_s, player.username, player.last_remote_ip
-
-        mixpanel_track 'player created' if new_record
 
         # TODO: support other hosts besides minefold.com
         if target_host =~ /^(\w+)\.(\w{1,16})\.minefold\.com\:?(\d+)?$/
