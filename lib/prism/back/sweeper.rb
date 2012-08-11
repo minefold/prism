@@ -129,10 +129,17 @@ module Prism
     def lost_worlds
       lost_world_ids = redis_universe.worlds[:running].keys - running_worlds.keys
       lost_world_ids.each do |world_id|
-        instance_id = redis_universe.worlds[:running][world_id]['instance_id']
+        notice("worlds:lost:#{world_id}", true) do |since, _|
+          instance_id = redis_universe.worlds[:running][world_id]['instance_id']
 
-        debug "lost world:#{world_id} instance:#{instance_id}"
-        redis.unstore_running_world instance_id, world_id
+          if (Time.now - since) < 60
+            debug "missing world:#{world_id} instance:#{instance_id}"
+          else
+            debug "lost world:#{world_id} instance:#{instance_id}"
+            redis.unstore_running_world instance_id, world_id
+            redis.del "worlds:lost:#{world_id}"
+          end
+        end
       end
     end
 
