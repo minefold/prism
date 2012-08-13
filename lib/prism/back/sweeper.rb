@@ -24,6 +24,8 @@ module Prism
       @boxes = boxes
 
       @running_boxes, @working_boxes, @broken_boxes, @running_worlds = [], [], [], {}
+      @duplicate_worlds = {}
+      
       EM::Iterator.new(boxes).each(proc{ |box,iter|
         box.query_state do |state|
           if state == 'running'
@@ -31,6 +33,12 @@ module Prism
             op = box.query_worlds
             op.callback do |worlds|
               @working_boxes << box
+              duplicate_world_ids = (@running_worlds.keys & worlds.keys)
+              duplicate_world_ids.each do |world_id|
+                @duplicate_worlds[world_id] ||= []
+                @duplicate_worlds[world_id].push @running_worlds[world_id], worlds[world_id]
+              end
+              
               @running_worlds.merge! worlds
 
               iter.next
@@ -56,6 +64,7 @@ module Prism
         @allocator.rebalance
 
         clear_phantoms
+        stop_duplicates
 
         update_boxes
         lost_boxes
@@ -79,6 +88,15 @@ module Prism
         keys.each do |key|
           redis.del key unless world_running?(key.split(':').last)
         end
+      end
+    end
+    
+    def stop_duplicates
+      @duplicate_worlds.each do |world_id, worlds|
+        debug "duplicate world detected world_id=#{world_id} #{worlds}"
+        latest_dupe = worlds.sort_by{|w| w['started_at'] }.last
+        debug "stopping latest dupe:#{latest_dupe}"
+        redis.lpush "workers:#{latest_dupe['instance_id']}:worlds:requests:stop", world_id
       end
     end
 
@@ -152,7 +170,7 @@ module Prism
           debug "lost busy world:#{world_id}"
           redis.hdel "worlds:busy", world_id
         else
-          debug "busy world:#{world_id} (#{busy_hash['state']} #{busy_length} seconds)"
+          debug "lost busy world:#{world_id} (#{busy_hash['state']} #{busy_length} seconds)"
         end
       end
     end
