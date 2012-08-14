@@ -31,7 +31,9 @@ module Prism
           if state == 'running'
             @running_boxes << box
             op = box.query_worlds
-            op.callback do |worlds|
+            op.callback do |worlds, delta|
+              StatsD.measure "timers.widgets.response", delta if delta
+
               @working_boxes << box
               duplicate_world_ids = (@running_worlds.keys & worlds.keys)
               duplicate_world_ids.each do |world_id|

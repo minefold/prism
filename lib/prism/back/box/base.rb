@@ -3,6 +3,7 @@ module Prism
     def initialize timeout, df
       @timeout = timeout
       @df = df
+      @started_at = Time.now
     end
 
     def post_init
@@ -16,6 +17,7 @@ module Prism
       # TODO: this is here temporarily as currently widget won't hang up
       json_data = JSON.parse @data rescue nil
       if json_data
+        @delta = (Time.now - @started_at)
         close_connection
       end
     end
@@ -23,7 +25,7 @@ module Prism
     def unbind
       @timeout.cancel
       if @data
-        @df.succeed JSON.parse @data
+        @df.succeed JSON.parse(@data), @delta
       else
         @df.fail
       end
@@ -62,7 +64,7 @@ module Prism
 
       def query_worlds timeout = 20
         df = EM::DefaultDeferrable.new
-
+        
         @timeout = EM.add_periodic_timer(timeout) do
           puts "timeout querying worlds instance_id:#{instance_id} host:#{host}"
           df.fail "timeout"
