@@ -11,6 +11,6 @@ module StatsD
   def self.measure_timer start_time, key
     time = Time.now - start_time
     ms = time * 1000
-    StatsD.measure "timers.#{key}", ms
+    StatsD.measure key, ms
   end
 end

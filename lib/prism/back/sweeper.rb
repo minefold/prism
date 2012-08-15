@@ -30,9 +30,10 @@ module Prism
         box.query_state do |state|
           if state == 'running'
             @running_boxes << box
+            started_at = Time.now
             op = box.query_worlds
-            op.callback do |worlds, delta|
-              StatsD.measure "timers.widgets.response", delta if delta
+            op.callback do |worlds|
+              StatsD.measure_timer started_at, "sweeper.worlds"
 
               @working_boxes << box
               duplicate_world_ids = (@running_worlds.keys & worlds.keys)
@@ -42,6 +43,7 @@ module Prism
               end
               
               @running_worlds.merge! worlds
+              
 
               iter.next
             end

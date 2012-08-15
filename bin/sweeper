@@ -18,14 +18,18 @@ module Prism
     end
 
     def start_sweepin
+      started_at = Time.now
+
       @timeout = EM.add_periodic_timer(120) do
         raise "Sweep took too long"
       end
 
       @sweeper.perform_sweep do
-        @sweeper.record_stats
-        EM.add_timer(5) { start_sweepin }
         @timeout.cancel
+        @sweeper.record_stats
+        StatsD.measure started_at, "sweeper.sweep"
+        
+        EM.add_timer(5) { start_sweepin }
       end
     end
   end

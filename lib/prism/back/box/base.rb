@@ -3,7 +3,6 @@ module Prism
     def initialize timeout, df
       @timeout = timeout
       @df = df
-      @started_at = Time.now
     end
 
     def post_init
@@ -17,7 +16,6 @@ module Prism
       # TODO: this is here temporarily as currently widget won't hang up
       json_data = JSON.parse @data rescue nil
       if json_data
-        @delta = (Time.now - @started_at)
         close_connection
       end
     end
@@ -25,7 +23,7 @@ module Prism
     def unbind
       @timeout.cancel
       if @data
-        @df.succeed JSON.parse(@data), @delta
+        @df.succeed JSON.parse(@data)
       else
         @df.fail
       end
