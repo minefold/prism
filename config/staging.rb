@@ -25,3 +25,5 @@ Storage.provider = Fog::Storage.new({
 
 StatsD.server = 'stats.minefold.com:8125'
 StatsD.mode = :production
+
+TEST_PRISM="prism.staging.minefold.com"

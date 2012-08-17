@@ -1,3 +1,6 @@
+require 'minecraft/packet'
+require 'eventmachine/rpc'
+
 module Prism
   module WorldCollector
     def initialize timeout, df
@@ -29,7 +32,6 @@ module Prism
       end
     end
   end
-
 
   module Box
     def self.box_class
@@ -75,6 +77,28 @@ module Prism
           df.fail e
         end
         df
+      end      
+      
+      def query_prism packet, timeout, *a, &b
+        cb = EM::Callback *a, &b
+        EM.rpc TEST_PRISM, 25565, packet, timeout do |result|
+          cb.call result
+        end
+        cb
+      end
+      
+      def ping_world world_port, *a, &b
+        cb = EM::Callback *a, &b
+
+        brain_ping = Minecraft::Packet.new 0xE1,
+          :host => :string,
+          :port => :int
+
+        packet = brain_ping.create(host: host, port: world_port)
+        
+        query_prism packet, 2, cb
+        
+        cb
       end
 
       def to_hash

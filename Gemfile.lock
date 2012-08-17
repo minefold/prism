@@ -1,8 +1,8 @@
 GIT
   remote: https://github.com/Shopify/statsd-instrument.git
-  revision: dc0e9b47a13df1c9dcd9942b24c17d9bc404a6c8
+  revision: d6cdcfc761f917e4ac34b7547f3797b90bda1425
   specs:
-    statsd-instrument (1.0.1)
+    statsd-instrument (1.3.1)
 
 GIT
   remote: https://github.com/joshbuddy/em-spec.git

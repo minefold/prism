@@ -27,7 +27,7 @@ module Prism
       @sweeper.perform_sweep do
         @timeout.cancel
         @sweeper.record_stats
-        StatsD.measure started_at, "sweeper.sweep"
+        StatsD.measure_timer started_at, "sweeper.sweep"
         
         EM.add_timer(5) { start_sweepin }
       end

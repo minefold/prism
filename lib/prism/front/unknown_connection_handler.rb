@@ -25,6 +25,41 @@ module Prism
 
       elsif header == 0xFE
         connection_error "minefold.com"
+        
+      elsif header == 0xE0
+        begin
+          # 0xE0 packet is internal, routes to brain
+          test_packet = Minecraft::Packet.new 0xE0,
+            :host => :string,
+            :port => :int,
+            :payload => :string
+          
+          packet = test_packet.parse(connection.buffered_data)
+          
+          new_handler SystemTestHandler, packet[:host], packet[:port], packet[:payload]
+          
+        rescue => e
+          puts "#{e}\n#{e.backtrace.join("\n")}"
+          Exceptional.handle(e)
+          connection_error "Minefold Test Protocol Error"
+        end
+
+      elsif header == 0xE1
+        begin
+          # 0xE1 packet is internal, pings a running world
+          test_packet = Minecraft::Packet.new 0xE1,
+            :host => :string,
+            :port => :int
+          
+          packet = test_packet.parse(connection.buffered_data)
+          
+          new_handler WorldPingHandler, packet[:host], packet[:port]
+          
+        rescue => e
+          puts "#{e}\n#{e.backtrace.join("\n")}"
+          Exceptional.handle(e)
+          connection_error "Minefold Test Protocol Error"
+        end
 
       else
         connection.close_connection
@@ -41,7 +76,7 @@ module Prism
     end
 
     def receive_126_login data
-      login_packet = Minecraft::MinecraftPacket.new 0x02,
+      login_packet = Minecraft::Packet.new 0x02,
         :protocol_version => :byte,
         :username => :string,
         :host => :string,
@@ -53,7 +88,7 @@ module Prism
     end
 
     def receive_125_login data
-      login_packet = Minecraft::MinecraftPacket.new 0x02, :username => :string
+      login_packet = Minecraft::Packet.new 0x02, :username => :string
 
       values = login_packet.parse data
 

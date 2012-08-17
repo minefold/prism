@@ -68,7 +68,7 @@ module Prism
 
       listen_once("players:authenticate:#{username}") do |connection_hash|
         connection.send_data server_packet 0x02, connection_hash: connection_hash
-        # key_request = Minecraft::MinecraftPacket.new 0xFD,
+        # key_request = Minecraft::Packet.new 0xFD,
         #   :server_id => :string,
         #   :public_key => :byte_array,
         #   :verify_token => :byte_array

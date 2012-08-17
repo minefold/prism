@@ -26,14 +26,14 @@ module Prism
       @running_boxes, @working_boxes, @broken_boxes, @running_worlds = [], [], [], {}
       @duplicate_worlds = {}
       
-      EM::Iterator.new(boxes).each(proc{ |box,iter|
+      EM::Iterator.new(boxes).each(proc{ |box,box_iter|
         box.query_state do |state|
           if state == 'running'
             @running_boxes << box
-            started_at = Time.now
+            started_world_sweep = Time.now
             op = box.query_worlds
             op.callback do |worlds|
-              StatsD.measure_timer started_at, "sweeper.worlds"
+              StatsD.measure_timer started_world_sweep, "sweeper.worlds"
 
               @working_boxes << box
               duplicate_world_ids = (@running_worlds.keys & worlds.keys)
@@ -44,18 +44,25 @@ module Prism
               
               @running_worlds.merge! worlds
               
-
-              iter.next
+              EM::Iterator.new(worlds).each(proc{ |(world_id, world), world_iter|
+                  started_world_ping = Time.now
+                  box.ping_world(world['port']) do
+                    StatsD.measure_timer started_world_ping, 'sweeper.world_ping'
+                    world_iter.next
+                  end
+                }, proc {
+                  box_iter.next
+                })
             end
             op.errback do
               @broken_boxes << box
-              iter.next
+              box_iter.next
             end
           elsif state.nil?
             @broken_boxes << box
-            iter.next
+            box_iter.next
           else
-            iter.next
+            box_iter.next
           end
         end
       }, method(:update_state))
@@ -153,9 +160,11 @@ module Prism
       lost_world_ids.each do |world_id|
         notice("worlds:lost:#{world_id}", true) do |since, _|
           instance_id = redis_universe.worlds[:running][world_id]['instance_id']
-
-          if (Time.now - since) < 60
-            debug "missing world:#{world_id} instance:#{instance_id}"
+          lost_for = (Time.now - since)
+          
+          if lost_for < 60
+            debug "missing world:#{world_id} instance:#{instance_id} (#{lost_for} seconds)"
+            
           else
             debug "lost world:#{world_id} instance:#{instance_id}"
             redis.unstore_running_world instance_id, world_id
@@ -284,12 +293,9 @@ module Prism
 
     def record_stats
       running_boxes = redis_universe.boxes[:running]
-      StatsD.measure "boxes.count", running_boxes.size
-      running_boxes.values.group_by {|b| b['instance_type'] }.each do |instance_type, group|
-        StatsD.measure "boxes.#{instance_type.gsub('.','-')}.count", group.size
-      end
-      StatsD.measure "players.count", redis_universe.players.size
-      StatsD.measure "worlds.count",  redis_universe.worlds[:running].size
+      StatsD.gauge "boxes.count", running_boxes.size
+      StatsD.gauge "players.count", redis_universe.players.size
+      StatsD.gauge "worlds.count",  redis_universe.worlds[:running].size
     end
 
   end

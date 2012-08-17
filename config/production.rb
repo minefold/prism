@@ -29,3 +29,5 @@ StatsD.mode = :production
 
 ENV['RACK_ENV'] = 'production' # exceptional gem looks at this ENV
 Exceptional::Config.load("#{ROOT}/config/exceptional.yml")
+
+TEST_PRISM="pluto.minefold.com"

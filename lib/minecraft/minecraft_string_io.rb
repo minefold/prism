@@ -19,12 +19,27 @@ module Minecraft
         end
       end
     end
+    
+    def write_field type, value
+      if field = EASY_FIELDS[type]
+        write([value].pack(field[1]))
+      else
+        case type
+        when :string
+          write_string value
+        end
+      end
+    end
 
     def read_string
       length = read_field :short
 
       bytes = read(length * 2)
       bytes.force_encoding('UTF-16BE').encode('UTF-8')
+    end
+    
+    def write_string value
+      write [value.length, value.encode('UTF-16BE')].pack("na*")
     end
   end
 end
