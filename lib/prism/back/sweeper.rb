@@ -26,7 +26,7 @@ module Prism
       @running_boxes, @working_boxes, @broken_boxes, @running_worlds = [], [], [], {}
       @duplicate_worlds = {}
       
-      EM::Iterator.new(boxes).each(proc{ |box,box_iter|
+      EM::Iterator.new(boxes, 10).each(proc{ |box,box_iter|
         box.query_state do |state|
           if state == 'running'
             @running_boxes << box
@@ -156,6 +156,16 @@ module Prism
     end
 
     def lost_worlds
+      redis.keys('worlds:lost:*') do |lost_keys|
+        running_world_ids = redis_universe.worlds[:running].keys & running_worlds.keys
+        lost_world_ids = lost_keys.map{|key| key.split(':').last }
+        
+        (lost_world_ids & running_world_ids).each do |world_id|
+          debug "found lost world:#{world_id}"
+          redis.del "worlds:lost:#{world_id}"
+        end
+      end
+      
       lost_world_ids = redis_universe.worlds[:running].keys - running_worlds.keys
       lost_world_ids.each do |world_id|
         notice("worlds:lost:#{world_id}", true) do |since, _|
