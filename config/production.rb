@@ -25,6 +25,7 @@ Storage.provider = Fog::Storage.new({
 })
 
 StatsD.server = 'stats.minefold.com:8125'
+StatsD.logger = Logger.new('/dev/null')
 StatsD.mode = :production
 
 ENV['RACK_ENV'] = 'production' # exceptional gem looks at this ENV

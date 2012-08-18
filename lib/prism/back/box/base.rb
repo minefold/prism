@@ -15,18 +15,13 @@ module Prism
     def receive_data data
       @data ||= ""
       @data << data
-
-      # TODO: this is here temporarily as currently widget won't hang up
-      json_data = JSON.parse @data rescue nil
-      if json_data
-        close_connection
-      end
     end
 
     def unbind
       @timeout.cancel
       if @data
-        @df.succeed JSON.parse(@data)
+        json_data = JSON.parse(@data) rescue nil
+        @df.succeed json_data
       else
         @df.fail
       end
@@ -69,13 +64,22 @@ module Prism
           puts "timeout querying worlds instance_id:#{instance_id} host:#{host}"
           df.fail "timeout"
         end
-
-        begin
-          c = EM.connect host, 3000, WorldCollector, @timeout, df
-          c.pending_connect_timeout = 2
-        rescue => e
-          df.fail e
+        
+        EM.rpc_retry host, 3000, "worlds", 2, 10 do |result|
+          @timeout.cancel
+          if result and result.length > 0
+            df.succeed JSON.load(result)
+          else
+            df.fail
+          end
         end
+
+        # begin
+        #   c = EM.connect host, 3000, WorldCollector, @timeout, df
+        #   c.pending_connect_timeout = 2
+        # rescue => e
+        #   df.fail e
+        # end
         df
       end      
       
