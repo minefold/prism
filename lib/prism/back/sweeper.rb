@@ -162,11 +162,13 @@ module Prism
           instance_id = redis_universe.worlds[:running][world_id]['instance_id']
           lost_for = (Time.now - since)
           
-          if lost_for < 60
+          if lost_for < 120
             debug "missing world:#{world_id} instance:#{instance_id} (#{lost_for} seconds)"
             
           else
             debug "lost world:#{world_id} instance:#{instance_id}"
+            Exceptional.rescue { raise "lost world: #{world_id} instance:#{instance_id}" }
+            
             redis.unstore_running_world instance_id, world_id
             redis.del "worlds:lost:#{world_id}"
           end
