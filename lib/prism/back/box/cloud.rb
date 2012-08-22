@@ -100,7 +100,13 @@ chef-solo -c /home/ubuntu/chef/ec2/solo.rb -j /tmp/attributes.json
                 :groups => %W{default box},
                 :flavor_id => 'm1.large',
                 :user_data => cloud_init_script,
-                :tags => tags
+                :tags => tags,
+                :block_device_mapping => [
+                  {'DeviceName' => '/dev/sdb', 'VirtualName' => 'ephemeral0'},
+                  {'DeviceName' => '/dev/sdc', 'VirtualName' => 'ephemeral1'},
+                  {'DeviceName' => '/dev/sdd', 'VirtualName' => 'ephemeral2'},
+                  {'DeviceName' => '/dev/sde', 'VirtualName' => 'ephemeral3'}
+                ]
               }.merge(options)
 
               vm = compute_cloud.servers.bootstrap(options)
