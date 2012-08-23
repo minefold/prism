@@ -18,7 +18,6 @@ module Prism
         multi.add :running_worlds,  redis.hgetall_json( 'worlds:running')
         multi.add :busy_worlds,     redis.hgetall_json( 'worlds:busy')
         multi.add :players,         redis.hgetall('players:playing')
-        multi.add :usernames,       redis.hgetall('usernames')
 
         heartbeats.each {|key| multi.add key, redis.get(key) }
 
@@ -45,9 +44,7 @@ module Prism
 
       @players = {}
 
-      world_players = results[:players].each_with_object({}) do |(username, world_id), hash|
-        # TODO: this lookup username => user_id shouldn't be necessary
-        user_id = results[:usernames][username]
+      world_players = results[:players].each_with_object({}) do |(user_id, world_id), hash|
         @players[user_id] = world_id
 
         hash[world_id] ||= []
