@@ -269,7 +269,7 @@ module Prism
               end
 
               if rebalance_now
-                World.collection.update(
+                World.update(
                   {_id: BSON::ObjectId(a[:world_id])},
                   { '$set' => {'allocation_slots' => a[:required_player_slots] }}
                 )
