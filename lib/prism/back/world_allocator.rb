@@ -37,11 +37,11 @@ module Prism
       instance = INSTANCE_DEFS[instance_type]
       @image_id         = instance[:image_id]
 
-      @instance_ram     = instance[:ram] * (1 - OS_RAM_BUFFER)        # 6451 Mb
-      @world_cap        = (instance[:ecus] / ECUS_PER_WORLD).round    # 13
-      @player_cap       = (@instance_ram / RAM_PER_PLAYER).round      # 50
-      @ram_slot         = (@instance_ram / world_cap).round           # 496
-      @players_per_slot = [(@player_cap / @world_cap).ceil, 4].max    # 4
+      @instance_ram     = instance[:ram] * (1 - OS_RAM_BUFFER)          # 6451 Mb
+      @world_cap        = (instance[:ecus] / ECUS_PER_WORLD).round - 2  # 13
+      @player_cap       = (@instance_ram / RAM_PER_PLAYER).round        # 50
+      @ram_slot         = (@instance_ram / world_cap).round             # 496
+      @players_per_slot = [(@player_cap / @world_cap).ceil, 4].max      # 4
     end
 
     def to_hash
