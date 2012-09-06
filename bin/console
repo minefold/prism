@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+# redis.publish "workers:i-c5031ebe:worlds:503974e29a881b050000001b:stdin", "debug stop"
+
 require 'bundler/setup'
 Bundler.require :default, :chatty, :proxy
 
@@ -48,6 +50,15 @@ end
 
 def clear_players(n)
   n.times {|i| redis.hdel "players:playing", "player#{i}" }
+end
+
+def redis_writes
+  redis.monitor do |info|
+    ts, op, *args = info.split(' ')
+    unless args.first =~ /resque/i
+      puts "#{op}:#{args.join(' ').ljust(20)}"
+    end
+  end
 end
 
 binding.pry
