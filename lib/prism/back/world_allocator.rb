@@ -45,7 +45,8 @@ module Prism
     end
     
     def world_cap
-      @world_cap - 2
+      @instance_type == 'cc2.8xlarge' ? @world_cap = 20 : @world_cap - 2
+      # @world_cap - 2
     end
 
     def to_hash

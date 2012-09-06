@@ -74,12 +74,6 @@ module Prism
           end
         end
 
-        # begin
-        #   c = EM.connect host, 3000, WorldCollector, @timeout, df
-        #   c.pending_connect_timeout = 2
-        # rescue => e
-        #   df.fail e
-        # end
         df
       end      
       
