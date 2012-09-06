@@ -65,7 +65,7 @@ module Prism
           df.fail "timeout"
         end
         
-        EM.rpc_retry host, 3000, "worlds", 2, 10 do |result|
+        EM.rpc host, 3000, "worlds", 10 do |result|
           @timeout.cancel
           if result and result.length > 0
             df.succeed JSON.load(result)
