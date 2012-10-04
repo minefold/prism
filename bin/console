@@ -61,4 +61,8 @@ def redis_writes
   end
 end
 
+def stop_world instance_id, world_id
+  redis.lpush "workers:#{instance_id}:worlds:requests:stop", world_id
+end
+
 binding.pry

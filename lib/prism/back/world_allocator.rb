@@ -45,8 +45,11 @@ module Prism
     end
     
     def world_cap
-      @instance_type == 'cc2.8xlarge' ? @world_cap = 20 : @world_cap - 2
-      # @world_cap - 2
+      if @instance_type == 'cc2.8xlarge'
+        @world_cap = 15
+      else
+        @world_cap - 2
+      end
     end
 
     def to_hash
@@ -68,10 +71,10 @@ module Prism
 
     def new_instance_type
       # use the big reserved instance first, then use cheaper on-demand instances
-      # big_boys = boxes_with_capacity.count {|b| b['instance_type'] == 'cc2.8xlarge' }
-      # 
-      # big_boys == 0 ? 'cc2.8xlarge' : 'c1.xlarge'
-      'c1.xlarge'
+      big_boys = running_box_capacities.count {|b| b['instance_type'] == 'cc2.8xlarge' }
+      
+      big_boys == 0 ? 'cc2.8xlarge' : 'c1.xlarge'
+      # 'c1.xlarge'
     end
 
     def start_options_for_new_world world, player_slots_required = nil
