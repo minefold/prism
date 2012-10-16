@@ -86,6 +86,7 @@ cat<<EOF > /tmp/attributes.json
 EOF
 
 chef-solo -c /home/ubuntu/chef/ec2/solo.rb -j /tmp/attributes.json
+apt-get -y install lzop
         EOS
       end
 
