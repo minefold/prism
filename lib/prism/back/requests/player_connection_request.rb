@@ -166,7 +166,7 @@ module Prism
           instance_id = running_world['instance_id']
           ops.each do |op|
             send_world_player_message instance_id, world.id, op.username, "#{username} wants to join!"
-            send_world_player_message instance_id, world.id, op.username, "/approve #{username} or /deny #{username}"
+            send_world_player_message instance_id, world.id, op.username, "/whitelist add #{username} to accept"
           end
           listen_once("worlds:#{world.id}:whitelist_change:#{player.id}") do |action|
             cb.call action == 'added'
