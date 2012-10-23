@@ -9,7 +9,7 @@ module Prism
       connection.send_data server_packet 0xFF, :reason => error
       connection.close_connection_after_writing
     end
-
+    
     def receive_data data
       connection.buffered_data << data
 
@@ -24,8 +24,8 @@ module Prism
         end
 
       elsif header == 0xFE
-        connection_error "minefold.com"
-        
+        connection_error server_ping_msg('47', '1_4_1', 'minefold.com')
+
       elsif header == 0xE0
         begin
           # 0xE0 packet is internal, routes to brain
@@ -33,11 +33,11 @@ module Prism
             :host => :string,
             :port => :int,
             :payload => :string
-          
+
           packet = test_packet.parse(connection.buffered_data)
-          
+
           new_handler SystemTestHandler, packet[:host], packet[:port], packet[:payload]
-          
+
         rescue => e
           puts "#{e}\n#{e.backtrace.join("\n")}"
           Exceptional.handle(e)
@@ -50,11 +50,11 @@ module Prism
           test_packet = Minecraft::Packet.new 0xE1,
             :host => :string,
             :port => :int
-          
+
           packet = test_packet.parse(connection.buffered_data)
-          
+
           new_handler WorldPingHandler, packet[:host], packet[:port]
-          
+
         rescue => e
           puts "#{e}\n#{e.backtrace.join("\n")}"
           Exceptional.handle(e)
@@ -99,6 +99,17 @@ module Prism
         username, target_host = username.split(';', 2)
       end
       new_handler KnownPlayerHandler, username, target_host
+    end
+    
+    def server_ping_msg protocol_version, minecraft_version, msg
+      header = "\u00A71"
+      players = -1 # shows as ??? in the client
+      [ header, 
+        protocol_version, 
+        minecraft_version,
+        msg,
+        players,
+        players ].join("\u0000")
     end
   end
 end
