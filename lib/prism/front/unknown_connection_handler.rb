@@ -24,7 +24,7 @@ module Prism
         end
 
       elsif header == 0xFE
-        connection_error server_ping_msg('47', '1_4_1', 'minefold.com')
+        connection_error server_ping_msg('49', '1_4_4', 'minefold.com')
 
       elsif header == 0xE0
         begin
