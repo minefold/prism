@@ -11,13 +11,17 @@ STDOUT.sync = true
 EM.epoll
 
 module Prism
+  class << self
+    attr_reader :id
+  end
+
   EM.run do
 
-    prism_id = ARGV.shift || `hostname`.strip
+    log = Prism::Logger.new
+    @id = ARGV.shift || `hostname`.strip
 
-    puts "initialising #{prism_id}"
     redis = Prism.redis
-    Prism.redis.prism_id = prism_id
+    Prism.redis.prism_id = Prism.id
 
     EM.error_handler do |e|
       Exceptional.handle(e)
@@ -34,7 +38,7 @@ module Prism
 
     redis.del("players:playing") do
       EM.start_server '0.0.0.0', 25565, Client
-      puts "#{Fold.env} mode. listening on 0.0.0.0:25565"
+      log.info event:'started', id: Prism.id
     end
 
     # EM.add_periodic_timer(1) { puts EM.connection_count }

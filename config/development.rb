@@ -11,16 +11,6 @@ INCREMENTAL_WORLDS_BUCKET = ENV['INCREMENTAL_WORLDS_BUCKET'] || 'minefold-develo
 Fold.workers = :local
 Fold.worker_user = ENV['USER']
 
-# Storage.provider = Fog::Storage.new({
-#   :provider      => :local,
-#   :local_root    => "#{ROOT}/tmp/s3"
-# })
-Storage.provider = Fog::Storage.new({
-  :provider                 => :aws,
-  :aws_secret_access_key    => EC2_SECRET_KEY,
-  :aws_access_key_id        => EC2_ACCESS_KEY
-})
-
 StatsD.logger = Logger.new(STDOUT) #Logger.new('/dev/null')
 StatsD.mode = :development
 

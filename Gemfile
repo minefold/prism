@@ -2,11 +2,8 @@ source :rubygems
 
 gem 'rake'
 
-gem 'eventmachine', '1.0.0.beta.3'
-gem 'eventmachine-tail'
+gem 'eventmachine', '1.0.0.beta.4'
 gem 'em-http-request'
-
-gem 'fog', '~> 1.2.0' #code: '~/code/whatupdave/fog'
 
 gem 'mongo'
 gem 'bson_ext'
@@ -23,6 +20,7 @@ gem 'exceptional'
 
 group :development do
   gem 'pry'
+  gem 'colored'
 end
 
 group :test do
