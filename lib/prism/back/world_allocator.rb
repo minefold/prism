@@ -46,7 +46,7 @@ module Prism
     
     def world_cap
       if @instance_type == 'cc2.8xlarge'
-        @world_cap = 15
+        @world_cap = 25
       else
         @world_cap - 2
       end
