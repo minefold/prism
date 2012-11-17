@@ -9,7 +9,7 @@ module Prism
       connection.send_data server_packet 0xFF, :reason => error
       connection.close_connection_after_writing
     end
-    
+
     def receive_data data
       connection.buffered_data << data
 
@@ -100,12 +100,12 @@ module Prism
       end
       new_handler KnownPlayerHandler, username, target_host
     end
-    
+
     def server_ping_msg protocol_version, minecraft_version, msg
       header = "\u00A71"
       players = -1 # shows as ??? in the client
-      [ header, 
-        protocol_version, 
+      [ header,
+        protocol_version,
         minecraft_version,
         msg,
         players,

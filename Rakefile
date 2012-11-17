@@ -30,7 +30,7 @@ rescue LoadError
 end
 
 def redis_connect
-  uri = URI.parse(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
+  uri = URI.parse(ENV['REDIS_URL'] || 'redis://localhost:6379/')
   Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
 end
 
@@ -42,7 +42,7 @@ task "resque:setup" do
   Bundler.require :default, :chatty
   require 'minefold'
 
-  if REDISTOGO_URL
+  if REDIS_URL
     Resque.redis = redis_connect
   end
 end
