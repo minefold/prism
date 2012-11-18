@@ -4,8 +4,8 @@ gem 'rake'
 
 gem 'eventmachine', '1.0.0'
 
-gem 'mongo'
-gem 'bson_ext'
+gem 'mongo', "~> 1.7.1"
+gem "bson_ext", "~> 1.7.1"
 
 gem "hiredis", "~> 0.4.0"
 gem "redis", ">= 2.2.0", :require => ["redis/connection/hiredis", "redis"]
@@ -17,17 +17,4 @@ gem 'colored'
 
 group :development do
   gem 'pry'
-end
-
-group :test do
-  # gem "autotest-fsevent"
-  gem "autotest-growl"
-  gem 'foreman'
-  gem 'launchy'
-  gem 'rr', '~> 1.0.3'
-  gem 'rspec', '~> 2.6.0'
-  gem 'timecop', '~> 0.3.5'
-  gem 'em-spec', git:'https://github.com/joshbuddy/em-spec.git', require:'em-spec/rspec'
-  gem 'fakeredis'
-  gem "ZenTest", "~> 4.4.2"
 end
