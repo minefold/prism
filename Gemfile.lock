@@ -29,7 +29,7 @@ GEM
       http_parser.rb (>= 0.5.2)
     em-socksify (0.1.0)
       eventmachine
-    eventmachine (1.0.0.beta.4)
+    eventmachine (1.0.0)
     exceptional (2.0.32)
       rack
     fakeredis (0.3.0)
@@ -91,7 +91,7 @@ DEPENDENCIES
   em-hiredis (~> 0.1.1)
   em-http-request
   em-spec!
-  eventmachine (= 1.0.0.beta.4)
+  eventmachine (= 1.0.0)
   exceptional
   fakeredis
   foreman
