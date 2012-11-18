@@ -13,10 +13,10 @@ gem 'em-hiredis', '~> 0.1.1'
 gem 'resque'
 
 gem 'exceptional'
+gem 'colored'
 
 group :development do
   gem 'pry'
-  gem 'colored'
 end
 
 group :test do
