@@ -3,7 +3,6 @@ source :rubygems
 gem 'rake'
 
 gem 'eventmachine', '1.0.0'
-gem 'em-http-request'
 
 gem 'mongo'
 gem 'bson_ext'
