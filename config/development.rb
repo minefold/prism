@@ -10,10 +10,4 @@ INCREMENTAL_WORLDS_BUCKET = ENV['INCREMENTAL_WORLDS_BUCKET'] || 'minefold-develo
 Fold.workers = :local
 Fold.worker_user = ENV['USER']
 
-StatsD.logger = Logger.new(STDOUT) #Logger.new('/dev/null')
-StatsD.mode = :development
-
-# ENV['RACK_ENV'] = 'production' # exceptional gem looks at this ENV
-# Exceptional::Config.load("#{ROOT}/config/exceptional.yml")
-
 TEST_PRISM="localhost"

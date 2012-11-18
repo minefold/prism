@@ -38,7 +38,6 @@ module Prism
           if response['host']
             connection_time_ms = (Time.now - started_connection) * 1000
             info "connection time:#{connection_time_ms}"
-            StatsD.increment_and_measure_from started_connection, "players.connection_request.successful"
 
             host, port, player_id, world_id = response["host"], response["port"], response["player_id"], response["world_id"]
 
@@ -60,8 +59,6 @@ module Prism
             connection.send_data server_packet(0xFF, :reason => friendly_kick_messages[response['rejected']])
             connection.close_connection_after_writing
             exit
-            StatsD.increment_and_measure_from started_connection, "players.connection_request.failed"
-            StatsD.increment_and_measure_from started_connection, "players.connection_request.failed.#{response['rejected']}"
           end
         end
       end

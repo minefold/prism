@@ -96,42 +96,6 @@ namespace :prism do
   end
 end
 
-namespace :atlas do
-  task :deploy do
-    ENV['HOST'] ||= 'mapper.minefold.com'
-    ssh "cd atlas && git pull origin master && sudo stop atlas && rm -rf tmp && sudo start atlas"
-  end
-end
-
-namespace :graphite do
-  desc "Deploy the graphite dashboard.conf"
-  task :dashboard do
-    `scp -i .ssh/minefold.pem conf/graphite/dashboard.conf ubuntu@pluto.minefold.com:/opt/graphite/conf/dashboard.conf`
-  end
-end
-
-namespace :servers do
-  require 'yaml'
-  require 'prism/back'
-  require 'minefold/game_server_updater'
-
-  include Prism::Mongo
-  def mongo
-    @mongo ||= mongo_connect
-  end
-
-  desc "download and store latest servers"
-  task :update do
-    mongo['game_servers'].remove
-
-    servers = YAML.load File.read('servers.yaml')
-
-    servers['games'].each do |game|
-      GameServerUpdater.new(game).update
-    end
-  end
-end
-
 namespace :stress do
   task :create_bots do
     mongo['worlds'].update({

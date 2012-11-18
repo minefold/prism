@@ -49,7 +49,6 @@ module Prism
       end
       redis.hdel "players:playing", player_id
 
-      StatsD.measure_timer @minecraft_session_started_at, "sessions.minecraft"
       # redis.lpush_hash "player:disconnected",
       #   world_id: world_id,
       #   player_id: player_id,

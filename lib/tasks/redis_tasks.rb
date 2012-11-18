@@ -41,10 +41,4 @@ namespace "redis" do
 
     redis_connect.flushall
   end
-
-  desc "gets rid of loner keys"
-  task :delete_loners do
-    redis = redis_connect
-    redis.keys.grep(/resque:loners/).each {|key| puts "del #{key}"; redis.del key }
-  end
 end

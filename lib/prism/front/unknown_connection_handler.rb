@@ -63,7 +63,6 @@ module Prism
 
       else
         connection.close_connection
-        StatsD.increment 'connections.unknown_client'
       end
     end
 
