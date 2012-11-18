@@ -56,7 +56,9 @@ module Prism
                         world_id
 
           elsif response['rejected']
-            connection.send_data server_packet(0xFF, :reason => friendly_kick_messages[response['rejected']])
+            connection.send_data server_packet(0xFF, 
+              :reason => (friendly_kick_messages[response['rejected']] || response['rejected'])
+            )
             connection.close_connection_after_writing
             exit
           end
