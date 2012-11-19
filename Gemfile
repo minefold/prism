@@ -2,9 +2,9 @@ source :rubygems
 
 gem 'rake'
 
+gem 'foreman'
 gem 'eventmachine', '1.0.0'
 
-gem 'mongo', "~> 1.7.1"
 gem "bson_ext", "~> 1.7.1"
 
 gem "hiredis", "~> 0.4.0"

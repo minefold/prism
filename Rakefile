@@ -95,27 +95,3 @@ namespace :prism do
     puts `scp -i #{ENV['EC2_SSH']} ubuntu@pluto.minefold.com:/var/log/syslog* tmp/logs`
   end
 end
-
-namespace :stress do
-  task :create_bots do
-    mongo['worlds'].update({
-      _id: BSON::ObjectId('4f6d6135988e1b0001000136')
-    }, {
-      '$set' => { 'online_mode' => false }
-    })
-
-    1000.times do |i|
-      name = "stress-test-#{i}"
-      puts "#{name}"
-      mongo['users'].update({
-        username: name
-      }, {
-        username: name,
-        safe_username: name.downcase.strip,
-        slug: name,
-        email: "#{name}@minefold.com",
-        current_world_id: BSON::ObjectId('4f6d6135988e1b0001000136') # system-check/stress
-      }, upsert: true)
-    end
-  end
-end

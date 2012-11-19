@@ -4,11 +4,14 @@ require 'bundler/setup'
 Bundler.require :default
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
-require 'minefold'
+require 'logging'
 require 'prism/front'
 
 STDOUT.sync = true
 EM.epoll
+
+uri = URI.parse(ENV['REDIS_URL'] || 'redis://localhost:6379/')
+Resque.redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
 
 module Prism
   class << self
