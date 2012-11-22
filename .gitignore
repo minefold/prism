@@ -5,4 +5,4 @@ backups
 log/*
 tmp/*
 coverage
-.env
+.env*

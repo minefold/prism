@@ -20,17 +20,6 @@ module Prism
 
       redis.hset "players:playing", player_id, world_id
       debug "session:#{@session_id} started"
-      @credit_muncher = EventMachine::PeriodicTimer.new(60) do
-        debug "recording minute played"
-        redis.lpush_hash "players:minute_played",
-          session_id: @session_id,
-          world_id: world_id,
-          player_id: player_id,
-          username:username,
-          session_started_at: @minecraft_session_started_at
-
-        Resque.push 'high', class: 'MinutePlayedJob', args: [player_id, world_id, Time.now.utc]
-      end
 
       Resque.push 'high', class: 'PlayerConnectedJob', args: [player_id, world_id, Time.now.utc]
       # redis.lpush_hash "player:connected",
@@ -43,10 +32,6 @@ module Prism
 
     def exit
       @server.close_connection_after_writing
-      if @credit_muncher
-        debug "session:#{@session_id} ended"
-        @credit_muncher.cancel
-      end
       redis.hdel "players:playing", player_id
 
       # redis.lpush_hash "player:disconnected",
