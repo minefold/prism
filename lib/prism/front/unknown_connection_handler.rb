@@ -83,7 +83,15 @@ module Prism
 
       values = login_packet.parse data
 
-      new_handler KnownPlayerHandler, values[:username], "#{values[:host]}:#{values[:port]}"
+      puts "[connection] #{values[:username]} => #{values[:host]}"
+      if values[:host] =~ /([\w-]+)\.verify\.minefold\.com/
+        new_handler VerifyPlayerHandler, $1, values[:username]
+
+      else
+        new_handler KnownPlayerHandler,
+          values[:username],
+          "#{values[:host]}:#{values[:port]}"
+      end
     end
 
     def receive_125_login data
@@ -97,7 +105,13 @@ module Prism
       if username.include?(';')
         username, target_host = username.split(';', 2)
       end
-      new_handler KnownPlayerHandler, username, target_host
+
+      puts "connection: #{username} => #{target_host}"
+      if target_host =~ /([\w-]+)\.verify\.minefold\.com/
+        new_handler VerifyPlayerHandler, $1, username
+      else
+        new_handler KnownPlayerHandler, username, target_host
+      end
     end
 
     def server_ping_msg protocol_version, minecraft_version, msg

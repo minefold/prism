@@ -25,7 +25,7 @@ module Prism
     end
 
 
-    def init username, target_host = nil
+    def init username, target_host
       @username, @target_host = username, target_host
       @connection_active = true
 
