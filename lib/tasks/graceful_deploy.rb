@@ -39,12 +39,12 @@ namespace :prism do
       end
       
       messages = {
-        "10 mins until 15 minutes of scheduled maintenance" => 120,
-        "8 mins until 15 minutes of scheduled maintenance" => 120,
-        "5 mins until 15 minutes of scheduled maintenance" => 180,
-        "2 mins until 15 minutes of scheduled maintenance" => 120,
-        "1 minute until 15 minutes of scheduled maintenance" => 60,
-        "Maintenance in 10 seconds, please wait 15 minutes before reconnecting" => 10
+        "10 mins until scheduled maintenance" => 120,
+        "8 mins until scheduled maintenance" => 120,
+        "5 mins until scheduled maintenance" => 180,
+        "2 mins until scheduled maintenance" => 120,
+        "1 minute until scheduled maintenance" => 60,
+        "Maintenance in 10 seconds" => 10
       }
       
       EM::Iterator.new(messages).each(proc{ |(message, delay),iter|

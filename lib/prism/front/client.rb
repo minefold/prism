@@ -6,7 +6,11 @@ module Prism
 
     def post_init
       @buffered_data = ""
-      set_handler UnknownConnectionHandler
+      if File.exists?("tmp/maintenance")
+        set_handler MaintenanceHandler, File.read("tmp/maintenance")
+      else
+        set_handler UnknownConnectionHandler
+      end
     end
 
     def set_handler klass, *args
