@@ -99,7 +99,7 @@ func (w *McWriter) String(val string) (err error) {
 	}
 
 	ucs2 := make([]byte, len(val)*2)
-	_, _, err = iconv.Convert([]byte(val), ucs2, "utf-8", "ucs-2")
+	_, _, err = iconv.Convert([]byte(val), ucs2, "utf-8", "ucs-2be")
 	if err != nil {
 		return
 	}

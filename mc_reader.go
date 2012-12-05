@@ -75,7 +75,7 @@ func (r *McReader) String() (val string, err error) {
 	}
 
 	utf8 := make([]byte, charLen)
-	_, _, err = iconv.Convert(ucs2, utf8, "ucs-2", "utf-8")
+	_, _, err = iconv.Convert(ucs2, utf8, "ucs-2be", "utf-8")
 	if err != nil {
 		return
 	}
