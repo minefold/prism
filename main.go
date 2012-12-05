@@ -14,6 +14,9 @@ import (
 
 type ConnectionRequest struct {
 	Log        *Logger `json:"-"`
+	Client     string  `json:"client"`
+	ClientAddr string  `json:"client_address"`
+	Version    string  `json:"version"`
 	Username   string  `json:"username"`
 	TargetHost string  `json:"target_host"`
 }
@@ -69,6 +72,8 @@ func handleLogin(c net.Conn) {
 
 	tee := io.TeeReader(c, buf)
 
+	client := "minecraft"
+	var version string
 	var username string
 	var targetHost string
 	var connInit Init
@@ -86,6 +91,7 @@ func handleLogin(c net.Conn) {
 			c.Close()
 			return
 		}
+		version = "1.2.5"
 		// username in old packet looks like this: 
 		// whatupdave;4.foldserver.com:25565
 		parts := strings.Split(oldPkt.Username, ";")
@@ -97,6 +103,7 @@ func handleLogin(c net.Conn) {
 			w.OldHandshakePacket(*oldPkt)
 		}
 	} else {
+		version = fmt.Sprintf("%v", pkt.ProtocolVersion)
 		username = pkt.Username
 		targetHost = pkt.Host
 		connInit = func(remote net.Conn) {
@@ -104,16 +111,24 @@ func handleLogin(c net.Conn) {
 			w.HandshakePacket(*pkt)
 		}
 	}
-	req := NewConnectionRequest(username, targetHost)
+
+	clientAddr := c.RemoteAddr().String()
+	req := NewConnectionRequest(client, version, clientAddr, username, targetHost)
 	req.Process(c, connInit)
 }
 
-func NewConnectionRequest(username, targetHost string) *ConnectionRequest {
+func NewConnectionRequest(client, version, clientAddr, username, targetHost string) *ConnectionRequest {
 	req := &ConnectionRequest{
+		Client:     client,
+		Version:    version,
+		ClientAddr: clientAddr,
 		Username:   username,
 		TargetHost: targetHost,
 	}
 	req.Log = NewLog(map[string]interface{}{
+		"client":      req.Username,
+		"version":     req.Version,
+		"client_addr": req.ClientAddr,
 		"username":    req.Username,
 		"target_host": req.TargetHost,
 	})
@@ -235,8 +250,8 @@ func proxyConnection(client net.Conn, remoteAddr string, init Init) {
 
 	init(remote)
 
-	go io.Copy(remote, client)
 	go io.Copy(client, remote)
+	go io.Copy(remote, client)
 }
 
 func main() {
