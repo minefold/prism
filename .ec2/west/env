@@ -1,5 +1,0 @@
-#!/bin/sh
-source $FOLD_ROOT/.ec2/env
-export EC2_SSH=$FOLD_ROOT/.ec2/west/minefold-west.pem
-
-echo "EC2 region set to us-west-1"
