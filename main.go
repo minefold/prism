@@ -2,10 +2,9 @@ package main
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/djimenez/iconv-go"
 	"github.com/simonz05/godis/redis"
 	"io"
 	"net"
@@ -14,8 +13,9 @@ import (
 )
 
 type ConnectionRequest struct {
-	Username   string `json:"username"`
-	TargetHost string `json:"target_host"`
+	Log        *Logger `json:"-"`
+	Username   string  `json:"username"`
+	TargetHost string  `json:"target_host"`
 }
 
 type ConnectionRequestReply struct {
@@ -24,21 +24,27 @@ type ConnectionRequestReply struct {
 	Failed string `json:"failed"`
 }
 
+type Init func(net.Conn)
+type Approved func(net.Conn, Init, string, string, string)
+type Denied func(net.Conn, string)
+type Timeout func(net.Conn)
+
 var redisClient *redis.Client
+var log *Logger
 
 func handleConnection(c net.Conn) {
 	r := NewMcReader(c)
 	header, err := r.Header()
 	if err != nil {
-		fmt.Println("header read failed:", err)
+		log.Error(err, map[string]interface{}{
+			"event": "header read failed",
+		})
 	}
 
 	if header == 0xFE {
 		handleServerPing(c)
 	} else if header == 0x02 {
 		handleLogin(c)
-	} else {
-		fmt.Println(err, header)
 	}
 }
 
@@ -47,6 +53,10 @@ func handleLogin(c net.Conn) {
 
 	tee := io.TeeReader(c, buf)
 
+	var username string
+	var targetHost string
+	var connInit Init
+
 	r := NewMcReader(tee)
 	pkt, err := r.HandshakePacket()
 	if err != nil {
@@ -54,129 +64,168 @@ func handleLogin(c net.Conn) {
 		r = NewMcReader(buf)
 		oldPkt, err := r.OldHandshakePacket()
 		if err != nil {
-			fmt.Println("bad handshake", err)
+			log.Error(err, map[string]interface{}{
+				"event": "bad handshake",
+			})
 			c.Close()
 			return
 		}
 		// username in old packet looks like this: 
 		// whatupdave;4.foldserver.com:25565
 		parts := strings.Split(oldPkt.Username, ";")
-		username := parts[0]
+		username = parts[0]
 		parts = strings.Split(parts[1], ":")
-		host := parts[0]
-
-		processLogin(c, username, host, func(remote net.Conn) {
+		targetHost = parts[0]
+		connInit = func(remote net.Conn) {
 			w := NewMcWriter(remote)
 			w.OldHandshakePacket(*oldPkt)
-		})
+		}
 	} else {
-		processLogin(c, pkt.Username, pkt.Host, func(remote net.Conn) {
+		username = pkt.Username
+		targetHost = pkt.Host
+		connInit = func(remote net.Conn) {
 			w := NewMcWriter(remote)
 			w.HandshakePacket(*pkt)
-		})
+		}
 	}
+	req := NewConnectionRequest(username, targetHost)
+	req.Process(c, connInit)
 }
 
-func processLogin(c net.Conn, username string, host string, init func(net.Conn)) {
-	fmt.Println("connection:", username, host)
+func NewConnectionRequest(username, targetHost string) *ConnectionRequest {
+	req := &ConnectionRequest{
+		Username:   username,
+		TargetHost: targetHost,
+	}
+	req.Log = NewLog(map[string]interface{}{
+		"username":    req.Username,
+		"target_host": req.TargetHost,
+	})
+	return req
+}
+
+func (req *ConnectionRequest) Process(c net.Conn, init Init) {
+	req.Log.Info(map[string]interface{}{
+		"event": "login_request",
+	})
 
 	go func() {
 		conn := NewRedisConnection()
 		defer conn.Quit()
-		sub, err := conn.Subscribe("players:connection_request:" + username)
+		sub, err := conn.Subscribe("players:connection_request:" + req.Username)
 		defer sub.Close()
 		if err != nil {
-			fmt.Println("redis subscribe error", err)
+			req.Log.Error(err, map[string]interface{}{
+				"event": "redis_subscribe",
+			})
 			return
 		}
 
-		timeout := time.After(180 * time.Second)
-		keepalive := time.NewTicker(15 * time.Second)
 		w := NewMcWriter(c)
 
+		timeoutCb := time.After(240 * time.Second)
+		keepalive := time.NewTicker(15 * time.Second)
+		defer keepalive.Stop()
+		go func() {
+			for _ = range keepalive.C {
+				w.KeepAlivePacket(KeepAlivePacket{
+					Id: 1337,
+				})
+			}
+		}()
+
 		select {
-		case <-timeout:
-			fmt.Println("connection request timed out")
-
-		case <-keepalive.C:
-			w.KeepAlivePacket(KeepAlivePacket{
-				Id: 1337,
-			})
-
 		case message := <-sub.Messages:
 			var reply ConnectionRequestReply
 			err := json.Unmarshal(message.Elem.Bytes(), &reply)
 			if err != nil {
-				fmt.Println("bad message:", message.Elem.String())
-				return
-			}
-
-			if reply.Failed != "" {
-				w.KickPacket(KickPacket{
-					Reason: reply.Failed,
+				req.Log.Error(err, map[string]interface{}{
+					"event": "bad_req_reply",
+					"reply": message.Elem.String(),
 				})
 				c.Close()
+			} else if reply.Failed != "" {
+				req.Denied(c, reply.Failed)
 			} else {
 				remoteAddr := fmt.Sprintf("%s:%d", reply.Host, reply.Port)
-				go proxyConnection(c, remoteAddr, init)
+				req.Approved(c, init, remoteAddr)
 			}
+
+		case <-timeoutCb:
+			req.Timeout(c)
 		}
 	}()
-
-	req := &ConnectionRequest{
-		Username:   username,
-		TargetHost: host,
-	}
 
 	reqJson, _ := json.Marshal(req)
 	redisClient.Lpush("players:connection_request", reqJson)
 }
 
-func handleServerPing(c net.Conn) {
-	defer c.Close()
-	err := binary.Write(c, binary.BigEndian, byte(0xFF))
-	if err != nil {
-		fmt.Println("1 failed:", err)
-	}
+func (req *ConnectionRequest) Approved(c net.Conn, init Init, remoteAddr string) {
+	req.Log.Info(map[string]interface{}{
+		"event":  "login_request_approved",
+		"remote": remoteAddr,
+	})
 
-	msg := "§1\00049\0001_4_5\000minefold.com\0005\000-1"
-
-	err = binary.Write(c, binary.BigEndian, int16(len(msg)))
-	if err != nil {
-		fmt.Println("2 failed:", err)
-	}
-
-	ucs2 := make([]byte, len(msg)*2)
-	r, w, err := iconv.Convert([]byte(msg), ucs2, "utf-8", "ucs-2")
-	if err != nil {
-		fmt.Println("failed to convert string to ucs-2", err, r, w)
-	}
-
-	err = binary.Write(c, binary.BigEndian, ucs2)
-	if err != nil {
-		fmt.Println("3 failed:", err)
-	}
+	go proxyConnection(c, remoteAddr, init)
 }
 
-func proxyConnection(client net.Conn, remoteAddr string, init func(net.Conn)) {
-	fmt.Println("connecting to " + remoteAddr)
+func (req *ConnectionRequest) Denied(c net.Conn, reason string) {
+	defer c.Close()
 
+	req.Log.Info(map[string]interface{}{
+		"event":  "login_request_denied",
+		"reason": reason,
+	})
+
+	w := NewMcWriter(c)
+	w.KickPacket(KickPacket{
+		Reason: reason,
+	})
+}
+
+func (req *ConnectionRequest) Timeout(c net.Conn) {
+	defer c.Close()
+
+	req.Log.Error(errors.New("timeout"), map[string]interface{}{
+		"event": "login_request_timeout",
+	})
+
+	w := NewMcWriter(c)
+	w.KickPacket(KickPacket{
+		Reason: "Minefold is having some technical difficulties! Please try again",
+	})
+}
+
+func handleServerPing(c net.Conn) {
+	defer c.Close()
+
+	w := NewMcWriter(c)
+	w.KickPacket(KickPacket{
+		Reason: "§1\00049\0001_4_5\000minefold.com\0005\000-1",
+	})
+}
+
+func proxyConnection(client net.Conn, remoteAddr string, init Init) {
 	remote, err := net.Dial("tcp", remoteAddr)
 	if remote == nil || err != nil {
-		fmt.Println("Can't connect to " + remoteAddr)
+		defer client.Close()
+
+		log.Error(err, map[string]interface{}{
+			"event":  "failed_connection",
+			"remote": remoteAddr,
+		})
 		return
 	}
-	fmt.Println("connected. Sending handshake")
 
 	init(remote)
-
-	fmt.Println("sent")
 
 	go io.Copy(remote, client)
 	go io.Copy(client, remote)
 }
 
 func main() {
+	log = NewLog(map[string]interface{}{})
+
 	ln, err := net.Listen("tcp", ":25565")
 	if err != nil {
 		panic(err)
@@ -184,10 +233,16 @@ func main() {
 
 	redisClient = NewRedisConnection()
 
+	log.Info(map[string]interface{}{
+		"event": "listening",
+		"port":  "25565",
+	})
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			fmt.Println("error:", err)
+			log.Error(err, map[string]interface{}{
+				"event": "socket_accept",
+			})
 			continue
 		}
 		go handleConnection(conn)
