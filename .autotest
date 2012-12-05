@@ -1,5 +1,0 @@
-require 'autotest/bundler'
-
-Autotest.add_hook :initialize do |at|
-  %w{.git worlds backups chef}.each {|exception| at.add_exception(exception)}
-end

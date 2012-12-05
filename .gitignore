@@ -1,7 +1,1 @@
-.bundle
-mc/*
-worlds
-backups
-log/*
-tmp/*
-coverage
+prism
