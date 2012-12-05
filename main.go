@@ -44,8 +44,24 @@ func handleConnection(c net.Conn) {
 	if header == 0xFE {
 		handleServerPing(c)
 	} else if header == 0x02 {
-		handleLogin(c)
+		if !maintenanceMode(c) {
+			handleLogin(c)
+		}
 	}
+}
+
+func maintenanceMode(c net.Conn) bool {
+	msg, _ := redisClient.Get("prism:maintenance")
+	if msg.String() == "" {
+		return false
+	}
+
+	defer c.Close()
+	w := NewMcWriter(c)
+	w.KickPacket(KickPacket{
+		Reason: msg.String(),
+	})
+	return true
 }
 
 func handleLogin(c net.Conn) {
