@@ -51,6 +51,15 @@ func (r *McReader) OldHandshakePacket() (packet *OldHandshakePacket, err error) 
 	return
 }
 
+func (r *McReader) KeepAlive() (packet *KeepAlivePacket, err error) {
+	packet = new(KeepAlivePacket)
+	packet.Id, err = r.Int()
+	if err != nil {
+		return
+	}
+	return
+}
+
 func (r *McReader) Int() (int, error) {
 	var val int32
 	err := binary.Read(r.r, binary.BigEndian, &val)

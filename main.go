@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/simonz05/godis/redis"
 	"io"
 	"net"
+	"os"
 	"strings"
 	"time"
 )
@@ -32,8 +32,9 @@ type Approved func(net.Conn, Init, string, string, string)
 type Denied func(net.Conn, string)
 type Timeout func(net.Conn)
 
-var redisClient *redis.Client
+var redisClient *RedisClient
 var log *Logger
+var prismId string
 
 func handleConnection(c net.Conn) {
 	r := NewMcReader(c)
@@ -54,15 +55,15 @@ func handleConnection(c net.Conn) {
 }
 
 func maintenanceMode(c net.Conn) bool {
-	msg, _ := redisClient.Get("prism:maintenance")
-	if msg.String() == "" {
+	msg := redisClient.GetMaintenenceMsg()
+	if msg == "" {
 		return false
 	}
 
 	defer c.Close()
 	w := NewMcWriter(c)
 	w.KickPacket(KickPacket{
-		Reason: msg.String(),
+		Reason: msg,
 	})
 	return true
 }
@@ -141,9 +142,9 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
 	})
 
 	go func() {
-		conn := NewRedisConnection()
+		conn := NewRedisConnection(prismId)
 		defer conn.Quit()
-		sub, err := conn.Subscribe("players:connection_request:" + req.Username)
+		sub, err := conn.ConnectionReqReply(req.Username)
 		defer sub.Close()
 		if err != nil {
 			req.Log.Error(err, map[string]interface{}{
@@ -152,21 +153,32 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
 			return
 		}
 
-		w := NewMcWriter(c)
+		// keep connection alive for 5 minute
+		timeoutCb := time.After(5 * time.Minute)
 
-		timeoutCb := time.After(240 * time.Second)
+		// send keepalive packets to client every 15 seconds
 		keepalive := time.NewTicker(15 * time.Second)
 		defer keepalive.Stop()
 		go func() {
 			for _ = range keepalive.C {
+				w := NewMcWriter(c)
 				w.KeepAlivePacket(KeepAlivePacket{
 					Id: 1337,
 				})
+
+				// read keepalive response from client to get it off the
+				// connection
+				r := NewMcReader(c)
+				r.Header()
+				r.KeepAlive()
 			}
 		}()
 
 		select {
 		case message := <-sub.Messages:
+			// connection request reply from brain/prism-buddy
+			// will have failed: reason if bad
+			// otherwise it's approved
 			var reply ConnectionRequestReply
 			err := json.Unmarshal(message.Elem.Bytes(), &reply)
 			if err != nil {
@@ -187,8 +199,8 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
 		}
 	}()
 
-	reqJson, _ := json.Marshal(req)
-	redisClient.Lpush("players:connection_request", reqJson)
+	// send connection request to brain/prism-buddy
+	redisClient.PushConnectionReq(req)
 }
 
 func (req *ConnectionRequest) Approved(c net.Conn, init Init, remoteAddr string) {
@@ -197,7 +209,7 @@ func (req *ConnectionRequest) Approved(c net.Conn, init Init, remoteAddr string)
 		"remote": remoteAddr,
 	})
 
-	go proxyConnection(c, remoteAddr, init)
+	go req.ProxyConnection(c, remoteAddr, init)
 }
 
 func (req *ConnectionRequest) Denied(c net.Conn, reason string) {
@@ -236,12 +248,14 @@ func handleServerPing(c net.Conn) {
 	})
 }
 
-func proxyConnection(client net.Conn, remoteAddr string, init Init) {
+func (req *ConnectionRequest) ProxyConnection(client net.Conn, remoteAddr string, init Init) {
+	defer client.Close()
+	defer redisClient.RemovePlayer(req.Username)
+	redisClient.AddPlayer(req.Username)
+
 	remote, err := net.Dial("tcp", remoteAddr)
 	if remote == nil || err != nil {
-		defer client.Close()
-
-		log.Error(err, map[string]interface{}{
+		req.Log.Error(err, map[string]interface{}{
 			"event":  "failed_connection",
 			"remote": remoteAddr,
 		})
@@ -251,18 +265,26 @@ func proxyConnection(client net.Conn, remoteAddr string, init Init) {
 	init(remote)
 
 	go io.Copy(client, remote)
-	go io.Copy(remote, client)
+	io.Copy(remote, client)
+
+	req.Log.Info(map[string]interface{}{
+		"event": "disconnected",
+	})
 }
 
 func main() {
-	log = NewLog(map[string]interface{}{})
+	prismId = os.Args[1]
+	log = NewLog(map[string]interface{}{
+		"prism_id": prismId,
+	})
+
+	redisClient = NewRedisConnection(prismId)
+	redisClient.ClearPlayerSet()
 
 	ln, err := net.Listen("tcp", ":25565")
 	if err != nil {
 		panic(err)
 	}
-
-	redisClient = NewRedisConnection()
 
 	log.Info(map[string]interface{}{
 		"event": "listening",

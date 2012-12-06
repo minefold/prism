@@ -1,5 +1,12 @@
 # Prism
 
-# TODO
+## Redis keys
 
-Support Tekkit login
+    prism:{id}:maintenance
+    prism:{id}:players
+
+## Suggested restart procedure
+
+set maintenance message
+message players in game about connection dropping
+restart
