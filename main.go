@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -281,9 +282,9 @@ func (req *ConnectionRequest) ProxyConnection(client net.Conn, remoteAddr string
 		})
 		return
 	}
-	
+
 	req.Log.Info(map[string]interface{}{
-		"event": "start_proxy",
+		"event":  "start_proxy",
 		"remote": remoteAddr,
 	})
 
@@ -293,12 +294,14 @@ func (req *ConnectionRequest) ProxyConnection(client net.Conn, remoteAddr string
 	io.Copy(remote, client)
 
 	req.Log.Info(map[string]interface{}{
-		"event": "stop_proxy",
+		"event":  "stop_proxy",
 		"remote": remoteAddr,
 	})
 }
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	prismId = os.Args[1]
 	log = NewLog(map[string]interface{}{
 		"prism_id": prismId,
@@ -313,8 +316,9 @@ func main() {
 	}
 
 	log.Info(map[string]interface{}{
-		"event": "listening",
-		"port":  "25565",
+		"event":      "listening",
+		"port":       "25565",
+		"gomaxprocs": runtime.GOMAXPROCS(-1),
 	})
 	for {
 		conn, err := ln.Accept()
