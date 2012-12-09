@@ -136,6 +136,23 @@ func NewConnectionRequest(client, version, clientAddr, username, targetHost stri
 	return req
 }
 
+func sendKeepAlive(c net.Conn) error {
+	w := NewMcWriter(c)
+	w.KeepAlivePacket(KeepAlivePacket{
+		Id: 1337,
+	})
+
+	// read keepalive response from client to get it off the
+	// connection
+	r := NewMcReader(c)
+	_, err := r.Header()
+	if err != nil {
+		return err
+	}
+	_, err = r.KeepAlive()
+	return err
+}
+
 func (req *ConnectionRequest) Process(c net.Conn, init Init) {
 	req.Log.Info(map[string]interface{}{
 		"event": "login_request",
@@ -161,16 +178,13 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
 		defer keepalive.Stop()
 		go func() {
 			for _ = range keepalive.C {
-				w := NewMcWriter(c)
-				w.KeepAlivePacket(KeepAlivePacket{
-					Id: 1337,
-				})
-
-				// read keepalive response from client to get it off the
-				// connection
-				r := NewMcReader(c)
-				r.Header()
-				r.KeepAlive()
+				err := sendKeepAlive(c)
+				if err != nil {
+					keepalive.Stop()
+					req.Log.Info(map[string]interface{}{
+						"event": "disconnected",
+					})
+				}
 			}
 		}()
 
@@ -208,6 +222,12 @@ func (req *ConnectionRequest) Approved(c net.Conn, init Init, remoteAddr string)
 		"event":  "login_request_approved",
 		"remote": remoteAddr,
 	})
+
+	// send keepalive to see if the client is still connected
+	err := sendKeepAlive(c)
+	if err != nil {
+		return
+	}
 
 	go req.ProxyConnection(c, remoteAddr, init)
 }
@@ -261,6 +281,11 @@ func (req *ConnectionRequest) ProxyConnection(client net.Conn, remoteAddr string
 		})
 		return
 	}
+	
+	req.Log.Info(map[string]interface{}{
+		"event": "start_proxy",
+		"remote": remoteAddr,
+	})
 
 	init(remote)
 
@@ -268,7 +293,8 @@ func (req *ConnectionRequest) ProxyConnection(client net.Conn, remoteAddr string
 	io.Copy(remote, client)
 
 	req.Log.Info(map[string]interface{}{
-		"event": "disconnected",
+		"event": "stop_proxy",
+		"remote": remoteAddr,
 	})
 }
 
