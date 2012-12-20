@@ -25,6 +25,10 @@ func (l *Logger) Info(data map[string]interface{}) {
 	l.Out("info", data)
 }
 
+func (l *Logger) Warn(data map[string]interface{}) {
+	l.Out("warn", data)
+}
+
 func (l *Logger) Error(err error, data map[string]interface{}) {
 	data["error"] = err
 	l.Out("error", data)

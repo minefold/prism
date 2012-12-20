@@ -41,7 +41,7 @@ func handleConnection(c net.Conn) {
 	r := NewMcReader(c)
 	header, err := r.Header()
 	if err != nil {
-		log.Error(err, map[string]interface{}{
+		log.Warn(map[string]interface{}{
 			"event": "header read failed",
 		})
 	}
@@ -128,7 +128,6 @@ func NewConnectionRequest(client, version, clientAddr, username, targetHost stri
 		TargetHost: targetHost,
 	}
 	req.Log = NewLog(map[string]interface{}{
-		"client":      req.Username,
 		"version":     req.Version,
 		"client_addr": req.ClientAddr,
 		"username":    req.Username,
@@ -265,7 +264,7 @@ func handleServerPing(c net.Conn) {
 
 	w := NewMcWriter(c)
 	w.KickPacket(KickPacket{
-		Reason: "§1\00049\0001_4_5\000minefold.com\0005\000-1",
+		Reason: "§1\00051\0001_4_6\000minefold.com\0005\000-1",
 	})
 }
 
