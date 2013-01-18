@@ -20,6 +20,7 @@ type ConnectionRequest struct {
 	Version    string  `json:"version"`
 	Username   string  `json:"username"`
 	TargetHost string  `json:"target_host"`
+	ReplyKey   string  `json:"reply_key"`
 }
 
 type ConnectionRequestReply struct {

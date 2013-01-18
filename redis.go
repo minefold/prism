@@ -10,6 +10,7 @@ import (
 
 type RedisClient struct {
 	c              *redis.Client
+	rpcKey         string
 	playersKey     string
 	maintenanceKey string
 	protocolKey    string
@@ -34,6 +35,7 @@ func NewRedisConnection(prismId string) *RedisClient {
 
 	return &RedisClient{
 		c:              redis.New("tcp:"+redisUrl.Host, 0, password),
+		rpcKey:         fmt.Sprintf("prism:%s:connection_request", prismId),
 		playersKey:     fmt.Sprintf("prism:%s:players", prismId),
 		maintenanceKey: fmt.Sprintf("prism:%s:maintenance", prismId),
 		protocolKey:    fmt.Sprintf("prism:%s:protocol", prismId),
@@ -78,11 +80,16 @@ func (r *RedisClient) Motd() string {
 	return val.String()
 }
 
+func (r *RedisClient) ReplyKey(username string) string {
+	return fmt.Sprintf("%s:%s", r.rpcKey, username)
+}
+
 func (r *RedisClient) PushConnectionReq(req *ConnectionRequest) {
+	req.ReplyKey = r.ReplyKey(req.Username)
 	reqJson, _ := json.Marshal(req)
 	r.c.Lpush("players:connection_request", reqJson)
 }
 
-func (r *RedisClient) ConnectionReqReply(replyKey string) (*redis.Sub, error) {
-	return r.c.Subscribe("players:connection_request:" + replyKey)
+func (r *RedisClient) ConnectionReqReply(username string) (*redis.Sub, error) {
+	return r.c.Subscribe(r.ReplyKey(username))
 }
