@@ -12,6 +12,9 @@ type RedisClient struct {
 	c              *redis.Client
 	playersKey     string
 	maintenanceKey string
+	protocolKey    string
+	badProtocolKey string
+	motdKey        string
 }
 
 func NewRedisConnection(prismId string) *RedisClient {
@@ -33,6 +36,9 @@ func NewRedisConnection(prismId string) *RedisClient {
 		c:              redis.New("tcp:"+redisUrl.Host, 0, password),
 		playersKey:     fmt.Sprintf("prism:%s:players", prismId),
 		maintenanceKey: fmt.Sprintf("prism:%s:maintenance", prismId),
+		protocolKey:    fmt.Sprintf("prism:%s:protocol", prismId),
+		badProtocolKey: fmt.Sprintf("prism:%s:bad_protocol", prismId),
+		motdKey:        fmt.Sprintf("prism:%s:motd", prismId),
 	}
 }
 
@@ -55,6 +61,21 @@ func (r *RedisClient) RemovePlayer(username string) {
 func (r *RedisClient) GetMaintenenceMsg() string {
 	msg, _ := r.c.Get(r.maintenanceKey)
 	return msg.String()
+}
+
+func (r *RedisClient) Protocol() string {
+	val, _ := r.c.Get(r.protocolKey)
+	return val.String()
+}
+
+func (r *RedisClient) BadProtocolMsg() string {
+	val, _ := r.c.Get(r.badProtocolKey)
+	return val.String()
+}
+
+func (r *RedisClient) Motd() string {
+	val, _ := r.c.Get(r.motdKey)
+	return val.String()
 }
 
 func (r *RedisClient) PushConnectionReq(req *ConnectionRequest) {

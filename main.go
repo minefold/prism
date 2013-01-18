@@ -264,7 +264,11 @@ func handleServerPing(c net.Conn) {
 
 	w := NewMcWriter(c)
 	w.KickPacket(KickPacket{
-		Reason: "§1\00051\0001_4_6\000minefold.com\0005\000-1",
+		Reason: fmt.Sprintf(
+			"§1\000%s\000%s\000%s\000-1\000-1",
+			redisClient.Protocol(),
+			redisClient.BadProtocolMsg(),
+			redisClient.Motd()),
 	})
 }
 
@@ -302,21 +306,39 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	prismId = os.Args[1]
-	log = NewLog(map[string]interface{}{
-		"prism_id": prismId,
-	})
 
 	redisClient = NewRedisConnection(prismId)
 	redisClient.ClearPlayerSet()
 
-	ln, err := net.Listen("tcp", ":25565")
+	if redisClient.Protocol() == "" {
+		fmt.Println("set", redisClient.protocolKey)
+		os.Exit(1)
+	}
+	if redisClient.BadProtocolMsg() == "" {
+		fmt.Println("set", redisClient.badProtocolKey)
+		os.Exit(1)
+	}
+	if redisClient.Motd() == "" {
+		fmt.Println("set", redisClient.motdKey)
+		os.Exit(1)
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "25565"
+	}
+	log = NewLog(map[string]interface{}{
+		"prism": prismId,
+	})
+
+	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		panic(err)
 	}
 
 	log.Info(map[string]interface{}{
 		"event":      "listening",
-		"port":       "25565",
+		"port":       port,
 		"gomaxprocs": runtime.GOMAXPROCS(-1),
 	})
 	for {
