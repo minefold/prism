@@ -159,7 +159,7 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
 		"event": "login_request",
 	})
 
-	go func() {
+	work := func() {
 		conn := NewRedisConnection(prismId)
 		defer conn.Quit()
 		sub, err := conn.ConnectionReqReply(req.Username)
@@ -171,6 +171,8 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
 			return
 		}
 
+		connEnded := make(chan int, 1)
+
 		// keep connection alive for 5 minute
 		timeoutCb := time.After(5 * time.Minute)
 
@@ -181,10 +183,11 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
 			for _ = range keepalive.C {
 				err := sendKeepAlive(c)
 				if err != nil {
-					keepalive.Stop()
 					req.Log.Info(map[string]interface{}{
 						"event": "disconnected",
 					})
+					connEnded <- 1
+					break
 				}
 			}
 		}()
@@ -211,8 +214,12 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
 
 		case <-timeoutCb:
 			req.Timeout(c)
+
+		case <-connEnded:
 		}
-	}()
+	}
+
+	go func() { work() }()
 
 	// send connection request to brain/prism-buddy
 	redisClient.PushConnectionReq(req)
@@ -230,7 +237,7 @@ func (req *ConnectionRequest) Approved(c net.Conn, init Init, remoteAddr string)
 		return
 	}
 
-	go req.ProxyConnection(c, remoteAddr, init)
+	go func() { req.ProxyConnection(c, remoteAddr, init) }()
 }
 
 func (req *ConnectionRequest) Denied(c net.Conn, reason string) {
@@ -294,7 +301,7 @@ func (req *ConnectionRequest) ProxyConnection(client net.Conn, remoteAddr string
 
 	init(remote)
 
-	go io.Copy(client, remote)
+	go func() { io.Copy(client, remote) }()
 	io.Copy(remote, client)
 
 	req.Log.Info(map[string]interface{}{
@@ -350,6 +357,6 @@ func main() {
 			})
 			continue
 		}
-		go handleConnection(conn)
+		go func() { handleConnection(conn) }()
 	}
 }
