@@ -98,6 +98,15 @@ func handleLogin(c net.Conn) {
 		// username in old packet looks like this: 
 		// whatupdave;4.foldserver.com:25565
 		parts := strings.Split(oldPkt.Username, ";")
+		if len(parts) < 2 {
+			log.Error(err, map[string]interface{}{
+				"event":    "bad handshake",
+				"username": oldPkt.Username,
+			})
+			c.Close()
+			return
+		}
+		
 		username = parts[0]
 		parts = strings.Split(parts[1], ":")
 		targetHost = parts[0]
