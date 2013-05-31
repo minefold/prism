@@ -95,7 +95,7 @@ func handleLogin(c net.Conn) {
 			return
 		}
 		version = "1.2.5"
-		// username in old packet looks like this: 
+		// username in old packet looks like this:
 		// whatupdave;4.foldserver.com:25565
 		parts := strings.Split(oldPkt.Username, ";")
 		if len(parts) < 2 {
@@ -106,7 +106,7 @@ func handleLogin(c net.Conn) {
 			c.Close()
 			return
 		}
-		
+
 		username = parts[0]
 		parts = strings.Split(parts[1], ":")
 		targetHost = parts[0]
@@ -228,7 +228,7 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
 		}
 	}
 
-	go func() { work() }()
+	go work()
 
 	// send connection request to brain/prism-buddy
 	redisClient.PushConnectionReq(req)
@@ -246,7 +246,7 @@ func (req *ConnectionRequest) Approved(c net.Conn, init Init, remoteAddr string)
 		return
 	}
 
-	go func() { req.ProxyConnection(c, remoteAddr, init) }()
+	go req.ProxyConnection(c, remoteAddr, init)
 }
 
 func (req *ConnectionRequest) Denied(c net.Conn, reason string) {
@@ -310,7 +310,7 @@ func (req *ConnectionRequest) ProxyConnection(client net.Conn, remoteAddr string
 
 	init(remote)
 
-	go func() { io.Copy(client, remote) }()
+	go io.Copy(client, remote)
 	io.Copy(remote, client)
 
 	req.Log.Info(map[string]interface{}{
@@ -366,6 +366,6 @@ func main() {
 			})
 			continue
 		}
-		go func() { handleConnection(conn) }()
+		go handleConnection(conn)
 	}
 }
