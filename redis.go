@@ -65,16 +65,6 @@ func (r *RedisClient) GetMaintenenceMsg() string {
 	return msg.String()
 }
 
-func (r *RedisClient) Protocol() string {
-	val, _ := r.c.Get(r.protocolKey)
-	return val.String()
-}
-
-func (r *RedisClient) BadProtocolMsg() string {
-	val, _ := r.c.Get(r.badProtocolKey)
-	return val.String()
-}
-
 func (r *RedisClient) Motd() string {
 	val, _ := r.c.Get(r.motdKey)
 	return val.String()

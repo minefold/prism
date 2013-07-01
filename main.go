@@ -302,14 +302,6 @@ func main() {
 	redisClient = NewRedisConnection(prismId)
 	redisClient.ClearPlayerSet()
 
-	if redisClient.Protocol() == "" {
-		fmt.Println("set", redisClient.protocolKey)
-		os.Exit(1)
-	}
-	if redisClient.BadProtocolMsg() == "" {
-		fmt.Println("set", redisClient.badProtocolKey)
-		os.Exit(1)
-	}
 	if redisClient.Motd() == "" {
 		fmt.Println("set", redisClient.motdKey)
 		os.Exit(1)
