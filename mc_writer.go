@@ -56,20 +56,6 @@ func (w *McWriter) HandshakePacket(packet HandshakePacket) (err error) {
 	return
 }
 
-// 0x02
-func (w *McWriter) OldHandshakePacket(packet OldHandshakePacket) (err error) {
-	err = w.Byte(0x02)
-	if err != nil {
-		return
-	}
-
-	err = w.String(packet.Username)
-	if err != nil {
-		return
-	}
-	return
-}
-
 // 0xFF
 func (w *McWriter) KickPacket(packet KickPacket) (err error) {
 	err = w.Byte(0xFF)

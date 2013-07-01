@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -70,58 +68,48 @@ func maintenanceMode(c net.Conn) bool {
 	return true
 }
 
+func handleServerPing(c net.Conn) {
+	defer c.Close()
+
+	r := NewMcReader(c)
+	pkt, err := r.PingPacket()
+	if err != nil {
+		return
+	}
+
+	w := NewMcWriter(c)
+	w.KickPacket(KickPacket{
+		Reason: fmt.Sprintf(
+			"§1\000%s\000%s\000%s\000-1\000-1",
+			pkt.ProtocolVersion,
+			"",
+			redisClient.Motd()),
+	})
+}
+
 func handleLogin(c net.Conn) {
-	buf := new(bytes.Buffer)
-
-	tee := io.TeeReader(c, buf)
-
 	client := "minecraft"
 	var version string
 	var username string
 	var targetHost string
 	var connInit Init
 
-	r := NewMcReader(tee)
+	r := NewMcReader(c)
 	pkt, err := r.HandshakePacket()
 	if err != nil {
-		// try old handshake packet
-		r = NewMcReader(buf)
-		oldPkt, err := r.OldHandshakePacket()
-		if err != nil {
-			log.Error(err, map[string]interface{}{
-				"event": "bad handshake",
-			})
-			c.Close()
-			return
-		}
-		version = "1.2.5"
-		// username in old packet looks like this:
-		// whatupdave;4.foldserver.com:25565
-		parts := strings.Split(oldPkt.Username, ";")
-		if len(parts) < 2 {
-			log.Error(err, map[string]interface{}{
-				"event":    "bad handshake",
-				"username": oldPkt.Username,
-			})
-			c.Close()
-			return
-		}
+		log.Error(err, map[string]interface{}{
+			"event": "bad handshake",
+		})
+		c.Close()
+		return
+	}
 
-		username = parts[0]
-		parts = strings.Split(parts[1], ":")
-		targetHost = parts[0]
-		connInit = func(remote net.Conn) {
-			w := NewMcWriter(remote)
-			w.OldHandshakePacket(*oldPkt)
-		}
-	} else {
-		version = fmt.Sprintf("%v", pkt.ProtocolVersion)
-		username = pkt.Username
-		targetHost = pkt.Host
-		connInit = func(remote net.Conn) {
-			w := NewMcWriter(remote)
-			w.HandshakePacket(*pkt)
-		}
+	version = fmt.Sprintf("%v", pkt.ProtocolVersion)
+	username = pkt.Username
+	targetHost = pkt.Host
+	connInit = func(remote net.Conn) {
+		w := NewMcWriter(remote)
+		w.HandshakePacket(*pkt)
 	}
 
 	clientAddr := c.RemoteAddr().String()
@@ -273,19 +261,6 @@ func (req *ConnectionRequest) Timeout(c net.Conn) {
 	w := NewMcWriter(c)
 	w.KickPacket(KickPacket{
 		Reason: "Minefold is having some technical difficulties! Please try again",
-	})
-}
-
-func handleServerPing(c net.Conn) {
-	defer c.Close()
-
-	w := NewMcWriter(c)
-	w.KickPacket(KickPacket{
-		Reason: fmt.Sprintf(
-			"§1\000%s\000%s\000%s\000-1\000-1",
-			redisClient.Protocol(),
-			redisClient.BadProtocolMsg(),
-			redisClient.Motd()),
 	})
 }
 

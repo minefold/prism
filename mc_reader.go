@@ -21,6 +21,39 @@ func (r *McReader) Header() (header byte, err error) {
 	return
 }
 
+func (r *McReader) PingPacket() (packet *PingPacket, err error) {
+	packet = new(PingPacket)
+	packet.MagicNumber, err = r.Byte()
+	if err != nil {
+		return
+	}
+	packet.NewHeader, err = r.Byte()
+	if err != nil {
+		return
+	}
+	packet.UserAgent, err = r.String()
+	if err != nil {
+		return
+	}
+	packet.PayloadSize, err = r.Short()
+	if err != nil {
+		return
+	}
+	packet.ProtocolVersion, err = r.Byte()
+	if err != nil {
+		return
+	}
+	packet.Host, err = r.String()
+	if err != nil {
+		return
+	}
+	packet.Port, err = r.Int()
+	if err != nil {
+		return
+	}
+	return
+}
+
 func (r *McReader) HandshakePacket() (packet *HandshakePacket, err error) {
 	packet = new(HandshakePacket)
 	err = binary.Read(r.r, binary.BigEndian, &packet.ProtocolVersion)
@@ -42,15 +75,6 @@ func (r *McReader) HandshakePacket() (packet *HandshakePacket, err error) {
 	return
 }
 
-func (r *McReader) OldHandshakePacket() (packet *OldHandshakePacket, err error) {
-	packet = new(OldHandshakePacket)
-	packet.Username, err = r.String()
-	if err != nil {
-		return
-	}
-	return
-}
-
 func (r *McReader) KeepAlive() (packet *KeepAlivePacket, err error) {
 	packet = new(KeepAlivePacket)
 	packet.Id, err = r.Int()
@@ -58,6 +82,12 @@ func (r *McReader) KeepAlive() (packet *KeepAlivePacket, err error) {
 		return
 	}
 	return
+}
+
+func (r *McReader) Byte() (byte, error) {
+	var val byte
+	err := binary.Read(r.r, binary.BigEndian, &val)
+	return val, err
 }
 
 func (r *McReader) Int() (int, error) {
@@ -70,6 +100,12 @@ func (r *McReader) Int() (int, error) {
 	return int(val), nil
 }
 
+func (r *McReader) Short() (int16, error) {
+	var val int16
+	err := binary.Read(r.r, binary.BigEndian, &val)
+	return val, err
+}
+
 func (r *McReader) String() (val string, err error) {
 	var charLen int16
 	err = binary.Read(r.r, binary.BigEndian, &charLen)
@@ -78,7 +114,7 @@ func (r *McReader) String() (val string, err error) {
 	}
 
 	ucs2 := make([]byte, charLen*2)
-	_, err = r.r.Read(ucs2)
+	_, err = io.ReadFull(r.r, ucs2)
 	if err != nil {
 		return
 	}
@@ -89,5 +125,6 @@ func (r *McReader) String() (val string, err error) {
 		return
 	}
 	val = string(utf8)
+
 	return
 }

@@ -13,9 +13,15 @@ type HandshakePacket struct {
 	Port            int
 }
 
-// 0x02 old 1.2.5 login packet, for tekkit. Jeez.
-type OldHandshakePacket struct {
-	Username string
+// 0xFE
+type PingPacket struct {
+	MagicNumber     byte
+	NewHeader       byte
+	UserAgent       string
+	PayloadSize     int16
+	ProtocolVersion byte
+	Host            string
+	Port            int
 }
 
 // 0xFF
