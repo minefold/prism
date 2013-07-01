@@ -19,7 +19,7 @@ type RedisClient struct {
 }
 
 func NewRedisConnection(prismId string) *RedisClient {
-	urlString := os.Getenv("REDIS_URL")
+	urlString := os.Getenv("PARTY_CLOUD_REDIS")
 	if urlString == "" {
 		urlString = "redis://localhost:6379/"
 	}
