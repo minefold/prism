@@ -26,16 +26,22 @@ func handleServerPing(c net.Conn) {
   r := NewMcReader(c)
   pkt, err := r.PingPacket()
   if err != nil {
+    log.Error(err, map[string]interface{}{
+      "event": "read_ping",
+    })
     return
   }
 
   server, err := getMinefoldServerInfo(pkt.Host)
   if err != nil {
+    log.Error(err, map[string]interface{}{
+      "event": "minefold_server_info",
+    })
     return
   }
 
   w := NewMcWriter(c)
-  w.KickPacket(&KickPacket{
+  kickPkt := &KickPacket{
     Reason: fmt.Sprintf(
       "§1\000%s\000%s\000%s\000%d\000%d",
       pkt.ProtocolVersion,
@@ -43,7 +49,9 @@ func handleServerPing(c net.Conn) {
       server.Name,
       len(server.Players),
       50),
-  })
+  }
+  fmt.Println(kickPkt)
+  w.KickPacket(kickPkt)
 }
 
 func getMinefoldServerInfo(host string) (*MinefoldServerInfo, error) {
