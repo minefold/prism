@@ -4,6 +4,7 @@ import (
   "encoding/json"
   "errors"
   "fmt"
+  "github.com/simonz05/godis/redis"
   "io"
   "net"
   "os"
@@ -31,6 +32,9 @@ type Init func(net.Conn)
 type Approved func(net.Conn, Init, string, string, string)
 type Denied func(net.Conn, string)
 type Timeout func(net.Conn)
+
+var mfRedis *redis.Client
+var pcRedis *redis.Client
 
 var redisClient *RedisClient
 var log *Logger
@@ -138,7 +142,7 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
   })
 
   work := func() {
-    conn := NewRedisConnection(prismId)
+    conn := NewRedisClient(pcRedis, prismId)
     defer conn.Quit()
     sub, err := conn.ConnectionReqReply(req.Username)
     defer sub.Close()
@@ -280,7 +284,9 @@ func main() {
 
   prismId = os.Args[1]
 
-  redisClient = NewRedisConnection(prismId)
+  mfRedis = NewRedisConnection(os.Getenv("MINEFOLD_REDIS"))
+  pcRedis = NewRedisConnection(os.Getenv("MINEFOLD_REDIS"))
+  redisClient = NewRedisClient(pcRedis, prismId)
   redisClient.ClearPlayerSet()
 
   if redisClient.Motd() == "" {

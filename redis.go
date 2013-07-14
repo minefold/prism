@@ -5,11 +5,10 @@ import (
   "fmt"
   "github.com/simonz05/godis/redis"
   "net/url"
-  "os"
 )
 
 type RedisClient struct {
-  c              *redis.Client
+  C              *redis.Client
   respPrefix     string
   connReqKey     string
   playersKey     string
@@ -19,8 +18,7 @@ type RedisClient struct {
   motdKey        string
 }
 
-func NewRedisConnection(prismId string) *RedisClient {
-  urlString := os.Getenv("PARTY_CLOUD_REDIS")
+func NewRedisConnection(urlString string) *redis.Client {
   if urlString == "" {
     urlString = "redis://localhost:6379/"
   }
@@ -34,10 +32,14 @@ func NewRedisConnection(prismId string) *RedisClient {
     password, _ = redisUrl.User.Password()
   }
 
+  return redis.New("tcp:"+redisUrl.Host, 0, password)
+}
+
+func NewRedisClient(c *redis.Client, prismId string) *RedisClient {
   respPrefix := fmt.Sprintf("prism:%s", prismId)
 
   return &RedisClient{
-    c:              redis.New("tcp:"+redisUrl.Host, 0, password),
+    C:              c,
     respPrefix:     respPrefix,
     connReqKey:     fmt.Sprintf("%s:connection_request", respPrefix),
     playersKey:     fmt.Sprintf("%s:players", respPrefix),
@@ -47,33 +49,33 @@ func NewRedisConnection(prismId string) *RedisClient {
 }
 
 func (r *RedisClient) Quit() {
-  r.c.Quit()
+  r.C.Quit()
 }
 
 func (r *RedisClient) ClearPlayerSet() {
-  r.c.Del(r.playersKey)
+  r.C.Del(r.playersKey)
 }
 
 func (r *RedisClient) AddPlayer(username string) {
-  r.c.Sadd(r.playersKey, username)
+  r.C.Sadd(r.playersKey, username)
 }
 
 func (r *RedisClient) RemovePlayer(username string) {
-  r.c.Srem(r.playersKey, username)
+  r.C.Srem(r.playersKey, username)
 }
 
 func (r *RedisClient) GetMaintenenceMsg() string {
-  msg, _ := r.c.Get(r.maintenanceKey)
+  msg, _ := r.C.Get(r.maintenanceKey)
   return msg.String()
 }
 
 func (r *RedisClient) Motd() string {
-  val, _ := r.c.Get(r.motdKey)
+  val, _ := r.C.Get(r.motdKey)
   return val.String()
 }
 
 func (r *RedisClient) PartyCloudId(host string) string {
-  val, _ := r.c.Hget("minefold:servers:partycloudid", host)
+  val, _ := r.C.Hget("minefold:servers:partycloudid", host)
   return val.String()
 }
 
@@ -84,9 +86,9 @@ func (r *RedisClient) ReplyKey(username string) string {
 func (r *RedisClient) PushConnectionReq(req *ConnectionRequest) {
   req.ReplyKey = r.ReplyKey(req.Username)
   reqJson, _ := json.Marshal(req)
-  r.c.Lpush("players:connection_request", reqJson)
+  r.C.Lpush("players:connection_request", reqJson)
 }
 
 func (r *RedisClient) ConnectionReqReply(username string) (*redis.Sub, error) {
-  return r.c.Subscribe(r.ReplyKey(username))
+  return r.C.Subscribe(r.ReplyKey(username))
 }

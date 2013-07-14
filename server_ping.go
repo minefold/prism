@@ -1,23 +1,15 @@
 package main
 
 import (
-  "encoding/json"
   "fmt"
+  // "github.com/simonz05/godis/redis"
   "net"
-  "net/http"
 )
 
 type ServerInfo struct {
-  Name          string
+  Motd          string
   PlayersOnline int
   MaxPlayers    int
-}
-
-type MinefoldServerInfo struct {
-  Name         string   `json:"name"`
-  PartyCloudId string   `json:"partyCloudId"`
-  MaxPlayers   int      `json:"maxPlayers"`
-  Players      []string `json:"players"`
 }
 
 func handleServerPing(c net.Conn) {
@@ -32,54 +24,46 @@ func handleServerPing(c net.Conn) {
     return
   }
 
-  server, err := getMinefoldServerInfo(pkt.Host)
-  if err != nil {
-    log.Error(err, map[string]interface{}{
-      "event": "minefold_server_info",
-    })
-    return
+  kickPkt := &KickPacket{
+    Reason: reason(pkt.ProtocolVersion, "minefold.com", -1, -1),
+  }
+
+  server, err := getServerInfo(pkt.Host)
+  if err == nil {
+    kickPkt.Reason = reason(pkt.ProtocolVersion, server.Motd, server.PlayersOnline, server.MaxPlayers)
   }
 
   w := NewMcWriter(c)
-  kickPkt := &KickPacket{
-    Reason: fmt.Sprintf(
-      "§1\000%s\000%s\000%s\000%d\000%d",
-      pkt.ProtocolVersion,
-      "",
-      server.Name,
-      len(server.Players),
-      50),
-  }
-  fmt.Println(kickPkt)
   w.KickPacket(kickPkt)
 }
 
-func getMinefoldServerInfo(host string) (*MinefoldServerInfo, error) {
-  client := &http.Client{
-    CheckRedirect: redirectPolicyFunc,
-  }
-  req, err := http.NewRequest("GET", "http://"+host, nil)
-  req.Header.Add("Accept", "application/json")
-  resp, err := client.Do(req)
-  if err != nil {
-    return nil, err
-  }
-
-  defer resp.Body.Close()
-  dec := json.NewDecoder(resp.Body)
-
-  var server MinefoldServerInfo
-  err = dec.Decode(&server)
-  if err != nil {
-    return nil, err
-  }
-
-  return &server, err
+func reason(protocolVersion byte, motd string, onlinePlayers, maxPlayers int) string {
+  return fmt.Sprintf(
+    "§1\000%s\000%s\000%s\000%d\000%d",
+    protocolVersion,
+    "",
+    motd,
+    onlinePlayers,
+    maxPlayers)
 }
 
-func redirectPolicyFunc(req *http.Request, via []*http.Request) error {
-  // copy headers to redirected urls (so application/json is present)
-  // when blah.folderver.com redirects to /server/1234
-  req.Header = via[0].Header
-  return nil
+func getServerInfo(host string) (server *ServerInfo, err error) {
+  motdEl, err := mfRedis.Hget("server-info:motd", host)
+  if err != nil {
+    return
+  }
+  pcIdEl, err := mfRedis.Hget("server-info:party-cloud-id", host)
+  if err != nil {
+    return
+  }
+  pcId := pcIdEl.String()
+
+  onlinePlayersEl, err := pcRedis.Scard("server:" + pcId + ":players")
+
+  server = &ServerInfo{
+    Motd:          motdEl.String(),
+    PlayersOnline: int(onlinePlayersEl),
+    MaxPlayers:    50,
+  }
+  return
 }
