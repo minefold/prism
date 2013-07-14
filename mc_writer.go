@@ -57,7 +57,7 @@ func (w *McWriter) HandshakePacket(packet HandshakePacket) (err error) {
 }
 
 // 0xFF
-func (w *McWriter) KickPacket(packet KickPacket) (err error) {
+func (w *McWriter) KickPacket(packet *KickPacket) (err error) {
 	err = w.Byte(0xFF)
 	if err != nil {
 		return
