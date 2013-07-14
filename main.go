@@ -285,7 +285,7 @@ func main() {
   prismId = os.Args[1]
 
   mfRedis = NewRedisConnection(os.Getenv("MINEFOLD_REDIS"))
-  pcRedis = NewRedisConnection(os.Getenv("MINEFOLD_REDIS"))
+  pcRedis = NewRedisConnection(os.Getenv("PARTY_CLOUD_REDIS"))
   redisClient = NewRedisClient(pcRedis, prismId)
   redisClient.ClearPlayerSet()
 
