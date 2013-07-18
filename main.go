@@ -180,18 +180,26 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
       // will have failed: reason if bad
       // otherwise it's approved
       var reply ConnectionRequestReply
-      err := json.Unmarshal(message.Elem.Bytes(), &reply)
-      if err != nil {
+      if message == nil || message.Elem == nil {
         req.Log.Error(err, map[string]interface{}{
           "event": "bad_req_reply",
           "reply": message.Elem.String(),
         })
         c.Close()
-      } else if reply.Failed != "" {
-        req.Denied(c, reply.Failed)
       } else {
-        remoteAddr := fmt.Sprintf("%s:%d", reply.Host, reply.Port)
-        req.Approved(c, init, remoteAddr)
+        err := json.Unmarshal(message.Elem.Bytes(), &reply)
+        if err != nil {
+          req.Log.Error(err, map[string]interface{}{
+            "event": "bad_req_reply",
+            "reply": message.Elem.String(),
+          })
+          c.Close()
+        } else if reply.Failed != "" {
+          req.Denied(c, reply.Failed)
+        } else {
+          remoteAddr := fmt.Sprintf("%s:%d", reply.Host, reply.Port)
+          req.Approved(c, init, remoteAddr)
+        }
       }
 
     case <-timeoutCb:
