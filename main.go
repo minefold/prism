@@ -142,6 +142,14 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
   })
 
   work := func() {
+    defer func() {
+      if e := recover(); e != nil {
+        err := e.(error)
+        req.Log.Error(err, map[string]interface{}{
+          "event": "panic",
+        })
+      }
+    }()
     conn := NewRedisClient(pcRedis, prismId)
     defer conn.Quit()
     sub, err := conn.ConnectionReqReply(req.Username)
