@@ -4,7 +4,7 @@ import (
   "encoding/json"
   "errors"
   "fmt"
-  "github.com/simonz05/godis/redis"
+  "github.com/whatupdave/godis/redis"
   "io"
   "net"
   "os"
@@ -304,11 +304,6 @@ func main() {
   pcRedis = NewRedisConnection(os.Getenv("PARTY_CLOUD_REDIS"))
   redisClient = NewRedisClient(pcRedis, prismId)
   redisClient.ClearPlayerSet()
-
-  if redisClient.Motd() == "" {
-    fmt.Println("set", redisClient.motdKey)
-    os.Exit(1)
-  }
 
   port := os.Getenv("PORT")
   if port == "" {

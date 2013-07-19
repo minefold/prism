@@ -2,7 +2,7 @@ package main
 
 import (
   "fmt"
-  // "github.com/simonz05/godis/redis"
+  // "github.com/whatupdave/godis/redis"
   "net"
 )
 

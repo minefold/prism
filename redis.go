@@ -3,7 +3,7 @@ package main
 import (
   "encoding/json"
   "fmt"
-  "github.com/simonz05/godis/redis"
+  "github.com/whatupdave/godis/redis"
   "net/url"
 )
 
@@ -13,9 +13,6 @@ type RedisClient struct {
   connReqKey     string
   playersKey     string
   maintenanceKey string
-  protocolKey    string
-  badProtocolKey string
-  motdKey        string
 }
 
 func NewRedisConnection(urlString string) *redis.Client {
@@ -44,7 +41,6 @@ func NewRedisClient(c *redis.Client, prismId string) *RedisClient {
     connReqKey:     fmt.Sprintf("%s:connection_request", respPrefix),
     playersKey:     fmt.Sprintf("%s:players", respPrefix),
     maintenanceKey: fmt.Sprintf("%s:maintenance", respPrefix),
-    motdKey:        fmt.Sprintf("%s:motd", respPrefix),
   }
 }
 
@@ -67,11 +63,6 @@ func (r *RedisClient) RemovePlayer(username string) {
 func (r *RedisClient) GetMaintenenceMsg() string {
   msg, _ := r.C.Get(r.maintenanceKey)
   return msg.String()
-}
-
-func (r *RedisClient) Motd() string {
-  val, _ := r.C.Get(r.motdKey)
-  return val.String()
 }
 
 func (r *RedisClient) PartyCloudId(host string) string {

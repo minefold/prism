@@ -2,7 +2,7 @@ package main
 
 import (
   "testing"
-  // "github.com/simonz05/godis/redis"
+  // "github.com/whatupdave/godis/redis"
 )
 
 func TestGetServerInfo(t *testing.T) {
