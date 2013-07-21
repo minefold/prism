@@ -272,7 +272,7 @@ func (req *ConnectionRequest) Timeout(c net.Conn) {
 
 	w := NewMcWriter(c)
 	w.KickPacket(KickPacket{
-		Reason: "Minefold is having some technical difficulties! Please try again",
+		Reason: "Minefold is having technical difficulties. Please try again",
 	})
 }
 
