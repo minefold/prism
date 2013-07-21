@@ -26,5 +26,5 @@ func RemovePlayerFromSet(username string) {
 }
 
 func playerSetKey() string {
-    return fmt.Sprintf("%s:players", prismId)
+    return fmt.Sprintf("prism:%s:players", prismId)
 }
