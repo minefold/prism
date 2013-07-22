@@ -29,7 +29,7 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
         "event": "login_request",
     })
 
-    req.ReplyKey = prismId + ":connection_request"
+    req.ReplyKey = prismId + ":connection_request:" + req.Username
     payload, err := json.Marshal(req)
     if err != nil {
         c.Close()
@@ -43,13 +43,18 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
     rpcCancel := make(chan bool, 2)
 
     // send keepalive packets to client every 15 seconds
-    keepalive := time.NewTicker(15 * time.Second)
-    defer keepalive.Stop()
-    go func() {
-        req.sendKeepAlives(keepalive.C, c)
-        keepalive.Stop()
-        connEnded <- true
-    }()
+    stopKeepalive := Every(15*time.Second, func() bool {
+        err := sendKeepAlive(c)
+        if err != nil {
+            connEnded <- true
+            req.Log.Info(map[string]interface{}{
+                "event": "disconnected",
+            })
+            return false
+        }
+        return true
+    })
+    defer func() { stopKeepalive <- true }()
 
     replyChan, timeoutChan, errChan := RedisRPC(
         pcRedisPool,
@@ -84,26 +89,14 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
         if err != nil {
             c.Close()
             req.Log.Error(err, map[string]interface{}{
-                "event": "rpc_reply_unmarshal",
+                "event":   "rpc_reply_unmarshal",
                 "message": string(message),
             })
         } else if reply.Failed != "" {
-            req.Denied(c, reply.Failed)
+            go req.Denied(c, reply.Failed)
         } else {
             remoteAddr := fmt.Sprintf("%s:%d", reply.Host, reply.Port)
-            req.Approved(c, init, remoteAddr)
-        }
-    }
-}
-
-func (req *ConnectionRequest) sendKeepAlives(ticker <-chan time.Time, c net.Conn) {
-    for _ = range ticker {
-        err := sendKeepAlive(c)
-        if err != nil {
-            req.Log.Info(map[string]interface{}{
-                "event": "disconnected",
-            })
-            break
+            go req.Approved(c, init, remoteAddr)
         }
     }
 }

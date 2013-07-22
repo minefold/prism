@@ -1,6 +1,7 @@
 package main
 
 import (
+    "fmt"
     "github.com/garyburd/redigo/redis"
     "net"
     "net/url"
@@ -74,9 +75,18 @@ func testOnBorrow(c redis.Conn, t time.Time) error {
     return err
 }
 
+func debugGoroutines() {
+    for _ = range time.Tick(1 * time.Minute) {
+        buf := make([]byte, 1<<16)
+        runtime.Stack(buf, true)
+        fmt.Println(string(buf))
+        fmt.Println("DEBUG goroutines:", runtime.NumGoroutine())
+    }
+}
+
 func main() {
     runtime.GOMAXPROCS(runtime.NumCPU())
-
+    // go debugGoroutines()
     prismId = os.Args[1]
 
     port := os.Getenv("PORT")

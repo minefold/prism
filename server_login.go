@@ -33,7 +33,7 @@ func handleLogin(cr *McReader, cw *McWriter, client net.Conn) {
             "target_host": pkt.Host,
         }),
     }
-
+    
     req.Process(client, func(server net.Conn) {
         sw := NewMcWriter(server)
         err := sw.HandshakePacket(pkt)
@@ -110,8 +110,8 @@ func (req *ConnectionRequest) ProxyConnection(client net.Conn, remoteAddr string
 
     init(remote)
 
-    go io.Copy(client, remote)
-    io.Copy(remote, client)
+    go io.Copy(remote, client)
+    io.Copy(client, remote)
 
     req.Log.Info(map[string]interface{}{
         "event":  "stop_proxy",
