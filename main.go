@@ -41,7 +41,7 @@ func handleConnection(c net.Conn) {
     }
 }
 
-func redisDial(urlString string) func() (redis.Conn, error) {
+func RedisDial(urlString string) func() (redis.Conn, error) {
     return func() (redis.Conn, error) {
         if urlString == "" {
             urlString = "redis://localhost:6379/"
@@ -75,12 +75,16 @@ func testOnBorrow(c redis.Conn, t time.Time) error {
     return err
 }
 
+func dumpGoroutines() {
+    buf := make([]byte, 1<<16)
+    runtime.Stack(buf, true)
+    fmt.Println(string(buf))
+    fmt.Println("DEBUG goroutines:", runtime.NumGoroutine())
+}
+
 func debugGoroutines() {
-    for _ = range time.Tick(1 * time.Minute) {
-        buf := make([]byte, 1<<16)
-        runtime.Stack(buf, true)
-        fmt.Println(string(buf))
-        fmt.Println("DEBUG goroutines:", runtime.NumGoroutine())
+    for _ = range time.Tick(15 * time.Second) {
+        dumpGoroutines()
     }
 }
 
@@ -102,18 +106,16 @@ func main() {
         panic(err)
     }
 
-    dialFunc := redisDial(os.Getenv("MINEFOLD_REDIS"))
-
     mfRedisPool = &redis.Pool{
         MaxIdle:      3,
-        IdleTimeout:  10 * time.Second,
-        Dial:         dialFunc,
+        IdleTimeout:  240 * time.Second,
+        Dial:         RedisDial(os.Getenv("MINEFOLD_REDIS")),
         TestOnBorrow: testOnBorrow,
     }
     pcRedisPool = &redis.Pool{
-        MaxIdle:      50,
-        IdleTimeout:  10 * time.Second,
-        Dial:         redisDial(os.Getenv("PARTY_CLOUD_REDIS")),
+        MaxIdle:      3,
+        IdleTimeout:  240 * time.Second,
+        Dial:         RedisDial(os.Getenv("PARTY_CLOUD_REDIS")),
         TestOnBorrow: testOnBorrow,
     }
 

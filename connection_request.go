@@ -2,9 +2,9 @@ package main
 
 import (
     "encoding/json"
-    "errors"
     "fmt"
     "net"
+    "os"
     "time"
 )
 
@@ -39,14 +39,10 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
         return
     }
 
-    connEnded := make(chan bool, 1)
-    rpcCancel := make(chan bool, 2)
-
     // send keepalive packets to client every 15 seconds
     stopKeepalive := Every(15*time.Second, func() bool {
         err := sendKeepAlive(c)
         if err != nil {
-            connEnded <- true
             req.Log.Info(map[string]interface{}{
                 "event": "disconnected",
             })
@@ -56,47 +52,51 @@ func (req *ConnectionRequest) Process(c net.Conn, init Init) {
     })
     defer func() { stopKeepalive <- true }()
 
-    replyChan, timeoutChan, errChan := RedisRPC(
-        pcRedisPool,
-        "players:connection_request",
-        req.ReplyKey,
-        payload,
-        5*time.Minute,
-        rpcCancel)
+    dial := RedisDial(os.Getenv("PARTY_CLOUD_REDIS"))
 
-    select {
-    case <-connEnded:
-        // Connection hung up before RPC response
-        rpcCancel <- true
-
-    case <-timeoutChan:
-        // RPC timed out
-        req.Log.Error(errors.New("Timeout"), map[string]interface{}{
-            "event": "rpc_timeout",
+    pushConn, err := dial()
+    if err != nil {
+        req.Log.Error(err, map[string]interface{}{
+            "event": "redis_dial",
         })
-        c.Close()
+        return
+    }
+    defer pushConn.Close()
+    subConn, err := dial()
+    if err != nil {
+        req.Log.Error(err, map[string]interface{}{
+            "event": "redis_dial",
+        })
+        return
+    }
+    defer subConn.Close()
 
-    case err := <-errChan:
-        // RPC Error
+    message, err := RedisRPC(
+        pushConn, "players:connection_request", payload,
+        subConn, req.ReplyKey,
+        5*time.Minute)
+
+    if err != nil {
         req.Log.Error(err, map[string]interface{}{
             "event": "rpc",
         })
-        c.Close()
+        return
+    }
 
-    case message := <-replyChan:
-        var reply ConnectionRequestReply
-        err := json.Unmarshal(message, &reply)
-        if err != nil {
-            c.Close()
-            req.Log.Error(err, map[string]interface{}{
-                "event":   "rpc_reply_unmarshal",
-                "message": string(message),
-            })
-        } else if reply.Failed != "" {
-            go req.Denied(c, reply.Failed)
-        } else {
-            remoteAddr := fmt.Sprintf("%s:%d", reply.Host, reply.Port)
-            go req.Approved(c, init, remoteAddr)
-        }
+    var reply ConnectionRequestReply
+    err = json.Unmarshal(message, &reply)
+    if err != nil {
+        req.Log.Error(err, map[string]interface{}{
+            "event":   "rpc_reply_unmarshal",
+            "message": string(message),
+        })
+        return
+    }
+
+    if reply.Failed != "" {
+        go req.Denied(c, reply.Failed)
+    } else {
+        remoteAddr := fmt.Sprintf("%s:%d", reply.Host, reply.Port)
+        go req.Approved(c, init, remoteAddr)
     }
 }

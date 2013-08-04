@@ -6,55 +6,60 @@ import (
     "time"
 )
 
-func TestRPC(t *testing.T) {
-    pool := &redis.Pool{
-        MaxIdle:     3,
-        IdleTimeout: 10 * time.Second,
-        Dial: func() (redis.Conn, error) {
-            c, err := redis.Dial("tcp", "localhost:6379")
-            if err != nil {
-                return nil, err
-            }
-            if _, err := c.Do("SELECT", 7); err != nil {
-                c.Close()
-                return nil, err
-            }
-            return c, err
-        },
+func DialTestRedis() redis.Conn {
+    c, err := redis.Dial("tcp", "localhost:6379")
+    if err != nil {
+        panic(err)
     }
+    if _, err := c.Do("SELECT", 7); err != nil {
+        c.Close()
+        panic(err)
+    }
+    return c
+}
 
-    t.Logf("Pool actives: %d\n", pool.ActiveCount())
-    defer t.Logf("Pool actives: %d\n", pool.ActiveCount())
-
-    rpcCancel := make(chan bool)
-    replyChan, timeoutChan, errChan := RedisRPC(
-        pool,
-        "test:rpc:call",
-        "test:rpc:reply",
-        []byte("sup"),
-        1*time.Second,
-        rpcCancel)
+func TestRPC(t *testing.T) {
+    pushConn := DialTestRedis()
+    subConn := DialTestRedis()
+    defer pushConn.Close()
+    defer subConn.Close()
 
     go func() {
-        c := pool.Get()
-        defer c.Close()
-
-        c.Do("PUBLISH", "test:rpc:reply", "dawg")
+        time.Sleep(10 * time.Millisecond)
+        DialTestRedis().Do("PUBLISH", "test:rpc:reply", "dawg")
     }()
 
-    select {
-    case err := <-errChan:
-        t.Fatalf("Error:", err)
+    reply, err := RedisRPC(
+        pushConn, "test:rpc:call", []byte("sup"),
+        subConn, "test:rpc:reply",
+        10*time.Second)
 
-    case <-timeoutChan:
-        t.Fatalf("timeout RPC")
-
-    case reply := <-replyChan:
-        if string(reply) != "dawg" {
-            t.Fatalf("expected dawg was %s", string(reply))
-        }
+    if err != nil {
+        t.Error(err)
     }
 
+    if string(reply) != "dawg" {
+        t.Fatalf("reply=%v, want %v", string(reply), "dawg")
+    }
+}
 
+func TestRPCTimeout(t *testing.T) {
+    pushConn := DialTestRedis()
+    subConn := DialTestRedis()
+    defer pushConn.Close()
+    defer subConn.Close()
 
+    _, err := RedisRPC(
+        pushConn, "test:rpc:call", []byte("sup"),
+        subConn, "test:rpc:reply",
+        1*time.Millisecond)
+
+    switch v := err.(type) {
+    case error:
+        if v.Error() != "Timeout" {
+            t.Fatalf("Expected Timeout")
+        }
+    default:
+        t.Error(err)
+    }
 }
